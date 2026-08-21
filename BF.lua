@@ -32,7 +32,7 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.3 Free", 
+    text = "Version1.0 Free", 
     color = Color3.fromRGB(72, 202, 228) 
 })
 
