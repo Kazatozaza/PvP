@@ -32,7 +32,7 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.8 Free", 
+    text = "Version1.3 Free", 
     color = Color3.fromRGB(72, 202, 228) 
 })
 
@@ -68,18 +68,18 @@ local Camera = Workspace.CurrentCamera
 getgenv().FOVRadius = getgenv().FOVRadius or 180
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
-getgenv().ShowFOV = true -- บังคับเปิดการแสดงผล FOV เริ่มต้น
+getgenv().ShowFOV = true 
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
-getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse/Touch" 
+getgenv().FOVPositionMode = "Middle" 
 getgenv().LockedPartName = "Head" 
 getgenv().CamlockEnabled = getgenv().CamlockEnabled or false
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
 
--- สร้างหน้าจอ GUI สำหรับปุ่มลอยมือถือ
+-- สร้างหน้าจอ GUI หลัก
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MobileAimUI"
+ScreenGui.Name = "MobileAimUI_Ultimate"
 ScreenGui.ResetOnSpawn = false
 pcall(function()
     ScreenGui.Parent = CoreGui
@@ -88,16 +88,45 @@ if not ScreenGui.Parent then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- ฟังก์ชันสร้างปุ่มลอยที่กดสลับสถานะและลากย้ายได้
+-- สร้างวงกลม FOV แบบ GUI (กลางจอถาวร ขึ้นชัวร์ 100%)
+local FOVFrame = Instance.new("Frame")
+FOVFrame.Name = "FOVCircleGUI"
+FOVFrame.BackgroundTransparency = 1
+FOVFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVFrame.Size = UDim2.new(0, getgenv().FOVRadius * 2, 0, getgenv().FOVRadius * 2)
+FOVFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+FOVFrame.Visible = getgenv().ShowFOV
+FOVFrame.Parent = ScreenGui
+
+local FOVStroke = Instance.new("UIStroke")
+FOVStroke.Color = CurrentThemeColor
+FOVStroke.Thickness = 1.5
+FOVStroke.Transparency = 0.3
+FOVStroke.Parent = FOVFrame
+
+local FOVCorners = Instance.new("UICorner")
+FOVCorners.CornerRadius = UDim.new(1, 0)
+FOVCorners.Parent = FOVFrame
+
+-- สร้างเส้น Tracer แบบ Frame
+local TracerFrame = Instance.new("Frame")
+TracerFrame.Name = "TracerGUI"
+TracerFrame.BackgroundColor3 = CurrentThemeColor
+TracerFrame.BorderSizePixel = 0
+TracerFrame.Size = UDim2.new(0, 0, 0, 0)
+TracerFrame.Visible = false
+TracerFrame.Parent = ScreenGui
+
+-- ฟังก์ชันสร้างปุ่มลอย (พร้อมระบบลากย้ายตำแหน่ง)
 local function CreateFloatingButton(name, text, defaultState, position, callback)
     local Button = Instance.new("TextButton")
     Button.Name = name
-    Button.Size = UDim2.new(0, 110, 0, 45)
+    Button.Size = UDim2.new(0, 110, 0, 42)
     Button.Position = position
     Button.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     Button.BorderSizePixel = 0
     Button.TextColor3 = defaultState and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 50, 50)
-    Button.TextSize = 14
+    Button.TextSize = 13
     Button.Font = Enum.Font.GothamBold
     Button.Text = text .. (defaultState and " ON" or " OFF")
     Button.Parent = ScreenGui
@@ -107,7 +136,7 @@ local function CreateFloatingButton(name, text, defaultState, position, callback
     UICorner.Parent = Button
 
     local UIStroke = Instance.new("UIStroke")
-    UIStroke.Color = Color3.fromRGB(50, 50, 50)
+    UIStroke.Color = Color3.fromRGB(60, 60, 60)
     UIStroke.Thickness = 1.5
     UIStroke.Parent = Button
 
@@ -141,7 +170,6 @@ local function CreateFloatingButton(name, text, defaultState, position, callback
         end
     end)
 
-    -- กดคลิกเพื่อเปิด-ปิด
     local activeState = defaultState
     Button.MouseButton1Click:Connect(function()
         activeState = not activeState
@@ -158,8 +186,8 @@ local function CreateFloatingButton(name, text, defaultState, position, callback
     return Button
 end
 
--- สร้างปุ่ม MENU, AIM, CamLock และ FOV บนจอ
-CreateFloatingButton("MenuButton", "MENU", true, UDim2.new(0, 50, 0, 90), function(state)
+-- สร้างปุ่มควบคุมทั้งหมดบนหน้าจอ
+CreateFloatingButton("MenuButton", "MENU", true, UDim2.new(0, 40, 0, 70), function(state)
     for _, child in ipairs(ScreenGui:GetChildren()) do
         if child:IsA("TextButton") and child.Name ~= "MenuButton" then
             child.Visible = state
@@ -167,57 +195,30 @@ CreateFloatingButton("MenuButton", "MENU", true, UDim2.new(0, 50, 0, 90), functi
     end
 end)
 
-CreateFloatingButton("AimButton", "AIM", getgenv().SilentAimEnabled, UDim2.new(0, 50, 0, 145), function(Value)
+CreateFloatingButton("AimButton", "AIM", getgenv().SilentAimEnabled, UDim2.new(0, 40, 0, 120), function(Value)
     getgenv().SilentAimEnabled = Value
     if not Value and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
-        if RedLine then RedLine.Visible = false end
+        TracerFrame.Visible = false
     end
 end)
 
-CreateFloatingButton("CamLockButton", "CamLock", getgenv().CamlockEnabled, UDim2.new(0, 50, 0, 200), function(Value)
+CreateFloatingButton("CamLockButton", "CamLock", getgenv().CamlockEnabled, UDim2.new(0, 40, 0, 170), function(Value)
     getgenv().CamlockEnabled = Value
     if not Value and not getgenv().SilentAimEnabled then
         getgenv().CurrentTarget = nil
-        if RedLine then RedLine.Visible = false end
+        TracerFrame.Visible = false
     end
 end)
 
-CreateFloatingButton("FOVButton", "FOV", getgenv().ShowFOV, UDim2.new(0, 50, 0, 255), function(Value)
+CreateFloatingButton("FOVButton", "FOV", getgenv().ShowFOV, UDim2.new(0, 40, 0, 220), function(Value)
     getgenv().ShowFOV = Value
-    if FOVCircle then
-        FOVCircle.Visible = Value
-    end
+    FOVFrame.Visible = Value
 end)
 
--- สร้างวงกลม FOV และเส้น Tracer แบบ Drawing
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = getgenv().ShowFOV
-FOVCircle.Filled = false
-FOVCircle.Thickness = 1.5
-FOVCircle.Color = CurrentThemeColor
-FOVCircle.Transparency = 0.7
-
-local RedLine = Drawing.new("Line")
-RedLine.Visible = false
-RedLine.Thickness = 1.5
-RedLine.Color = CurrentThemeColor
-RedLine.Transparency = 0.8
-
-local LastTouchPosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        LastTouchPosition = Vector2.new(input.Position.X, input.Position.Y)
-    end
-end)
-
-UserInputService.TouchMoved:Connect(function(touch)
-    LastTouchPosition = Vector2.new(touch.Position.X, touch.Position.Y)
-end)
-
-UserInputService.TouchStarted:Connect(function(touch)
-    LastTouchPosition = Vector2.new(touch.Position.X, touch.Position.Y)
+CreateFloatingButton("TracerButton", "Tracer", getgenv().ShowTracer, UDim2.new(0, 40, 0, 270), function(Value)
+    getgenv().ShowTracer = Value
+    if not Value then TracerFrame.Visible = false end
 end)
 
 local function ShouldIgnoreTarget(targetCharacter)
@@ -232,30 +233,6 @@ local function ShouldIgnoreTarget(targetCharacter)
         return true
     end
     return false
-end
-
-local function GetReferencePosition()
-    local viewportSize = Camera.ViewportSize
-    local centerPos = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-
-    if getgenv().FOVPositionMode == "Middle" then
-        return centerPos
-    else
-        if not UserInputService.TouchEnabled then
-            local success, mouseLoc = pcall(function()
-                return UserInputService:GetMouseLocation()
-            end)
-            if success and mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
-                LastTouchPosition = mouseLoc
-            end
-        else
-            local touches = UserInputService:GetTouches()
-            if #touches > 0 then
-                LastTouchPosition = Vector2.new(touches[1].Position.X, touches[1].Position.Y)
-            end
-        end
-        return LastTouchPosition
-    end
 end
 
 local function GetTargetInFOV(refPos)
@@ -293,7 +270,7 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
--- ระบบ Metatable Hook ดั้งเดิม
+-- Metatable Hook สำหรับระบบล็อกเป้าหมาย
 local SuccessMouse, MouseObj = pcall(function()
     return LocalPlayer:GetMouse()
 end)
@@ -334,49 +311,42 @@ end)
 
 setreadonly(gmt, true)
 
--- ลูปการทำงานหลัก
+-- ลูปการทำงานหลัก (RenderStepped)
 RunService.RenderStepped:Connect(function()
-    local refPos = GetReferencePosition()
-    
-    if FOVCircle then
-        FOVCircle.Position = refPos
-        FOVCircle.Radius = getgenv().FOVRadius
-        FOVCircle.Visible = getgenv().ShowFOV
-        FOVCircle.Color = CurrentThemeColor
-    end
+    local viewportSize = Camera.ViewportSize
+    local centerPos = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+
+    -- อัปเดตตำแหน่งวงกลมให้อยู่กลางจอ
+    FOVFrame.Size = UDim2.new(0, getgenv().FOVRadius * 2, 0, getgenv().FOVRadius * 2)
+    FOVFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    FOVFrame.Visible = getgenv().ShowFOV
 
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
-        if RedLine then RedLine.Visible = false end
+        TracerFrame.Visible = false
         return
     end
 
-    getgenv().CurrentTarget = GetTargetInFOV(refPos)
+    getgenv().CurrentTarget = GetTargetInFOV(centerPos)
 
     -- จัดการเส้น Tracer
-    if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine then
-        local myChar = LocalPlayer.Character
-        local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
+    if getgenv().CurrentTarget and getgenv().ShowTracer then
+        local targetScreenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
+        if onScreen then
+            local startPos = Vector2.new(viewportSize.X / 2, viewportSize.Y)
+            local endPos = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+            local distance = (endPos - startPos).Magnitude
+            local midPoint = (startPos + endPos) / 2
 
-        if myHead then
-            local headScreenPos, headOnScreen = Camera:WorldToViewportPoint(myHead.Position)
-            local targetScreenPos, targetOnScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
-
-            if targetOnScreen and headOnScreen then
-                RedLine.From = Vector2.new(headScreenPos.X, headScreenPos.Y)
-                RedLine.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
-                RedLine.Color = CurrentThemeColor 
-                RedLine.Visible = true
-            else
-                RedLine.Visible = false
-            end
+            TracerFrame.Size = UDim2.new(0, 1.5, 0, distance)
+            TracerFrame.Position = UDim2.new(0, midPoint.X, 0, midPoint.Y)
+            TracerFrame.Rotation = math.deg(math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)) - 90
+            TracerFrame.Visible = true
         else
-            RedLine.Visible = false
+            TracerFrame.Visible = false
         end
     else
-        if RedLine then 
-            RedLine.Visible = false 
-        end
+        TracerFrame.Visible = false
     end
 end)
 
