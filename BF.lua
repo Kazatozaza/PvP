@@ -57,7 +57,6 @@ local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
 
 
 
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -66,21 +65,22 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
-local FOVRadius = 180
-local MaxDistance = 800
-local SilentAimEnabled = true
-local ShowFOV = true
-local ShowTracer = true
-local CurrentTarget = nil
+-- ใช้ getgenv() ทั้งหมดเพื่อให้ UI และระบบหลักใช้ตัวแปรชุดเดียวกัน 100%
+getgenv().FOVRadius = getgenv().FOVRadius or 180
+getgenv().MaxDistance = getgenv().MaxDistance or 800
+getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
+getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
+getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
+getgenv().CurrentTarget = nil
 
-local FOVPositionMode = "Mouse/Touch" -- เลือกได้: "Mouse/Touch" หรือ "Middle" (แนะนำ "Middle" สำหรับมือถือ)
-local LockTargetEnabled = false 
-local LockedPartName = "Head" 
+getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse/Touch" 
+getgenv().LockTargetEnabled = false 
+getgenv().LockedPartName = "Head" 
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
 
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = ShowFOV
+FOVCircle.Visible = getgenv().ShowFOV
 FOVCircle.Filled = false
 FOVCircle.Thickness = 1.5
 FOVCircle.Color = CurrentThemeColor
@@ -92,17 +92,14 @@ RedLine.Thickness = 1.5
 RedLine.Color = CurrentThemeColor
 RedLine.Transparency = 0.8
 
--- ตั้งค่าเริ่มต้นให้ตำแหน่งอยู่กลางจอ
 local LastTouchPosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
--- อัปเดตตำแหน่งเมาส์บน PC
 UserInputService.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then
         LastTouchPosition = Vector2.new(input.Position.X, input.Position.Y)
     end
 end)
 
--- อัปเดตตำแหน่งการสัมผัสบนมือถือ
 UserInputService.TouchMoved:Connect(function(touch)
     LastTouchPosition = touch.Position
 end)
@@ -125,7 +122,7 @@ local function ShouldIgnoreTarget(targetCharacter)
 end
 
 local function GetReferencePosition()
-    if FOVPositionMode == "Middle" then
+    if getgenv().FOVPositionMode == "Middle" then
         local viewportSize = Camera.ViewportSize
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     else
@@ -134,13 +131,11 @@ local function GetReferencePosition()
             if #touches > 0 then
                 LastTouchPosition = Vector2.new(touches[1].Position.X, touches[1].Position.Y)
             else
-                -- ถ้าไม่ได้สัมผัสจอ ให้ใช้กึ่งกลางจอเป็นค่าสำรอง ป้องกันวงกลมหาย
                 local viewportSize = Camera.ViewportSize
                 LastTouchPosition = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
             end
             return LastTouchPosition
         else
-            -- สำหรับ PC
             pcall(function()
                 local mouseLoc = UserInputService:GetMouseLocation()
                 if mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
@@ -154,27 +149,27 @@ end
 
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
-    local ShortestDistance = FOVRadius
+    local ShortestDistance = getgenv().FOVRadius
 
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            local targetPart = player.Character:FindFirstChild(LockedPartName) or player.Character:FindFirstChild("HumanoidRootPart")
+            local targetPart = player.Character:FindFirstChild(getgenv().LockedPartName) or player.Character:FindFirstChild("HumanoidRootPart")
             local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
 
             if targetPart and humanoid and humanoid.Health > 0 then
                 if not ShouldIgnoreTarget(player.Character) then
                     local worldDistance = myHRP and (targetPart.Position - myHRP.Position).Magnitude or 0
-                    if worldDistance <= MaxDistance then
+                    if worldDistance <= getgenv().MaxDistance then
                         local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
 
                         if onScreen then
                             local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
                             local distance = (targetPos2D - refPos).Magnitude
 
-                            if distance <= FOVRadius and distance < ShortestDistance then
+                            if distance <= getgenv().FOVRadius and distance < ShortestDistance then
                                 ShortestDistance = distance
                                 ClosestTarget = targetPart
                             end
@@ -197,11 +192,11 @@ local oldNamecall = gmt.__namecall
 setreadonly(gmt, false)
 
 gmt.__index = newcclosure(function(self, idx)
-    if SilentAimEnabled and CurrentTarget and SuccessMouse and self == MouseObj then
+    if getgenv().SilentAimEnabled and getgenv().CurrentTarget and SuccessMouse and self == MouseObj then
         if idx == "Hit" or idx == "hit" then
-            return CurrentTarget.CFrame
+            return getgenv().CurrentTarget.CFrame
         elseif idx == "Target" or idx == "target" then
-            return CurrentTarget
+            return getgenv().CurrentTarget
         end
     end
     return oldIndex(self, idx)
@@ -211,12 +206,12 @@ gmt.__namecall = newcclosure(function(self, ...)
     local method = getnamecallmethod()
     local args = { ... }
 
-    if SilentAimEnabled and CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
+    if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
         for i, arg in ipairs(args) do
             if typeof(arg) == "Vector3" then
-                args[i] = CurrentTarget.Position
+                args[i] = getgenv().CurrentTarget.Position
             elseif typeof(arg) == "CFrame" then
-                args[i] = CurrentTarget.CFrame
+                args[i] = getgenv().CurrentTarget.CFrame
             end
         end
         return oldNamecall(self, table.unpack(args))
@@ -231,8 +226,8 @@ local updateInterval = 0.05
 local timeSinceLastUpdate = 0
 
 RunService.RenderStepped:Connect(function(dt)
-    if not SilentAimEnabled then
-        CurrentTarget = nil
+    if not getgenv().SilentAimEnabled then
+        getgenv().CurrentTarget = nil
         if RedLine then RedLine.Visible = false end
         if FOVCircle then FOVCircle.Visible = false end
         return
@@ -241,8 +236,8 @@ RunService.RenderStepped:Connect(function(dt)
     local refPos = GetReferencePosition()
     if FOVCircle then
         FOVCircle.Position = refPos
-        FOVCircle.Radius = FOVRadius
-        FOVCircle.Visible = ShowFOV
+        FOVCircle.Radius = getgenv().FOVRadius
+        FOVCircle.Visible = getgenv().ShowFOV
         FOVCircle.Color = CurrentThemeColor
     end
 
@@ -250,60 +245,60 @@ RunService.RenderStepped:Connect(function(dt)
     if timeSinceLastUpdate >= updateInterval then
         timeSinceLastUpdate = 0
         
-        if LockTargetEnabled and CurrentTarget and CurrentTarget.Parent then
-            if ShouldIgnoreTarget(CurrentTarget.Parent) then
-                CurrentTarget = nil
+        if getgenv().LockTargetEnabled and getgenv().CurrentTarget and getgenv().CurrentTarget.Parent then
+            if ShouldIgnoreTarget(getgenv().CurrentTarget.Parent) then
+                getgenv().CurrentTarget = nil
             else
                 local myChar = LocalPlayer.Character
                 local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                local worldDistance = myHRP and (CurrentTarget.Position - myHRP.Position).Magnitude or (MaxDistance + 1)
+                local worldDistance = myHRP and (getgenv().CurrentTarget.Position - myHRP.Position).Magnitude or (getgenv().MaxDistance + 1)
                 
-                local screenPos, onScreen = Camera:WorldToViewportPoint(CurrentTarget.Position)
+                local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
                 local inFOV = false
                 if onScreen then
                     local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                    if (targetPos2D - refPos).Magnitude <= FOVRadius then
+                    if (targetPos2D - refPos).Magnitude <= getgenv().FOVRadius then
                         inFOV = true
                     end
                 end
 
-                if worldDistance > MaxDistance or not inFOV then
-                    CurrentTarget = nil
+                if worldDistance > getgenv().MaxDistance or not inFOV then
+                    getgenv().CurrentTarget = nil
                 end
             end
         end
 
-        if not CurrentTarget then
-            CurrentTarget = GetTargetInFOV(refPos)
+        if not getgenv().CurrentTarget then
+            getgenv().CurrentTarget = GetTargetInFOV(refPos)
         end
     end
 
-    if CurrentTarget then
-        local screenPos, onScreen = Camera:WorldToViewportPoint(CurrentTarget.Position)
+    if getgenv().CurrentTarget then
+        local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
         if onScreen then
             local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-            if (targetPos2D - refPos).Magnitude > FOVRadius then
-                CurrentTarget = nil
+            if (targetPos2D - refPos).Magnitude > getgenv().FOVRadius then
+                getgenv().CurrentTarget = nil
             end
         else
-            CurrentTarget = nil
+            getgenv().CurrentTarget = nil
         end
     end
 
-    if CurrentTarget and ShowTracer and RedLine then
+    if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine then
         local myChar = LocalPlayer.Character
         local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
         local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
         local validDistance = false
 
-        if myHRP and CurrentTarget.Parent then
-            local worldDistance = (CurrentTarget.Position - myHRP.Position).Magnitude
-            validDistance = worldDistance <= MaxDistance
+        if myHRP and getgenv().CurrentTarget.Parent then
+            local worldDistance = (getgenv().CurrentTarget.Position - myHRP.Position).Magnitude
+            validDistance = worldDistance <= getgenv().MaxDistance
         end
 
         if validDistance and myHead then
             local headScreenPos, headOnScreen = Camera:WorldToViewportPoint(myHead.Position)
-            local targetScreenPos, targetOnScreen = Camera:WorldToViewportPoint(CurrentTarget.Position)
+            local targetScreenPos, targetOnScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
 
             if targetOnScreen and headOnScreen then
                 RedLine.From = Vector2.new(headScreenPos.X, headScreenPos.Y)
@@ -315,7 +310,7 @@ RunService.RenderStepped:Connect(function(dt)
             end
         else
             RedLine.Visible = false
-            CurrentTarget = nil
+            getgenv().CurrentTarget = nil
         end
     else
         if RedLine then 
@@ -323,7 +318,6 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
-
 
 
 
@@ -1372,15 +1366,14 @@ Main:CreateToggle({
 
 local AimSection = Main:CreateSection({ Name = "Visual & Aim Settings" })
 
--- UI Toggles และ Dropdowns (เชื่อมต่อค่าตัวแปรหลักโดยตรง เพื่อให้มือถือใช้งานได้ปกติ)
 Main:CreateToggle({
     name = "Silent Aim",
     flag = "SilentAimToggle",
-    value = SilentAimEnabled,
+    value = getgenv().SilentAimEnabled,
     callback = function(Value)
-        SilentAimEnabled = Value
+        getgenv().SilentAimEnabled = Value
         if not Value then
-            CurrentTarget = nil
+            getgenv().CurrentTarget = nil
             if RedLine then RedLine.Visible = false end
         end
     end,
@@ -1389,9 +1382,9 @@ Main:CreateToggle({
 Main:CreateToggle({
     name = "Show FOV Circle",
     flag = "ShowFOVToggle",
-    value = ShowFOV,
+    value = getgenv().ShowFOV,
     callback = function(Value)
-        ShowFOV = Value
+        getgenv().ShowFOV = Value
         if FOVCircle then FOVCircle.Visible = Value end
     end,
 })
@@ -1399,9 +1392,9 @@ Main:CreateToggle({
 Main:CreateToggle({
     name = "Show Red Snapline",
     flag = "ShowTracerToggle",
-    value = ShowTracer,
+    value = getgenv().ShowTracer,
     callback = function(Value)
-        ShowTracer = Value
+        getgenv().ShowTracer = Value
         if not Value and RedLine then
             RedLine.Visible = false
         end
@@ -1413,11 +1406,11 @@ local AimConfigSection = Main:CreateSection({ Name = "Aim Configurations" })
 Main:CreateDropdown({
     name = "FOV Position",
     multiSelect = false,
-    options = { "Mouse/Touch", "Middle" }, -- เปลี่ยนจาก Cursor เป็น Mouse/Touch เพื่อรองรับมือถือเต็มรูปแบบ
-    value = FOVPositionMode,
+    options = { "Mouse/Touch", "Middle" },
+    value = getgenv().FOVPositionMode,
     callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
-        FOVPositionMode = mode
+        getgenv().FOVPositionMode = mode
     end,
 })
 
@@ -1429,11 +1422,11 @@ Main:CreateDropdown({
     callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
         if mode == "180°" then
-            FOVRadius = 180
+            getgenv().FOVRadius = 180
         elseif mode == "360°" then
-            FOVRadius = 9999 
+            getgenv().FOVRadius = 9999 
         else
-            FOVRadius = 180 
+            getgenv().FOVRadius = 180 
         end
     end,
 })
@@ -1443,9 +1436,9 @@ Main:CreateSlider({
     flag = "FOVRadiusSlider",
     range = { 50, 500 },
     increment = 1,
-    value = FOVRadius,
+    value = getgenv().FOVRadius,
     callback = function(Value)
-        FOVRadius = Value
+        getgenv().FOVRadius = Value
     end,
 })
 
@@ -1454,11 +1447,12 @@ Main:CreateSlider({
     flag = "MaxDistanceSlider",
     range = { 50, 800 },
     increment = 1,
-    value = MaxDistance,
+    value = getgenv().MaxDistance,
     callback = function(Value)
-        MaxDistance = Value
+        getgenv().MaxDistance = Value
     end,
 })
+
 Main:CreateColorPicker({
     name = "Highlight",
     color = Color3.fromRGB(96, 205, 255),
