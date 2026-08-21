@@ -32,7 +32,7 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.3 Free", 
+    text = "Version1.5 Free", 
     color = Color3.fromRGB(72, 202, 228) -- โทนสีฟ้าครามสว่างสดใส (Cyan Glow)
 })
 
@@ -51,8 +51,6 @@ local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
 
 
 
-
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -61,21 +59,19 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- ตัวแปรตั้งค่าระบบ (ใช้ getgenv เพื่อให้ลิงก์กับเมนูปุ่มกดได้ง่าย)
+-- ตัวแปรตั้งค่าระบบ
 getgenv().FOVRadius = getgenv().FOVRadius or 180
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
-
-getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle" 
-getgenv().LockTargetEnabled = getgenv().LockTargetEnabled ~= false and true
+getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse/Touch" 
 getgenv().LockedPartName = "Head" 
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
 
--- สร้างวงกลม FOV และเส้น Tracer
+-- สร้างวงกลม FOV และเส้น Tracer แบบ Drawing ดั้งเดิม
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = getgenv().ShowFOV
 FOVCircle.Filled = false
@@ -146,7 +142,7 @@ end
 
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
-    local ShortestDistance = getgenv().FOVRadius
+    local ShortestDistance = (getgenv().FOVRadius >= 9999) and 99999 or getgenv().FOVRadius
 
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
@@ -166,7 +162,7 @@ local function GetTargetInFOV(refPos)
                             local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
                             local distance = (targetPos2D - refPos).Magnitude
 
-                            if distance <= getgenv().FOVRadius and distance < ShortestDistance then
+                            if distance <= ShortestDistance then
                                 ShortestDistance = distance
                                 ClosestTarget = targetPart
                             end
@@ -179,11 +175,11 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
+-- ระบบ Metatable Hook ดั้งเดิม (ยิงและสกิลโดนชัวร์)
 local SuccessMouse, MouseObj = pcall(function()
     return LocalPlayer:GetMouse()
 end)
 
--- ระบบ Metatable Hook เพื่อบังคับกระสุนและข้อมูลการกดสกิลให้พุ่งหาเป้าหมาย
 local gmt = getrawmetatable(game)
 local oldIndex = gmt.__index
 local oldNamecall = gmt.__namecall
@@ -204,18 +200,12 @@ gmt.__namecall = newcclosure(function(self, ...)
     local method = getnamecallmethod()
     local args = { ... }
 
-    -- ดักจับการส่งข้อมูลสกิลหรือการโจมตีผ่าน Remote เพื่อเปลี่ยนพิกัดให้เล็งโดนตัวเป้าหมายอัตโนมัติ
     if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
         for i, arg in ipairs(args) do
             if typeof(arg) == "Vector3" then
                 args[i] = getgenv().CurrentTarget.Position
             elseif typeof(arg) == "CFrame" then
                 args[i] = getgenv().CurrentTarget.CFrame
-            elseif typeof(arg) == "Instance" and arg:IsA("BasePart") then
-                -- รองรับบางเกมที่ส่งพาร์ทเป้าหมายไปกับสกิล
-                if arg.Name == "HumanoidRootPart" or arg.Name == "Head" then
-                    args[i] = getgenv().CurrentTarget
-                end
             end
         end
         return oldNamecall(self, table.unpack(args))
@@ -226,18 +216,10 @@ end)
 
 setreadonly(gmt, true)
 
-local updateInterval = 0.05 
-local timeSinceLastUpdate = 0
-
-RunService.RenderStepped:Connect(function(dt)
-    if not getgenv().SilentAimEnabled then
-        getgenv().CurrentTarget = nil
-        if RedLine then RedLine.Visible = false end
-        if FOVCircle then FOVCircle.Visible = false end
-        return
-    end
-
+-- ลูปการทำงานหลัก
+RunService.RenderStepped:Connect(function()
     local refPos = GetReferencePosition()
+    
     if FOVCircle then
         FOVCircle.Position = refPos
         FOVCircle.Radius = getgenv().FOVRadius
@@ -245,62 +227,20 @@ RunService.RenderStepped:Connect(function(dt)
         FOVCircle.Color = CurrentThemeColor
     end
 
-    timeSinceLastUpdate = timeSinceLastUpdate + dt
-    if timeSinceLastUpdate >= updateInterval then
-        timeSinceLastUpdate = 0
-        
-        if getgenv().LockTargetEnabled and getgenv().CurrentTarget and getgenv().CurrentTarget.Parent then
-            if ShouldIgnoreTarget(getgenv().CurrentTarget.Parent) then
-                getgenv().CurrentTarget = nil
-            else
-                local myChar = LocalPlayer.Character
-                local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                local worldDistance = myHRP and (getgenv().CurrentTarget.Position - myHRP.Position).Magnitude or (getgenv().MaxDistance + 1)
-                
-                local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
-                local inFOV = false
-                if onScreen then
-                    local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                    if (targetPos2D - refPos).Magnitude <= getgenv().FOVRadius then
-                        inFOV = true
-                    end
-                end
-
-                if worldDistance > getgenv().MaxDistance or not inFOV then
-                    getgenv().CurrentTarget = nil
-                end
-            end
-        end
-
-        if not getgenv().CurrentTarget then
-            getgenv().CurrentTarget = GetTargetInFOV(refPos)
-        end
+    if not getgenv().SilentAimEnabled then
+        getgenv().CurrentTarget = nil
+        if RedLine then RedLine.Visible = false end
+        return
     end
 
-    if getgenv().CurrentTarget then
-        local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
-        if onScreen then
-            local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-            if (targetPos2D - refPos).Magnitude > getgenv().FOVRadius then
-                getgenv().CurrentTarget = nil
-            end
-        else
-            getgenv().CurrentTarget = nil
-        end
-    end
+    getgenv().CurrentTarget = GetTargetInFOV(refPos)
 
+    -- จัดการเส้น Tracer ดั้งเดิม
     if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine then
         local myChar = LocalPlayer.Character
         local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
-        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-        local validDistance = false
 
-        if myHRP and getgenv().CurrentTarget.Parent then
-            local worldDistance = (getgenv().CurrentTarget.Position - myHRP.Position).Magnitude
-            validDistance = worldDistance <= getgenv().MaxDistance
-        end
-
-        if validDistance and myHead then
+        if myHead then
             local headScreenPos, headOnScreen = Camera:WorldToViewportPoint(myHead.Position)
             local targetScreenPos, targetOnScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
 
@@ -314,7 +254,6 @@ RunService.RenderStepped:Connect(function(dt)
             end
         else
             RedLine.Visible = false
-            getgenv().CurrentTarget = nil
         end
     else
         if RedLine then 
@@ -1345,7 +1284,41 @@ local function SetAutoRaceV4(state)
     end)
 end
 
+-- ตัวแปรตั้งค่า Hitbox
+getgenv().HitboxEnabled = getgenv().HitboxEnabled or false
+getgenv().HitboxSize = getgenv().HitboxSize or 5 -- ขนาดความกว้าง (ปกติของเกมมักจะอยู่ที่ 2 หรือ 3)
+getgenv().HitboxPartName = getgenv().HitboxPartName or "HumanoidRootPart" -- เลือกขยายส่วนไหน (HumanoidRootPart หรือ Head)
+getgenv().HitboxTransparency = 0.7 -- ความโปร่งใสของ Hitbox ที่ขยาย (0 คือทึบมองเห็น, 0.5 กำลังดี, 1 คือล่องหน)
 
+RunService.RenderStepped:Connect(function()
+    if not getgenv().HitboxEnabled then return end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local targetPlayer = Players:GetPlayerFromCharacter(player.Character)
+            -- เช็คทีม (ไม่ขยาย Hitbox เพื่อนร่วมทีม)
+            if targetPlayer and targetPlayer.Team ~= LocalPlayer.Team then
+                local part = player.Character:FindFirstChild(getgenv().HitboxPartName)
+                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                
+                if part and humanoid and humanoid.Health > 0 then
+                    -- บันทึกขนาดเดิมไว้ถ้ายังไม่มี (ป้องกันเกมบัณทับซ้อน)
+                    if not part:FindFirstChild("OriginalSize") then
+                        local sizeObj = Instance.new("Vector3Value")
+                        sizeObj.Name = "OriginalSize"
+                        sizeObj.Value = part.Size
+                        sizeObj.Parent = part
+                    end
+                    
+                    -- ขยายขนาด Hitbox ตามที่ตั้งค่า
+                    part.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                    part.Transparency = getgenv().HitboxTransparency
+                    part.CanCollide = false -- ปิดการชนเพื่อไม่ให้ตัวละครติดหรือเดินชน
+                end
+            end
+        end
+    end
+end)
 
 
 --  ปุ่มทั้งหมด=================================================================
@@ -1375,20 +1348,6 @@ Main:CreateToggle({
     callback = function(Value)
         getgenv().SilentAimEnabled = Value
         if not Value and not getgenv().CamlockEnabled then
-            getgenv().CurrentTarget = nil
-            if RedLine then RedLine.Visible = false end
-        end
-    end,
-})
-
--- ปุ่มแยกสำหรับล็อกจอหาศัตรูโดยเฉพาะ
-Main:CreateToggle({
-    name = "Lock onto enemies ",
-    flag = "CamlockToggle",
-    value = getgenv().CamlockEnabled,
-    callback = function(Value)
-        getgenv().CamlockEnabled = Value
-        if not Value then
             getgenv().CurrentTarget = nil
             if RedLine then RedLine.Visible = false end
         end
@@ -1468,6 +1427,8 @@ Main:CreateSlider({
         getgenv().MaxDistance = Value
     end,
 })
+
+
 Main:CreateColorPicker({
     name = "Highlight",
     color = Color3.fromRGB(96, 205, 255),
@@ -1475,6 +1436,47 @@ Main:CreateColorPicker({
         CurrentThemeColor = color 
     end,
 })
+
+
+
+local HitboxSection = Main:CreateSection({ Name = "Hitbox Expander" })
+
+Main:CreateToggle({
+    name = "ขยาย Hitbox ศัตรู",
+    flag = "HitboxToggle",
+    value = getgenv().HitboxEnabled,
+    callback = function(Value)
+        getgenv().HitboxEnabled = Value
+        -- ถ้าปิด ให้คืนค่าขนาดเดิมของตัวละครทันที
+        if not Value then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local part = player.Character:FindFirstChild(getgenv().HitboxPartName)
+                    if part then
+                        local orig = part:FindFirstChild("OriginalSize")
+                        if orig then
+                            part.Size = orig.Value
+                            part.Transparency = 1 -- กลับเป็นล่องหนปกติของเกม
+                            part.CanCollide = true
+                        end
+                    end
+                end
+            end
+        end
+    end,
+})
+
+Main:CreateSlider({
+    name = "ขนาด Hitbox",
+    flag = "HitboxSizeSlider",
+    range = { 3, 50 },
+    increment = 1,
+    value = getgenv().HitboxSize,
+    callback = function(Value)
+        getgenv().HitboxSize = Value
+    end,
+})
+
 
 -- General Tab Elements
 local CharacterSection = General:CreateSection({ Name = "Character & Abilities" })
