@@ -73,7 +73,7 @@ local ShowFOV = true
 local ShowTracer = true
 local CurrentTarget = nil
 
-local FOVPositionMode = "Mouse/Touch" -- "Mouse/Touch" หรือ "Middle"
+local FOVPositionMode = "Mouse/Touch" -- เลือกได้: "Mouse/Touch" หรือ "Middle" (แนะนำ "Middle" สำหรับมือถือ)
 local LockTargetEnabled = false 
 local LockedPartName = "Head" 
 
@@ -92,7 +92,7 @@ RedLine.Thickness = 1.5
 RedLine.Color = CurrentThemeColor
 RedLine.Transparency = 0.8
 
--- ตั้งค่าเริ่มต้นให้ตำแหน่งอยู่กลางจอก่อน เพื่อป้องกันไม่ให้ค่าเป็น (0,0) ในเฟรมแรก
+-- ตั้งค่าเริ่มต้นให้ตำแหน่งอยู่กลางจอ
 local LastTouchPosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 -- อัปเดตตำแหน่งเมาส์บน PC
@@ -102,7 +102,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- อัปเดตตำแหน่งการสัมผัสบนมือถือ (ใช้ TouchMoved และ TouchStarted)
+-- อัปเดตตำแหน่งการสัมผัสบนมือถือ
 UserInputService.TouchMoved:Connect(function(touch)
     LastTouchPosition = touch.Position
 end)
@@ -129,12 +129,14 @@ local function GetReferencePosition()
         local viewportSize = Camera.ViewportSize
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     else
-        -- ถ้าเล่นในมือถือและไม่มีการสัมผัส ให้ใช้ตำแหน่งกลางจอสำรองไว้ก่อนเพื่อไม่ให้ FOV หาย
-        if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
-            -- ถ้า LastTouchPosition ยังเป็นค่าเริ่มต้น หรือไม่ได้สัมผัส ให้เช็คว่ามีนิ้วแตะอยู่ไหม
+        if UserInputService.TouchEnabled then
             local touches = UserInputService:GetTouches()
             if #touches > 0 then
                 LastTouchPosition = Vector2.new(touches[1].Position.X, touches[1].Position.Y)
+            else
+                -- ถ้าไม่ได้สัมผัสจอ ให้ใช้กึ่งกลางจอเป็นค่าสำรอง ป้องกันวงกลมหาย
+                local viewportSize = Camera.ViewportSize
+                LastTouchPosition = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
             end
             return LastTouchPosition
         else
@@ -185,7 +187,6 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
--- ป้องกัน Error กรณี GetMouse() ไม่มีผลในบางแพลตฟอร์ม
 local SuccessMouse, MouseObj = pcall(function()
     return LocalPlayer:GetMouse()
 end)
