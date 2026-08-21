@@ -309,10 +309,6 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
-โค้ดนี้จะแยกระหว่าง PC และ Mobile ให้เองอย่างแม่นยำครับ ลองนำไปทดสอบดูอีกครั้งนะครับว่าเป็นอย่างไรบ้าง?
-
-
-
 
 
 
