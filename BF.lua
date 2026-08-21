@@ -74,7 +74,7 @@ local ShowFOV = true
 local ShowTracer = true
 local CurrentTarget = nil
 
-local FOVPositionMode = "Middle" -- "Middle" (กลางจอ) หรือ "Mouse/Touch" (ตามเมาส์/นิ้ว)
+local FOVPositionMode = "Mouse/Touch" -- เปลี่ยนเป็น "Mouse/Touch" เพื่อให้ตามเมาส์/นิ้ว หรือ "Middle" สำหรับกลางจอ
 local LockTargetEnabled = false 
 local LockedPartName = "Head" 
 
@@ -96,6 +96,14 @@ RedLine.Transparency = 0.8
 -- ตัวแปรเช็คแพลตฟอร์มและเก็บตำแหน่ง
 local LastTouchPosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
+-- อัปเดตตำแหน่งเมาส์แบบ Real-time สำหรับคอมพิวเตอร์
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        LastTouchPosition = Vector2.new(input.Position.X, input.Position.Y)
+    end
+end)
+
+-- รองรับการสัมผัสบนมือถือ
 UserInputService.TouchMoved:Connect(function(touch)
     LastTouchPosition = touch.Position
 end)
@@ -122,18 +130,14 @@ local function GetReferencePosition()
         local viewportSize = Camera.ViewportSize
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     else
-        -- ถ้าเป็นคอมพิวเตอร์ ใช้ MouseLocation, ถ้าเป็นมือถือ ใช้ LastTouchPosition
-        if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
-            return LastTouchPosition
-        else
-            pcall(function()
-                local mouseLoc = UserInputService:GetMouseLocation()
-                if mouseLoc then
-                    LastTouchPosition = mouseLoc
-                end
-            end)
-            return LastTouchPosition
-        end
+        -- ดึงพิกัดเมาส์หรือตำแหน่งนิ้วล่าสุด
+        pcall(function()
+            local mouseLoc = UserInputService:GetMouseLocation()
+            if mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
+                LastTouchPosition = mouseLoc
+            end
+        end)
+        return LastTouchPosition
     end
 end
 
@@ -309,6 +313,10 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
+
+
+
+
 
 
 
