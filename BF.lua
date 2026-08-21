@@ -32,7 +32,7 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.0 Free", 
+    text = "Version1.8 Free", 
     color = Color3.fromRGB(72, 202, 228) 
 })
 
@@ -68,7 +68,7 @@ local Camera = Workspace.CurrentCamera
 getgenv().FOVRadius = getgenv().FOVRadius or 180
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
-getgenv().ShowFOV = true -- บังคับเปิดการแสดงผล FOV
+getgenv().ShowFOV = true -- บังคับเปิดการแสดงผล FOV เริ่มต้น
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
 getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse/Touch" 
@@ -158,7 +158,7 @@ local function CreateFloatingButton(name, text, defaultState, position, callback
     return Button
 end
 
--- สร้างปุ่ม MENU, AIM, และ CamLock ตามรูป
+-- สร้างปุ่ม MENU, AIM, CamLock และ FOV บนจอ
 CreateFloatingButton("MenuButton", "MENU", true, UDim2.new(0, 50, 0, 90), function(state)
     for _, child in ipairs(ScreenGui:GetChildren()) do
         if child:IsA("TextButton") and child.Name ~= "MenuButton" then
@@ -180,6 +180,13 @@ CreateFloatingButton("CamLockButton", "CamLock", getgenv().CamlockEnabled, UDim2
     if not Value and not getgenv().SilentAimEnabled then
         getgenv().CurrentTarget = nil
         if RedLine then RedLine.Visible = false end
+    end
+end)
+
+CreateFloatingButton("FOVButton", "FOV", getgenv().ShowFOV, UDim2.new(0, 50, 0, 255), function(Value)
+    getgenv().ShowFOV = Value
+    if FOVCircle then
+        FOVCircle.Visible = Value
     end
 end)
 
