@@ -32,20 +32,19 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.5 Free", 
-    color = Color3.fromRGB(72, 202, 228) -- โทนสีฟ้าครามสว่างสดใส (Cyan Glow)
+    text = "Version1.3 Free", 
+    color = Color3.fromRGB(72, 202, 228) 
 })
-
-
-
-
-
 
 
 local Home = window:CreateTab({ name = "Home", icon = 125823673784681 })
 local General = window:CreateTab({ name = "General", icon = 93364949241311 })
 local Main = window:CreateTab({ name = "Combat", icon = 125823673784681 })
 local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
+
+
+
+
 
 
 
@@ -71,7 +70,7 @@ getgenv().LockedPartName = "Head"
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
 
--- สร้างวงกลม FOV และเส้น Tracer แบบ Drawing ดั้งเดิม
+-- สร้างวงกลม FOV และเส้น Tracer
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = getgenv().ShowFOV
 FOVCircle.Filled = false
@@ -85,6 +84,7 @@ RedLine.Thickness = 1.5
 RedLine.Color = CurrentThemeColor
 RedLine.Transparency = 0.8
 
+-- ระบบจับตำแหน่งนิ้วสัมผัสบนมือถือ (Multi-touch & Touch Tracking)
 local LastTouchPosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 UserInputService.InputChanged:Connect(function(input)
@@ -94,16 +94,18 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 UserInputService.TouchMoved:Connect(function(touch)
-    LastTouchPosition = touch.Position
+    LastTouchPosition = Vector2.new(touch.Position.X, touch.Position.Y)
 end)
 
 UserInputService.TouchStarted:Connect(function(touch)
-    LastTouchPosition = touch.Position
+    LastTouchPosition = Vector2.new(touch.Position.X, touch.Position.Y)
 end)
 
+-- ฟังก์ชันตรวจสอบผู้เล่นที่ควรข้าม
 local function ShouldIgnoreTarget(targetCharacter)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
     if not targetPlayer then return true end
+    if targetPlayer == LocalPlayer then return true end
     if targetPlayer.Team == LocalPlayer.Team then
         return true
     end
@@ -114,32 +116,30 @@ local function ShouldIgnoreTarget(targetCharacter)
     return false
 end
 
+-- ฟังก์ชันหาจุดกึ่งกลางหรือตำแหน่งที่นิ้วสัมผัสอยู่ (รองรับมือถือ 100%)
 local function GetReferencePosition()
     if getgenv().FOVPositionMode == "Middle" then
         local viewportSize = Camera.ViewportSize
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     else
-        if UserInputService.TouchEnabled then
-            local touches = UserInputService:GetTouches()
-            if #touches > 0 then
-                LastTouchPosition = Vector2.new(touches[1].Position.X, touches[1].Position.Y)
-            else
-                local viewportSize = Camera.ViewportSize
-                LastTouchPosition = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-            end
-            return LastTouchPosition
+        -- ตรวจสอบการสัมผัสหน้าจอของมือถือ
+        local touches = UserInputService:GetTouches()
+        if #touches > 0 then
+            LastTouchPosition = Vector2.new(touches[1].Position.X, touches[1].Position.Y)
         else
-            pcall(function()
-                local mouseLoc = UserInputService:GetMouseLocation()
-                if mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
-                    LastTouchPosition = mouseLoc
-                end
+            -- ถ้าไม่ได้กดจออยู่ ให้เช็คเมาส์หรือใช้ตำแหน่งเดิมค้างไว้
+            local success, mouseLoc = pcall(function()
+                return UserInputService:GetMouseLocation()
             end)
-            return LastTouchPosition
+            if success and mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
+                LastTouchPosition = mouseLoc
+            end
         end
+        return LastTouchPosition
     end
 end
 
+-- ฟังก์ชันหาเป้าหมายในวงกลม FOV
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
     local ShortestDistance = (getgenv().FOVRadius >= 9999) and 99999 or getgenv().FOVRadius
@@ -175,7 +175,7 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
--- ระบบ Metatable Hook ดั้งเดิม (ยิงและสกิลโดนชัวร์)
+-- ระบบ Metatable Hook สำหรับดักการยิง (รองรับมือถือและคอมพิวเตอร์)
 local SuccessMouse, MouseObj = pcall(function()
     return LocalPlayer:GetMouse()
 end)
@@ -216,7 +216,7 @@ end)
 
 setreadonly(gmt, true)
 
--- ลูปการทำงานหลัก
+-- ลูปการทำงานหลัก (RenderStepped)
 RunService.RenderStepped:Connect(function()
     local refPos = GetReferencePosition()
     
@@ -235,7 +235,7 @@ RunService.RenderStepped:Connect(function()
 
     getgenv().CurrentTarget = GetTargetInFOV(refPos)
 
-    -- จัดการเส้น Tracer ดั้งเดิม
+    -- จัดการเส้น Tracer
     if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine then
         local myChar = LocalPlayer.Character
         local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
@@ -261,7 +261,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
 
 
 
