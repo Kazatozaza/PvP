@@ -32,7 +32,7 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.2 Free", 
+    text = "Version1.3 Free", 
     color = Color3.fromRGB(72, 202, 228) -- โทนสีฟ้าครามสว่างสดใส (Cyan Glow)
 })
 
@@ -54,6 +54,7 @@ local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
 
 
 
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -62,20 +63,23 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- ตัวแปรตั้งค่าระบบ (ใช้ getgenv เพื่อเชื่อมกับ UI)
+-- ตัวแปรตั้งค่าระบบ
 getgenv().FOVRadius = getgenv().FOVRadius or 180
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
-getgenv().CurrentTarget = nil
 
+-- เพิ่มตัวแปรปุ่มแยกเปิด-ปิดการล็อกจอ (Camlock)
+getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
+
+getgenv().CurrentTarget = nil
 getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse/Touch" 
 getgenv().LockedPartName = "Head" 
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
 
--- สร้างวงกลม FOV และเส้น Tracer (รองรับ Delta บนมือถือ)
+-- สร้างวงกลม FOV และเส้น Tracer
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = getgenv().ShowFOV
 FOVCircle.Filled = false
@@ -89,7 +93,6 @@ RedLine.Thickness = 1.5
 RedLine.Color = CurrentThemeColor
 RedLine.Transparency = 0.8
 
--- ค่าตำแหน่งอ้างอิงเริ่มต้น (ป้องกันค่าเป็น 0,0)
 local LastTouchPosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 UserInputService.InputChanged:Connect(function(input)
@@ -106,7 +109,6 @@ UserInputService.TouchStarted:Connect(function(touch)
     LastTouchPosition = touch.Position
 end)
 
--- ฟังก์ชันกรองเป้าหมาย (ข้ามทีมตัวเองและคนที่ตายแล้ว)
 local function ShouldIgnoreTarget(targetCharacter)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
     if not targetPlayer then return true end
@@ -120,7 +122,6 @@ local function ShouldIgnoreTarget(targetCharacter)
     return false
 end
 
--- คำนวณตำแหน่งจุดศูนย์กลางของ FOV
 local function GetReferencePosition()
     if getgenv().FOVPositionMode == "Middle" then
         local viewportSize = Camera.ViewportSize
@@ -147,7 +148,6 @@ local function GetReferencePosition()
     end
 end
 
--- หารายชื่อเป้าหมายที่อยู่ใกล้ที่สุดในวงกลม FOV
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
     local ShortestDistance = getgenv().FOVRadius
@@ -183,16 +183,10 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
--- ลูปหลักการทำงาน (ใช้ระบบ Camera Lock แทน Metatable เพื่อความเสถียรบน Delta)
+-- ลูปการทำงานหลัก
 RunService.RenderStepped:Connect(function()
-    if not getgenv().SilentAimEnabled then
-        getgenv().CurrentTarget = nil
-        if RedLine then RedLine.Visible = false end
-        if FOVCircle then FOVCircle.Visible = false end
-        return
-    end
-
     local refPos = GetReferencePosition()
+    
     if FOVCircle then
         FOVCircle.Position = refPos
         FOVCircle.Radius = getgenv().FOVRadius
@@ -200,7 +194,13 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Color = CurrentThemeColor
     end
 
-    -- หาเป้าหมายใหม่หรือเช็คเป้าหมายเดิม
+    -- ตรวจหาเป้าหมายเมื่อเปิด SilentAim หรือเปิดล็อกจอ
+    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
+        getgenv().CurrentTarget = nil
+        if RedLine then RedLine.Visible = false end
+        return
+    end
+
     if not getgenv().CurrentTarget or not getgenv().CurrentTarget.Parent then
         getgenv().CurrentTarget = GetTargetInFOV(refPos)
     else
@@ -219,12 +219,12 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- ระบบล็อกกล้องเบาๆ ไปที่เป้าหมาย (ทำงานแทน Silent Aim แบบเดิมเพื่อให้รันบน Delta ได้ลื่นๆ)
-    if getgenv().CurrentTarget then
+    -- ทำการล็อกจอเฉพาะตอนที่เปิดปุ่ม "Camlock" ไว้เท่านั้น
+    if getgenv().CamlockEnabled and getgenv().CurrentTarget then
         Camera.CFrame = CFrame.new(Camera.CFrame.Position, getgenv().CurrentTarget.Position)
     end
 
-    -- จัดการเส้น Tracer (Snapline)
+    -- จัดการเส้น Tracer
     if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine then
         local myChar = LocalPlayer.Character
         local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
@@ -1287,11 +1287,36 @@ end
 local MainSection = Main:CreateSection({ Name = "Combat & Aim" })
 
 Main:CreateToggle({
-    name = "Silent Aim (Aimbot)",
+    name = "Fast Attack",
+    flag = "FastAttack",
+    value = false,
+    callback = function(Value)
+        SetFastAttack(Value)
+    end,
+})
+
+local AimSection = Main:CreateSection({ Name = "Visual & Aim Settings" })
+
+Main:CreateToggle({
+    name = "Silent Aim",
     flag = "SilentAimToggle",
     value = getgenv().SilentAimEnabled,
     callback = function(Value)
         getgenv().SilentAimEnabled = Value
+        if not Value and not getgenv().CamlockEnabled then
+            getgenv().CurrentTarget = nil
+            if RedLine then RedLine.Visible = false end
+        end
+    end,
+})
+
+-- ปุ่มแยกสำหรับล็อกจอหาศัตรูโดยเฉพาะ
+Main:CreateToggle({
+    name = "ล็อกจอหาศัตรู (Camlock)",
+    flag = "CamlockToggle",
+    value = getgenv().CamlockEnabled,
+    callback = function(Value)
+        getgenv().CamlockEnabled = Value
         if not Value then
             getgenv().CurrentTarget = nil
             if RedLine then RedLine.Visible = false end
@@ -1372,7 +1397,6 @@ Main:CreateSlider({
         getgenv().MaxDistance = Value
     end,
 })
-
 Main:CreateColorPicker({
     name = "Highlight",
     color = Color3.fromRGB(96, 205, 255),
