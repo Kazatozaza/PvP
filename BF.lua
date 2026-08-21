@@ -53,8 +53,6 @@ local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
 
 
 
-
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -63,18 +61,16 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- ตัวแปรตั้งค่าระบบ
+-- ตัวแปรตั้งค่าระบบ (ใช้ getgenv เพื่อให้ลิงก์กับเมนูปุ่มกดได้ง่าย)
 getgenv().FOVRadius = getgenv().FOVRadius or 180
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
-
--- เพิ่มตัวแปรปุ่มแยกเปิด-ปิดการล็อกจอ (Camlock)
-getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
-
 getgenv().CurrentTarget = nil
-getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse/Touch" 
+
+getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle" 
+getgenv().LockTargetEnabled = getgenv().LockTargetEnabled ~= false and true
 getgenv().LockedPartName = "Head" 
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
@@ -183,10 +179,65 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
--- ลูปการทำงานหลัก
-RunService.RenderStepped:Connect(function()
+local SuccessMouse, MouseObj = pcall(function()
+    return LocalPlayer:GetMouse()
+end)
+
+-- ระบบ Metatable Hook เพื่อบังคับกระสุนและข้อมูลการกดสกิลให้พุ่งหาเป้าหมาย
+local gmt = getrawmetatable(game)
+local oldIndex = gmt.__index
+local oldNamecall = gmt.__namecall
+setreadonly(gmt, false)
+
+gmt.__index = newcclosure(function(self, idx)
+    if getgenv().SilentAimEnabled and getgenv().CurrentTarget and SuccessMouse and self == MouseObj then
+        if idx == "Hit" or idx == "hit" then
+            return getgenv().CurrentTarget.CFrame
+        elseif idx == "Target" or idx == "target" then
+            return getgenv().CurrentTarget
+        end
+    end
+    return oldIndex(self, idx)
+end)
+
+gmt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = { ... }
+
+    -- ดักจับการส่งข้อมูลสกิลหรือการโจมตีผ่าน Remote เพื่อเปลี่ยนพิกัดให้เล็งโดนตัวเป้าหมายอัตโนมัติ
+    if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
+        for i, arg in ipairs(args) do
+            if typeof(arg) == "Vector3" then
+                args[i] = getgenv().CurrentTarget.Position
+            elseif typeof(arg) == "CFrame" then
+                args[i] = getgenv().CurrentTarget.CFrame
+            elseif typeof(arg) == "Instance" and arg:IsA("BasePart") then
+                -- รองรับบางเกมที่ส่งพาร์ทเป้าหมายไปกับสกิล
+                if arg.Name == "HumanoidRootPart" or arg.Name == "Head" then
+                    args[i] = getgenv().CurrentTarget
+                end
+            end
+        end
+        return oldNamecall(self, table.unpack(args))
+    end
+
+    return oldNamecall(self, ...)
+end)
+
+setreadonly(gmt, true)
+
+local updateInterval = 0.05 
+local timeSinceLastUpdate = 0
+
+RunService.RenderStepped:Connect(function(dt)
+    if not getgenv().SilentAimEnabled then
+        getgenv().CurrentTarget = nil
+        if RedLine then RedLine.Visible = false end
+        if FOVCircle then FOVCircle.Visible = false end
+        return
+    end
+
     local refPos = GetReferencePosition()
-    
     if FOVCircle then
         FOVCircle.Position = refPos
         FOVCircle.Radius = getgenv().FOVRadius
@@ -194,42 +245,62 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Color = CurrentThemeColor
     end
 
-    -- ตรวจหาเป้าหมายเมื่อเปิด SilentAim หรือเปิดล็อกจอ
-    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
-        getgenv().CurrentTarget = nil
-        if RedLine then RedLine.Visible = false end
-        return
-    end
-
-    if not getgenv().CurrentTarget or not getgenv().CurrentTarget.Parent then
-        getgenv().CurrentTarget = GetTargetInFOV(refPos)
-    else
-        if ShouldIgnoreTarget(getgenv().CurrentTarget.Parent) then
-            getgenv().CurrentTarget = nil
-        else
-            local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
-            if not onScreen then
+    timeSinceLastUpdate = timeSinceLastUpdate + dt
+    if timeSinceLastUpdate >= updateInterval then
+        timeSinceLastUpdate = 0
+        
+        if getgenv().LockTargetEnabled and getgenv().CurrentTarget and getgenv().CurrentTarget.Parent then
+            if ShouldIgnoreTarget(getgenv().CurrentTarget.Parent) then
                 getgenv().CurrentTarget = nil
             else
-                local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                if (targetPos2D - refPos).Magnitude > getgenv().FOVRadius then
+                local myChar = LocalPlayer.Character
+                local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                local worldDistance = myHRP and (getgenv().CurrentTarget.Position - myHRP.Position).Magnitude or (getgenv().MaxDistance + 1)
+                
+                local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
+                local inFOV = false
+                if onScreen then
+                    local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
+                    if (targetPos2D - refPos).Magnitude <= getgenv().FOVRadius then
+                        inFOV = true
+                    end
+                end
+
+                if worldDistance > getgenv().MaxDistance or not inFOV then
                     getgenv().CurrentTarget = nil
                 end
             end
         end
+
+        if not getgenv().CurrentTarget then
+            getgenv().CurrentTarget = GetTargetInFOV(refPos)
+        end
     end
 
-    -- ทำการล็อกจอเฉพาะตอนที่เปิดปุ่ม "Camlock" ไว้เท่านั้น
-    if getgenv().CamlockEnabled and getgenv().CurrentTarget then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, getgenv().CurrentTarget.Position)
+    if getgenv().CurrentTarget then
+        local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
+        if onScreen then
+            local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
+            if (targetPos2D - refPos).Magnitude > getgenv().FOVRadius then
+                getgenv().CurrentTarget = nil
+            end
+        else
+            getgenv().CurrentTarget = nil
+        end
     end
 
-    -- จัดการเส้น Tracer
     if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine then
         local myChar = LocalPlayer.Character
         local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
+        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        local validDistance = false
 
-        if myHead then
+        if myHRP and getgenv().CurrentTarget.Parent then
+            local worldDistance = (getgenv().CurrentTarget.Position - myHRP.Position).Magnitude
+            validDistance = worldDistance <= getgenv().MaxDistance
+        end
+
+        if validDistance and myHead then
             local headScreenPos, headOnScreen = Camera:WorldToViewportPoint(myHead.Position)
             local targetScreenPos, targetOnScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
 
@@ -243,6 +314,7 @@ RunService.RenderStepped:Connect(function()
             end
         else
             RedLine.Visible = false
+            getgenv().CurrentTarget = nil
         end
     else
         if RedLine then 
@@ -250,7 +322,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
 
 
 
@@ -1312,7 +1383,7 @@ Main:CreateToggle({
 
 -- ปุ่มแยกสำหรับล็อกจอหาศัตรูโดยเฉพาะ
 Main:CreateToggle({
-    name = "ล็อกจอหาศัตรู (Camlock)",
+    name = "Lock onto enemies ",
     flag = "CamlockToggle",
     value = getgenv().CamlockEnabled,
     callback = function(Value)
@@ -1360,7 +1431,7 @@ Main:CreateDropdown({
 })
 
 Main:CreateDropdown({
-    name = "โหมด Silent Aim",
+    name = "Silent Aim",
     multiSelect = false,
     options = { "FOV", "180°", "360°" },
     value = "FOV",
