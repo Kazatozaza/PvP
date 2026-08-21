@@ -1372,16 +1372,15 @@ Main:CreateToggle({
 
 local AimSection = Main:CreateSection({ Name = "Visual & Aim Settings" })
 
-
--- UI Toggles และ Dropdowns (เชื่อมต่อค่าตัวแปรอย่างถูกต้อง)
+-- UI Toggles และ Dropdowns (เชื่อมต่อค่าตัวแปรหลักโดยตรง เพื่อให้มือถือใช้งานได้ปกติ)
 Main:CreateToggle({
     name = "Silent Aim",
     flag = "SilentAimToggle",
-    value = true,
+    value = SilentAimEnabled,
     callback = function(Value)
-        getgenv().SilentAimEnabled = Value
+        SilentAimEnabled = Value
         if not Value then
-            getgenv().CurrentTarget = nil
+            CurrentTarget = nil
             if RedLine then RedLine.Visible = false end
         end
     end,
@@ -1390,9 +1389,9 @@ Main:CreateToggle({
 Main:CreateToggle({
     name = "Show FOV Circle",
     flag = "ShowFOVToggle",
-    value = true,
+    value = ShowFOV,
     callback = function(Value)
-        getgenv().ShowFOV = Value
+        ShowFOV = Value
         if FOVCircle then FOVCircle.Visible = Value end
     end,
 })
@@ -1400,9 +1399,9 @@ Main:CreateToggle({
 Main:CreateToggle({
     name = "Show Red Snapline",
     flag = "ShowTracerToggle",
-    value = true,
+    value = ShowTracer,
     callback = function(Value)
-        getgenv().ShowTracer = Value
+        ShowTracer = Value
         if not Value and RedLine then
             RedLine.Visible = false
         end
@@ -1414,14 +1413,11 @@ local AimConfigSection = Main:CreateSection({ Name = "Aim Configurations" })
 Main:CreateDropdown({
     name = "FOV Position",
     multiSelect = false,
-    options = { "Cursor", "Middle" },
-    value = "Cursor",
+    options = { "Mouse/Touch", "Middle" }, -- เปลี่ยนจาก Cursor เป็น Mouse/Touch เพื่อรองรับมือถือเต็มรูปแบบ
+    value = FOVPositionMode,
     callback = function(selected)
-        if type(selected) == "table" then
-            getgenv().FOVPositionMode = selected[1] or "Cursor"
-        else
-            getgenv().FOVPositionMode = selected
-        end
+        local mode = type(selected) == "table" and selected[1] or selected
+        FOVPositionMode = mode
     end,
 })
 
@@ -1433,11 +1429,11 @@ Main:CreateDropdown({
     callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
         if mode == "180°" then
-            getgenv().FOVRadius = 180
+            FOVRadius = 180
         elseif mode == "360°" then
-            getgenv().FOVRadius = 9999 
+            FOVRadius = 9999 
         else
-            getgenv().FOVRadius = 180 
+            FOVRadius = 180 
         end
     end,
 })
@@ -1447,7 +1443,7 @@ Main:CreateSlider({
     flag = "FOVRadiusSlider",
     range = { 50, 500 },
     increment = 1,
-    value = 180,
+    value = FOVRadius,
     callback = function(Value)
         FOVRadius = Value
     end,
@@ -1458,13 +1454,11 @@ Main:CreateSlider({
     flag = "MaxDistanceSlider",
     range = { 50, 800 },
     increment = 1,
-    value = 800,
+    value = MaxDistance,
     callback = function(Value)
         MaxDistance = Value
     end,
 })
-
-
 Main:CreateColorPicker({
     name = "Highlight",
     color = Color3.fromRGB(96, 205, 255),
@@ -1472,12 +1466,6 @@ Main:CreateColorPicker({
         CurrentThemeColor = color 
     end,
 })
-
-
-
-
-
-
 
 -- General Tab Elements
 local CharacterSection = General:CreateSection({ Name = "Character & Abilities" })
