@@ -32,7 +32,7 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.1 Free", 
+    text = "Version1.2 Free", 
     color = Color3.fromRGB(72, 202, 228) -- โทนสีฟ้าครามสว่างสดใส (Cyan Glow)
 })
 
@@ -54,9 +54,6 @@ local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
 
 
 
-
-
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -65,7 +62,7 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- ใช้ getgenv() ทั้งหมดเพื่อให้ UI และระบบหลักใช้ตัวแปรชุดเดียวกัน 100%
+-- ตัวแปรตั้งค่าระบบ (ใช้ getgenv เพื่อเชื่อมกับ UI)
 getgenv().FOVRadius = getgenv().FOVRadius or 180
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
@@ -74,11 +71,11 @@ getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
 
 getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse/Touch" 
-getgenv().LockTargetEnabled = false 
 getgenv().LockedPartName = "Head" 
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
 
+-- สร้างวงกลม FOV และเส้น Tracer (รองรับ Delta บนมือถือ)
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = getgenv().ShowFOV
 FOVCircle.Filled = false
@@ -92,6 +89,7 @@ RedLine.Thickness = 1.5
 RedLine.Color = CurrentThemeColor
 RedLine.Transparency = 0.8
 
+-- ค่าตำแหน่งอ้างอิงเริ่มต้น (ป้องกันค่าเป็น 0,0)
 local LastTouchPosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 UserInputService.InputChanged:Connect(function(input)
@@ -108,6 +106,7 @@ UserInputService.TouchStarted:Connect(function(touch)
     LastTouchPosition = touch.Position
 end)
 
+-- ฟังก์ชันกรองเป้าหมาย (ข้ามทีมตัวเองและคนที่ตายแล้ว)
 local function ShouldIgnoreTarget(targetCharacter)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
     if not targetPlayer then return true end
@@ -121,6 +120,7 @@ local function ShouldIgnoreTarget(targetCharacter)
     return false
 end
 
+-- คำนวณตำแหน่งจุดศูนย์กลางของ FOV
 local function GetReferencePosition()
     if getgenv().FOVPositionMode == "Middle" then
         local viewportSize = Camera.ViewportSize
@@ -147,6 +147,7 @@ local function GetReferencePosition()
     end
 end
 
+-- หารายชื่อเป้าหมายที่อยู่ใกล้ที่สุดในวงกลม FOV
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
     local ShortestDistance = getgenv().FOVRadius
@@ -182,50 +183,8 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-local SuccessMouse, MouseObj = pcall(function()
-    return LocalPlayer:GetMouse()
-end)
-
-local gmt = getrawmetatable(game)
-local oldIndex = gmt.__index
-local oldNamecall = gmt.__namecall
-setreadonly(gmt, false)
-
-gmt.__index = newcclosure(function(self, idx)
-    if getgenv().SilentAimEnabled and getgenv().CurrentTarget and SuccessMouse and self == MouseObj then
-        if idx == "Hit" or idx == "hit" then
-            return getgenv().CurrentTarget.CFrame
-        elseif idx == "Target" or idx == "target" then
-            return getgenv().CurrentTarget
-        end
-    end
-    return oldIndex(self, idx)
-end)
-
-gmt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local args = { ... }
-
-    if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
-        for i, arg in ipairs(args) do
-            if typeof(arg) == "Vector3" then
-                args[i] = getgenv().CurrentTarget.Position
-            elseif typeof(arg) == "CFrame" then
-                args[i] = getgenv().CurrentTarget.CFrame
-            end
-        end
-        return oldNamecall(self, table.unpack(args))
-    end
-
-    return oldNamecall(self, ...)
-end)
-
-setreadonly(gmt, true)
-
-local updateInterval = 0.05 
-local timeSinceLastUpdate = 0
-
-RunService.RenderStepped:Connect(function(dt)
+-- ลูปหลักการทำงาน (ใช้ระบบ Camera Lock แทน Metatable เพื่อความเสถียรบน Delta)
+RunService.RenderStepped:Connect(function()
     if not getgenv().SilentAimEnabled then
         getgenv().CurrentTarget = nil
         if RedLine then RedLine.Visible = false end
@@ -241,62 +200,36 @@ RunService.RenderStepped:Connect(function(dt)
         FOVCircle.Color = CurrentThemeColor
     end
 
-    timeSinceLastUpdate = timeSinceLastUpdate + dt
-    if timeSinceLastUpdate >= updateInterval then
-        timeSinceLastUpdate = 0
-        
-        if getgenv().LockTargetEnabled and getgenv().CurrentTarget and getgenv().CurrentTarget.Parent then
-            if ShouldIgnoreTarget(getgenv().CurrentTarget.Parent) then
+    -- หาเป้าหมายใหม่หรือเช็คเป้าหมายเดิม
+    if not getgenv().CurrentTarget or not getgenv().CurrentTarget.Parent then
+        getgenv().CurrentTarget = GetTargetInFOV(refPos)
+    else
+        if ShouldIgnoreTarget(getgenv().CurrentTarget.Parent) then
+            getgenv().CurrentTarget = nil
+        else
+            local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
+            if not onScreen then
                 getgenv().CurrentTarget = nil
             else
-                local myChar = LocalPlayer.Character
-                local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                local worldDistance = myHRP and (getgenv().CurrentTarget.Position - myHRP.Position).Magnitude or (getgenv().MaxDistance + 1)
-                
-                local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
-                local inFOV = false
-                if onScreen then
-                    local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                    if (targetPos2D - refPos).Magnitude <= getgenv().FOVRadius then
-                        inFOV = true
-                    end
-                end
-
-                if worldDistance > getgenv().MaxDistance or not inFOV then
+                local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
+                if (targetPos2D - refPos).Magnitude > getgenv().FOVRadius then
                     getgenv().CurrentTarget = nil
                 end
             end
         end
-
-        if not getgenv().CurrentTarget then
-            getgenv().CurrentTarget = GetTargetInFOV(refPos)
-        end
     end
 
+    -- ระบบล็อกกล้องเบาๆ ไปที่เป้าหมาย (ทำงานแทน Silent Aim แบบเดิมเพื่อให้รันบน Delta ได้ลื่นๆ)
     if getgenv().CurrentTarget then
-        local screenPos, onScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
-        if onScreen then
-            local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-            if (targetPos2D - refPos).Magnitude > getgenv().FOVRadius then
-                getgenv().CurrentTarget = nil
-            end
-        else
-            getgenv().CurrentTarget = nil
-        end
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, getgenv().CurrentTarget.Position)
     end
 
+    -- จัดการเส้น Tracer (Snapline)
     if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine then
         local myChar = LocalPlayer.Character
         local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
-        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-        local validDistance = false
 
-        if myHRP and getgenv().CurrentTarget.Parent then
-            local worldDistance = (getgenv().CurrentTarget.Position - myHRP.Position).Magnitude
-            validDistance = worldDistance <= getgenv().MaxDistance
-        end
-
-        if validDistance and myHead then
+        if myHead then
             local headScreenPos, headOnScreen = Camera:WorldToViewportPoint(myHead.Position)
             local targetScreenPos, targetOnScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
 
@@ -310,7 +243,6 @@ RunService.RenderStepped:Connect(function(dt)
             end
         else
             RedLine.Visible = false
-            getgenv().CurrentTarget = nil
         end
     else
         if RedLine then 
@@ -318,7 +250,6 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
-
 
 
 
@@ -1356,18 +1287,7 @@ end
 local MainSection = Main:CreateSection({ Name = "Combat & Aim" })
 
 Main:CreateToggle({
-    name = "Fast Attack",
-    flag = "FastAttack",
-    value = false,
-    callback = function(Value)
-        SetFastAttack(Value)
-    end,
-})
-
-local AimSection = Main:CreateSection({ Name = "Visual & Aim Settings" })
-
-Main:CreateToggle({
-    name = "Silent Aim",
+    name = "Silent Aim (Aimbot)",
     flag = "SilentAimToggle",
     value = getgenv().SilentAimEnabled,
     callback = function(Value)
