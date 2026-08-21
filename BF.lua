@@ -58,7 +58,6 @@ local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
 
 
 
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -74,7 +73,7 @@ local ShowFOV = true
 local ShowTracer = true
 local CurrentTarget = nil
 
-local FOVPositionMode = "Mouse/Touch" -- เปลี่ยนเป็น "Mouse/Touch" เพื่อให้ตามเมาส์/นิ้ว หรือ "Middle" สำหรับกลางจอ
+local FOVPositionMode = "Mouse/Touch" -- "Mouse/Touch" หรือ "Middle"
 local LockTargetEnabled = false 
 local LockedPartName = "Head" 
 
@@ -93,17 +92,17 @@ RedLine.Thickness = 1.5
 RedLine.Color = CurrentThemeColor
 RedLine.Transparency = 0.8
 
--- ตัวแปรเช็คแพลตฟอร์มและเก็บตำแหน่ง
+-- ตั้งค่าเริ่มต้นให้ตำแหน่งอยู่กลางจอก่อน เพื่อป้องกันไม่ให้ค่าเป็น (0,0) ในเฟรมแรก
 local LastTouchPosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
--- อัปเดตตำแหน่งเมาส์แบบ Real-time สำหรับคอมพิวเตอร์
+-- อัปเดตตำแหน่งเมาส์บน PC
 UserInputService.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then
         LastTouchPosition = Vector2.new(input.Position.X, input.Position.Y)
     end
 end)
 
--- รองรับการสัมผัสบนมือถือ
+-- อัปเดตตำแหน่งการสัมผัสบนมือถือ (ใช้ TouchMoved และ TouchStarted)
 UserInputService.TouchMoved:Connect(function(touch)
     LastTouchPosition = touch.Position
 end)
@@ -130,14 +129,24 @@ local function GetReferencePosition()
         local viewportSize = Camera.ViewportSize
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     else
-        -- ดึงพิกัดเมาส์หรือตำแหน่งนิ้วล่าสุด
-        pcall(function()
-            local mouseLoc = UserInputService:GetMouseLocation()
-            if mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
-                LastTouchPosition = mouseLoc
+        -- ถ้าเล่นในมือถือและไม่มีการสัมผัส ให้ใช้ตำแหน่งกลางจอสำรองไว้ก่อนเพื่อไม่ให้ FOV หาย
+        if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
+            -- ถ้า LastTouchPosition ยังเป็นค่าเริ่มต้น หรือไม่ได้สัมผัส ให้เช็คว่ามีนิ้วแตะอยู่ไหม
+            local touches = UserInputService:GetTouches()
+            if #touches > 0 then
+                LastTouchPosition = Vector2.new(touches[1].Position.X, touches[1].Position.Y)
             end
-        end)
-        return LastTouchPosition
+            return LastTouchPosition
+        else
+            -- สำหรับ PC
+            pcall(function()
+                local mouseLoc = UserInputService:GetMouseLocation()
+                if mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
+                    LastTouchPosition = mouseLoc
+                end
+            end)
+            return LastTouchPosition
+        end
     end
 end
 
@@ -313,7 +322,6 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
-
 
 
 
