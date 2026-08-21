@@ -32,9 +32,12 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.1 Free", 
+    text = "Version1.3 Free", 
     color = Color3.fromRGB(72, 202, 228) 
 })
+
+
+
 
 
 local Home = window:CreateTab({ name = "Home", icon = 125823673784681 })
@@ -50,10 +53,13 @@ local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
 
 
 
+
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -62,15 +68,122 @@ local Camera = Workspace.CurrentCamera
 getgenv().FOVRadius = getgenv().FOVRadius or 180
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
-getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
+getgenv().ShowFOV = true -- บังคับเปิดการแสดงผล FOV
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
 getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse/Touch" 
 getgenv().LockedPartName = "Head" 
+getgenv().CamlockEnabled = getgenv().CamlockEnabled or false
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
 
--- สร้างวงกลม FOV และเส้น Tracer
+-- สร้างหน้าจอ GUI สำหรับปุ่มลอยมือถือ
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MobileAimUI"
+ScreenGui.ResetOnSpawn = false
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- ฟังก์ชันสร้างปุ่มลอยที่กดสลับสถานะและลากย้ายได้
+local function CreateFloatingButton(name, text, defaultState, position, callback)
+    local Button = Instance.new("TextButton")
+    Button.Name = name
+    Button.Size = UDim2.new(0, 110, 0, 45)
+    Button.Position = position
+    Button.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Button.BorderSizePixel = 0
+    Button.TextColor3 = defaultState and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 50, 50)
+    Button.TextSize = 14
+    Button.Font = Enum.Font.GothamBold
+    Button.Text = text .. (defaultState and " ON" or " OFF")
+    Button.Parent = ScreenGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = Button
+
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Color3.fromRGB(50, 50, 50)
+    UIStroke.Thickness = 1.5
+    UIStroke.Parent = Button
+
+    -- ระบบลากปุ่ม (Draggable)
+    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
+
+    Button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = Button.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    Button.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    -- กดคลิกเพื่อเปิด-ปิด
+    local activeState = defaultState
+    Button.MouseButton1Click:Connect(function()
+        activeState = not activeState
+        if activeState then
+            Button.TextColor3 = Color3.fromRGB(0, 255, 100)
+            Button.Text = text .. " ON"
+        else
+            Button.TextColor3 = Color3.fromRGB(255, 50, 50)
+            Button.Text = text .. " OFF"
+        end
+        callback(activeState)
+    end)
+
+    return Button
+end
+
+-- สร้างปุ่ม MENU, AIM, และ CamLock ตามรูป
+CreateFloatingButton("MenuButton", "MENU", true, UDim2.new(0, 50, 0, 90), function(state)
+    for _, child in ipairs(ScreenGui:GetChildren()) do
+        if child:IsA("TextButton") and child.Name ~= "MenuButton" then
+            child.Visible = state
+        end
+    end
+end)
+
+CreateFloatingButton("AimButton", "AIM", getgenv().SilentAimEnabled, UDim2.new(0, 50, 0, 145), function(Value)
+    getgenv().SilentAimEnabled = Value
+    if not Value and not getgenv().CamlockEnabled then
+        getgenv().CurrentTarget = nil
+        if RedLine then RedLine.Visible = false end
+    end
+end)
+
+CreateFloatingButton("CamLockButton", "CamLock", getgenv().CamlockEnabled, UDim2.new(0, 50, 0, 200), function(Value)
+    getgenv().CamlockEnabled = Value
+    if not Value and not getgenv().SilentAimEnabled then
+        getgenv().CurrentTarget = nil
+        if RedLine then RedLine.Visible = false end
+    end
+end)
+
+-- สร้างวงกลม FOV และเส้น Tracer แบบ Drawing
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = getgenv().ShowFOV
 FOVCircle.Filled = false
@@ -84,7 +197,6 @@ RedLine.Thickness = 1.5
 RedLine.Color = CurrentThemeColor
 RedLine.Transparency = 0.8
 
--- ระบบจับตำแหน่งนิ้วสัมผัสบนมือถือ (Multi-touch & Touch Tracking)
 local LastTouchPosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 UserInputService.InputChanged:Connect(function(input)
@@ -101,7 +213,6 @@ UserInputService.TouchStarted:Connect(function(touch)
     LastTouchPosition = Vector2.new(touch.Position.X, touch.Position.Y)
 end)
 
--- ฟังก์ชันตรวจสอบผู้เล่นที่ควรข้าม
 local function ShouldIgnoreTarget(targetCharacter)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
     if not targetPlayer then return true end
@@ -116,30 +227,30 @@ local function ShouldIgnoreTarget(targetCharacter)
     return false
 end
 
--- ฟังก์ชันหาจุดกึ่งกลางหรือตำแหน่งที่นิ้วสัมผัสอยู่ (รองรับมือถือ 100%)
 local function GetReferencePosition()
+    local viewportSize = Camera.ViewportSize
+    local centerPos = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+
     if getgenv().FOVPositionMode == "Middle" then
-        local viewportSize = Camera.ViewportSize
-        return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+        return centerPos
     else
-        -- ตรวจสอบการสัมผัสหน้าจอของมือถือ
-        local touches = UserInputService:GetTouches()
-        if #touches > 0 then
-            LastTouchPosition = Vector2.new(touches[1].Position.X, touches[1].Position.Y)
-        else
-            -- ถ้าไม่ได้กดจออยู่ ให้เช็คเมาส์หรือใช้ตำแหน่งเดิมค้างไว้
+        if not UserInputService.TouchEnabled then
             local success, mouseLoc = pcall(function()
                 return UserInputService:GetMouseLocation()
             end)
             if success and mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
                 LastTouchPosition = mouseLoc
             end
+        else
+            local touches = UserInputService:GetTouches()
+            if #touches > 0 then
+                LastTouchPosition = Vector2.new(touches[1].Position.X, touches[1].Position.Y)
+            end
         end
         return LastTouchPosition
     end
 end
 
--- ฟังก์ชันหาเป้าหมายในวงกลม FOV
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
     local ShortestDistance = (getgenv().FOVRadius >= 9999) and 99999 or getgenv().FOVRadius
@@ -175,7 +286,7 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
--- ระบบ Metatable Hook สำหรับดักการยิง (รองรับมือถือและคอมพิวเตอร์)
+-- ระบบ Metatable Hook ดั้งเดิม
 local SuccessMouse, MouseObj = pcall(function()
     return LocalPlayer:GetMouse()
 end)
@@ -216,7 +327,7 @@ end)
 
 setreadonly(gmt, true)
 
--- ลูปการทำงานหลัก (RenderStepped)
+-- ลูปการทำงานหลัก
 RunService.RenderStepped:Connect(function()
     local refPos = GetReferencePosition()
     
@@ -227,7 +338,7 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Color = CurrentThemeColor
     end
 
-    if not getgenv().SilentAimEnabled then
+    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
         if RedLine then RedLine.Visible = false end
         return
@@ -1468,7 +1579,7 @@ Main:CreateToggle({
 Main:CreateSlider({
     name = "ขนาด Hitbox",
     flag = "HitboxSizeSlider",
-    range = { 3, 50 },
+    range = { 3, 100 },
     increment = 1,
     value = getgenv().HitboxSize,
     callback = function(Value)
