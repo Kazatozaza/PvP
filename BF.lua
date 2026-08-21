@@ -32,7 +32,7 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.3 Free", 
+    text = "Version1.10 Free", 
     color = Color3.fromRGB(72, 202, 228) 
 })
 
@@ -79,7 +79,7 @@ local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
 
 -- สร้างหน้าจอ GUI หลัก
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MobileAimUI_Ultimate"
+ScreenGui.Name = "MobileAimUI_Modern"
 ScreenGui.ResetOnSpawn = false
 pcall(function()
     ScreenGui.Parent = CoreGui
@@ -88,7 +88,7 @@ if not ScreenGui.Parent then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- สร้างวงกลม FOV แบบ GUI (กลางจอถาวร ขึ้นชัวร์ 100%)
+-- สร้างวงกลม FOV แบบ GUI (กลางจอถาวร)
 local FOVFrame = Instance.new("Frame")
 FOVFrame.Name = "FOVCircleGUI"
 FOVFrame.BackgroundTransparency = 1
@@ -117,26 +117,27 @@ TracerFrame.Size = UDim2.new(0, 0, 0, 0)
 TracerFrame.Visible = false
 TracerFrame.Parent = ScreenGui
 
--- ฟังก์ชันสร้างปุ่มลอย (พร้อมระบบลากย้ายตำแหน่ง)
+-- ฟังก์ชันสร้างปุ่มดีไซน์ใหม่ให้สวยขึ้น
 local function CreateFloatingButton(name, text, defaultState, position, callback)
     local Button = Instance.new("TextButton")
     Button.Name = name
-    Button.Size = UDim2.new(0, 110, 0, 42)
+    Button.Size = UDim2.new(0, 120, 0, 40)
     Button.Position = position
-    Button.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Button.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
     Button.BorderSizePixel = 0
-    Button.TextColor3 = defaultState and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 50, 50)
+    Button.TextColor3 = defaultState and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(255, 80, 80)
     Button.TextSize = 13
     Button.Font = Enum.Font.GothamBold
-    Button.Text = text .. (defaultState and " ON" or " OFF")
+    Button.Text = text .. " : " .. (defaultState and "ON" or "OFF")
     Button.Parent = ScreenGui
 
     local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.CornerRadius = UDim.new(0, 10)
     UICorner.Parent = Button
 
+    -- เพิ่มขอบเรืองแสงดูพรีเมียม
     local UIStroke = Instance.new("UIStroke")
-    UIStroke.Color = Color3.fromRGB(60, 60, 60)
+    UIStroke.Color = Color3.fromRGB(50, 50, 70)
     UIStroke.Thickness = 1.5
     UIStroke.Parent = Button
 
@@ -174,11 +175,11 @@ local function CreateFloatingButton(name, text, defaultState, position, callback
     Button.MouseButton1Click:Connect(function()
         activeState = not activeState
         if activeState then
-            Button.TextColor3 = Color3.fromRGB(0, 255, 100)
-            Button.Text = text .. " ON"
+            Button.TextColor3 = Color3.fromRGB(50, 255, 150)
+            Button.Text = text .. " : ON"
         else
-            Button.TextColor3 = Color3.fromRGB(255, 50, 50)
-            Button.Text = text .. " OFF"
+            Button.TextColor3 = Color3.fromRGB(255, 80, 80)
+            Button.Text = text .. " : OFF"
         end
         callback(activeState)
     end)
@@ -186,8 +187,8 @@ local function CreateFloatingButton(name, text, defaultState, position, callback
     return Button
 end
 
--- สร้างปุ่มควบคุมทั้งหมดบนหน้าจอ
-CreateFloatingButton("MenuButton", "MENU", true, UDim2.new(0, 40, 0, 70), function(state)
+-- สร้างปุ่มควบคุมทั้งหมดบนหน้าจอดีไซน์ใหม่
+CreateFloatingButton("MenuButton", "MENU", true, UDim2.new(0, 30, 0, 60), function(state)
     for _, child in ipairs(ScreenGui:GetChildren()) do
         if child:IsA("TextButton") and child.Name ~= "MenuButton" then
             child.Visible = state
@@ -195,7 +196,7 @@ CreateFloatingButton("MenuButton", "MENU", true, UDim2.new(0, 40, 0, 70), functi
     end
 end)
 
-CreateFloatingButton("AimButton", "AIM", getgenv().SilentAimEnabled, UDim2.new(0, 40, 0, 120), function(Value)
+CreateFloatingButton("AimButton", "AIM", getgenv().SilentAimEnabled, UDim2.new(0, 30, 0, 110), function(Value)
     getgenv().SilentAimEnabled = Value
     if not Value and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
@@ -203,7 +204,7 @@ CreateFloatingButton("AimButton", "AIM", getgenv().SilentAimEnabled, UDim2.new(0
     end
 end)
 
-CreateFloatingButton("CamLockButton", "CamLock", getgenv().CamlockEnabled, UDim2.new(0, 40, 0, 170), function(Value)
+CreateFloatingButton("CamLockButton", "CamLock", getgenv().CamlockEnabled, UDim2.new(0, 30, 0, 160), function(Value)
     getgenv().CamlockEnabled = Value
     if not Value and not getgenv().SilentAimEnabled then
         getgenv().CurrentTarget = nil
@@ -211,12 +212,12 @@ CreateFloatingButton("CamLockButton", "CamLock", getgenv().CamlockEnabled, UDim2
     end
 end)
 
-CreateFloatingButton("FOVButton", "FOV", getgenv().ShowFOV, UDim2.new(0, 40, 0, 220), function(Value)
+CreateFloatingButton("FOVButton", "FOV", getgenv().ShowFOV, UDim2.new(0, 30, 0, 210), function(Value)
     getgenv().ShowFOV = Value
     FOVFrame.Visible = Value
 end)
 
-CreateFloatingButton("TracerButton", "Tracer", getgenv().ShowTracer, UDim2.new(0, 40, 0, 270), function(Value)
+CreateFloatingButton("TracerButton", "Tracer", getgenv().ShowTracer, UDim2.new(0, 30, 0, 260), function(Value)
     getgenv().ShowTracer = Value
     if not Value then TracerFrame.Visible = false end
 end)
