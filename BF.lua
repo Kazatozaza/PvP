@@ -32,18 +32,15 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.2 Free", 
+    text = "Version1.5 Free", 
     color = Color3.fromRGB(72, 202, 228) 
 })
-
-
-
-
 
 local Home = window:CreateTab({ name = "Home", icon = 125823673784681 })
 local Main = window:CreateTab({ name = "Combat", icon = 125823673784681 })
 local General = window:CreateTab({ name = "General", icon = 93364949241311 })
 local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
+
 
 
 
@@ -64,103 +61,22 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- ตัวแปรตั้งค่าระบบ
 getgenv().FOVRadius = getgenv().FOVRadius or 180
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
-getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse" 
-getgenv().LockedPartName = "Head" 
+getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse"
+getgenv().LockedPartName = "Head"
+
+getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
+getgenv().CamlockKey = Enum.UserInputType.MouseButton2 -- คลิกขวาเมาส์สำหรับ PC
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SimpleAimUI"
-ScreenGui.ResetOnSpawn = false
-pcall(function()
-    ScreenGui.Parent = CoreGui
-end)
-if not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-local function CreateFloatingButton(name, text, defaultState, position, callback)
-    local Button = Instance.new("TextButton")
-    Button.Name = name
-    Button.Size = UDim2.new(0, 120, 0, 40)
-    Button.Position = position
-    Button.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    Button.BorderSizePixel = 0
-    Button.TextColor3 = defaultState and Color3.fromRGB(50, 255, 150) or Color3.fromRGB(255, 80, 80)
-    Button.TextSize = 13
-    Button.Font = Enum.Font.GothamBold
-    Button.Text = text .. " : " .. (defaultState and "ON" or "OFF")
-    Button.Parent = ScreenGui
+local isCamlockActive = false
 
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 10)
-    UICorner.Parent = Button
-
-    local UIStroke = Instance.new("UIStroke")
-    UIStroke.Color = Color3.fromRGB(50, 50, 70)
-    UIStroke.Thickness = 1.5
-    UIStroke.Parent = Button
-
-    -- ระบบลากปุ่ม (Draggable)
-    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
-
-    Button.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = Button.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    Button.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            Button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-
-    local activeState = defaultState
-    Button.MouseButton1Click:Connect(function()
-        activeState = not activeState
-        if activeState then
-            Button.TextColor3 = Color3.fromRGB(50, 255, 150)
-            Button.Text = text .. " : ON"
-        else
-            Button.TextColor3 = Color3.fromRGB(255, 80, 80)
-            Button.Text = text .. " : OFF"
-        end
-        callback(activeState)
-    end)
-
-    return Button
-end
-
--- สร้างเฉพาะปุ่ม AIM และปุ่ม FOV
-CreateFloatingButton("AimButton", "AIM", getgenv().SilentAimEnabled, UDim2.new(0, 30, 0, 60), function(Value)
-    getgenv().SilentAimEnabled = Value
-    if not Value then getgenv().CurrentTarget = nil end
-end)
-
-CreateFloatingButton("FOVButton", "FOV", getgenv().ShowFOV, UDim2.new(0, 30, 0, 110), function(Value)
-    getgenv().ShowFOV = Value
-end)
+-- สร้างวงกลม FOV ด้วย Drawing เดิม
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = getgenv().ShowFOV
 FOVCircle.Filled = false
@@ -168,25 +84,97 @@ FOVCircle.Thickness = 1.5
 FOVCircle.Color = CurrentThemeColor
 FOVCircle.Transparency = 0.7
 
+-- สร้างเส้นเล็งศัตรู (RedLine / Tracer) ด้วย Drawing เดิม
 local RedLine = Drawing.new("Line")
 RedLine.Visible = false
 RedLine.Thickness = 1.5
 RedLine.Color = CurrentThemeColor
 RedLine.Transparency = 0.8
 
+-- ลบปุ่ม UI เก่าทิ้งกันบั๊กซ้อน
+if CoreGui:FindFirstChild("MobileCamlockGui") then
+    CoreGui.MobileCamlockGui:Destroy()
+end
+if LocalPlayer.PlayerGui:FindFirstChild("MobileCamlockGui") then
+    LocalPlayer.PlayerGui.MobileCamlockGui:Destroy()
+end
+
+-- สร้างปุ่มเปิด-ปิด Camlock บนจอมือถือ
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MobileCamlockGui"
+ScreenGui.ResetOnSpawn = false
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local CamlockButton = Instance.new("TextButton")
+CamlockButton.Name = "CamlockButton"
+CamlockButton.Size = UDim2.new(0, 120, 0, 45)
+CamlockButton.Position = UDim2.new(0.85, -60, 0.4, 0)
+CamlockButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+CamlockButton.BackgroundTransparency = 0.3
+CamlockButton.TextColor3 = CurrentThemeColor
+CamlockButton.TextSize = 14
+CamlockButton.Font = Enum.Font.GothamBold
+CamlockButton.Text = "CAMLOCK: OFF"
+CamlockButton.Active = true
+CamlockButton.Draggable = true 
+CamlockButton.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = CamlockButton
+
+CamlockButton.MouseButton1Click:Connect(function()
+    isCamlockActive = not isCamlockActive
+    if isCamlockActive then
+        CamlockButton.Text = "CAMLOCK: ON"
+        CamlockButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    else
+        CamlockButton.Text = "CAMLOCK: OFF"
+        CamlockButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    end
+end)
+
+-- ตัวแปรเก็บตำแหน่งนิ้วหรือเมาส์ล่าสุด
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+    end
+end)
+
+-- รองรับปุ่มคลิกขวาบน PC
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == getgenv().CamlockKey then
+        if not UserInputService.TouchEnabled then
+            isCamlockActive = true
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == getgenv().CamlockKey then
+        if not UserInputService.TouchEnabled then
+            isCamlockActive = false
+        end
     end
 end)
 
 local function ShouldIgnoreTarget(targetCharacter)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
     if not targetPlayer then return true end
-    if targetPlayer == LocalPlayer then return true end
-    if targetPlayer.Team and LocalPlayer.Team and targetPlayer.Team == LocalPlayer.Team then
+    if targetPlayer.Team == LocalPlayer.Team then
         return true
     end
     local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
@@ -201,6 +189,9 @@ local function GetReferencePosition()
         local viewportSize = Camera.ViewportSize
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     else
+        if UserInputService.TouchEnabled then
+            return LastMousePosition
+        end
         pcall(function()
             local mouseLoc = UserInputService:GetMouseLocation()
             if mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
@@ -245,6 +236,7 @@ local function GetTargetInFOV(refPos)
     end
     return ClosestTarget
 end
+
 local SuccessMouse, MouseObj = pcall(function()
     return LocalPlayer:GetMouse()
 end)
@@ -284,6 +276,7 @@ gmt.__namecall = newcclosure(function(self, ...)
 end)
 
 setreadonly(gmt, true)
+
 RunService.RenderStepped:Connect(function()
     local refPos = GetReferencePosition()
     
@@ -294,14 +287,19 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Color = CurrentThemeColor
     end
 
-    if not getgenv().SilentAimEnabled then
+    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
         if RedLine then RedLine.Visible = false end
         return
     end
 
     getgenv().CurrentTarget = GetTargetInFOV(refPos)
-    if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine then
+
+    if getgenv().CamlockEnabled and isCamlockActive and getgenv().CurrentTarget then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, getgenv().CurrentTarget.Position)
+    end
+
+    if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine and getgenv().SilentAimEnabled then
         local myChar = LocalPlayer.Character
         local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
 
@@ -312,7 +310,7 @@ RunService.RenderStepped:Connect(function()
             if targetOnScreen and headOnScreen then
                 RedLine.From = Vector2.new(headScreenPos.X, headScreenPos.Y)
                 RedLine.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
-                RedLine.Color = CurrentThemeColor 
+                RedLine.Color = CurrentThemeColor
                 RedLine.Visible = true
             else
                 RedLine.Visible = false
@@ -321,11 +319,22 @@ RunService.RenderStepped:Connect(function()
             RedLine.Visible = false
         end
     else
-        if RedLine then 
-            RedLine.Visible = false 
+        if RedLine then
+            RedLine.Visible = false
         end
     end
 end)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1352,7 +1361,7 @@ end
 getgenv().HitboxEnabled = getgenv().HitboxEnabled or false
 getgenv().HitboxSize = getgenv().HitboxSize or 5 -- ขนาดความกว้าง (ปกติของเกมมักจะอยู่ที่ 2 หรือ 3)
 getgenv().HitboxPartName = getgenv().HitboxPartName or "HumanoidRootPart" -- เลือกขยายส่วนไหน (HumanoidRootPart หรือ Head)
-getgenv().HitboxTransparency = 0.7 -- ความโปร่งใสของ Hitbox ที่ขยาย (0 คือทึบมองเห็น, 0.5 กำลังดี, 1 คือล่องหน)
+getgenv().HitboxTransparency = 0.9 -- ความโปร่งใสของ Hitbox ที่ขยาย (0 คือทึบมองเห็น, 0.5 กำลังดี, 1 คือล่องหน)
 
 RunService.RenderStepped:Connect(function()
     if not getgenv().HitboxEnabled then return end
@@ -1388,6 +1397,29 @@ end)
 --  ปุ่มทั้งหมด=================================================================
 
 
+-- ปุ่มคัดลอกลิงก์ Discord
+Home:CreateButton({
+    name = "Copy Discord ",
+    callback = function()
+        if setclipboard then
+            setclipboard("https://discord.gg/BrqVynxftU")
+            -- ถ้า UI ของคุณรองรับระบบ Notification สามารถใส่เพิ่มตรงนี้ได้ครับ
+        end
+    end,
+})
+
+Home:CreateButton({
+    name = "Copy YouTube ",
+    callback = function()
+        if setclipboard then
+            setclipboard("https://www.youtube.com/@Sakura_09-d5z")
+        end
+    end,
+})
+
+local AimSection = Home:CreateSection({ Name = "Updates & Temp" })
+
+
 
 
 
@@ -1404,6 +1436,19 @@ Main:CreateToggle({
 })
 
 local AimSection = Main:CreateSection({ Name = "Visual & Aim Settings" })
+
+Main:CreateToggle({
+    name = "CamLock (PC/Mobile)",
+    flag = "CamlockToggle",
+    value = getgenv().CamlockEnabled,
+    callback = function(Value)
+        getgenv().CamlockEnabled = Value
+        if not Value then
+            getgenv().CurrentTarget = nil
+        end
+    end,
+})
+
 
 Main:CreateToggle({
     name = "Silent Aim",
@@ -1984,13 +2029,6 @@ Main:CreateSlider({
         FollowDistance = Value
     end,
 })
-
-
-
-
-
-
-
 
 
 
