@@ -32,7 +32,7 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1.5 Free", 
+    text = "Version1.1 Free", 
     color = Color3.fromRGB(72, 202, 228) 
 })
 
@@ -40,8 +40,6 @@ local Home = window:CreateTab({ name = "Home", icon = 125823673784681 })
 local Main = window:CreateTab({ name = "Combat", icon = 125823673784681 })
 local General = window:CreateTab({ name = "General", icon = 93364949241311 })
 local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
-
-
 
 
 
@@ -61,7 +59,7 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
-getgenv().FOVRadius = getgenv().FOVRadius or 180
+getgenv().FOVRadius = getgenv().FOVRadius or 80 -- ปรับขนาดเริ่มต้นให้พอดีตา
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
@@ -71,37 +69,22 @@ getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse"
 getgenv().LockedPartName = "Head"
 
 getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
-getgenv().CamlockKey = Enum.UserInputType.MouseButton2 -- คลิกขวาเมาส์สำหรับ PC
+getgenv().CamlockKey = Enum.UserInputType.MouseButton2
 
 local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
 local isCamlockActive = false
 
--- สร้างวงกลม FOV ด้วย Drawing เดิม
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = getgenv().ShowFOV
-FOVCircle.Filled = false
-FOVCircle.Thickness = 1.5
-FOVCircle.Color = CurrentThemeColor
-FOVCircle.Transparency = 0.7
-
--- สร้างเส้นเล็งศัตรู (RedLine / Tracer) ด้วย Drawing เดิม
-local RedLine = Drawing.new("Line")
-RedLine.Visible = false
-RedLine.Thickness = 1.5
-RedLine.Color = CurrentThemeColor
-RedLine.Transparency = 0.8
-
--- ลบปุ่ม UI เก่าทิ้งกันบั๊กซ้อน
-if CoreGui:FindFirstChild("MobileCamlockGui") then
-    CoreGui.MobileCamlockGui:Destroy()
+-- ลบ UI เก่าทิ้งกันบั๊กซ้อน
+if CoreGui:FindFirstChild("MobileAimbotGui") then
+    CoreGui.MobileAimbotGui:Destroy()
 end
-if LocalPlayer.PlayerGui:FindFirstChild("MobileCamlockGui") then
-    LocalPlayer.PlayerGui.MobileCamlockGui:Destroy()
+if LocalPlayer.PlayerGui:FindFirstChild("MobileAimbotGui") then
+    LocalPlayer.PlayerGui.MobileAimbotGui:Destroy()
 end
 
--- สร้างปุ่มเปิด-ปิด Camlock บนจอมือถือ
+-- สร้าง ScreenGui หลัก
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MobileCamlockGui"
+ScreenGui.Name = "MobileAimbotGui"
 ScreenGui.ResetOnSpawn = false
 pcall(function()
     ScreenGui.Parent = CoreGui
@@ -110,6 +93,32 @@ if not ScreenGui.Parent then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
+-- สร้างวงกลม FOV ด้วย UI (ปรับขนาดแบบ Radius ปกติ ไม่ให้ใหญ่ล้นจอ)
+local FOVUI = Instance.new("Frame")
+FOVUI.Name = "FOVCircle"
+FOVUI.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVUI.BackgroundTransparency = 1
+FOVUI.Visible = false -- ซ่อนไว้ก่อนจนกว่าจะเข้าเกม
+FOVUI.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(1, 0)
+UICorner.Parent = FOVUI
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 1.5
+UIStroke.Color = CurrentThemeColor
+UIStroke.Transparency = 0.3
+UIStroke.Parent = FOVUI
+
+-- เส้นเล็งศัตรู (RedLine / Tracer)
+local RedLine = Drawing.new("Line")
+RedLine.Visible = false
+RedLine.Thickness = 1.5
+RedLine.Color = CurrentThemeColor
+RedLine.Transparency = 0.8
+
+-- ปุ่มเปิด-ปิด Camlock บนจอมือถือ
 local CamlockButton = Instance.new("TextButton")
 CamlockButton.Name = "CamlockButton"
 CamlockButton.Size = UDim2.new(0, 120, 0, 45)
@@ -124,9 +133,9 @@ CamlockButton.Active = true
 CamlockButton.Draggable = true 
 CamlockButton.Parent = ScreenGui
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = CamlockButton
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 8)
+ButtonCorner.Parent = CamlockButton
 
 CamlockButton.MouseButton1Click:Connect(function()
     isCamlockActive = not isCamlockActive
@@ -139,7 +148,6 @@ CamlockButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- ตัวแปรเก็บตำแหน่งนิ้วหรือเมาส์ล่าสุด
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 UserInputService.InputChanged:Connect(function(input)
@@ -154,7 +162,6 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
--- รองรับปุ่มคลิกขวาบน PC
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.UserInputType == getgenv().CamlockKey then
         if not UserInputService.TouchEnabled then
@@ -278,13 +285,21 @@ end)
 setreadonly(gmt, true)
 
 RunService.RenderStepped:Connect(function()
+    -- เช็คว่าอยู่ในเกมจริงไหม (ถ้ายังอยู่หน้าเมนูหลัก ให้ซ่อนวงกลมทันที)
+    if not LocalPlayer.Character or not Workspace.CurrentCamera then
+        if FOVUI then FOVUI.Visible = false end
+        if RedLine then RedLine.Visible = false end
+        return
+    end
+
     local refPos = GetReferencePosition()
     
-    if FOVCircle then
-        FOVCircle.Position = refPos
-        FOVCircle.Radius = getgenv().FOVRadius
-        FOVCircle.Visible = getgenv().ShowFOV
-        FOVCircle.Color = CurrentThemeColor
+    if FOVUI then
+        FOVUI.Visible = getgenv().ShowFOV
+        FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
+        local size = getgenv().FOVRadius * 2
+        FOVUI.Size = UDim2.new(0, size, 0, size)
+        UIStroke.Color = CurrentThemeColor
     end
 
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
@@ -324,7 +339,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
 
 
 
