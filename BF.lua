@@ -50,55 +50,49 @@ local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
 
 
 
+
+
+
+
+
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
-getgenv().FOVRadius = getgenv().FOVRadius or 80 -- ปรับขนาดเริ่มต้นให้พอดีตา
+getgenv().FOVRadius = getgenv().FOVRadius or 80
 getgenv().MaxDistance = getgenv().MaxDistance or 800
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
-getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Mouse"
+getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle" -- รองรับ "Middle" หรือ "Mouse/Touch"
 getgenv().LockedPartName = "Head"
 
 getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
 getgenv().CamlockKey = Enum.UserInputType.MouseButton2
 
-local CurrentThemeColor = Color3.fromRGB(96, 205, 255)
+local CurrentThemeColor = Color3.fromRGB(255, 60, 60) -- สีแดง
 local isCamlockActive = false
 
--- ลบ UI เก่าทิ้งกันบั๊กซ้อน
-if CoreGui:FindFirstChild("MobileAimbotGui") then
-    CoreGui.MobileAimbotGui:Destroy()
-end
 if LocalPlayer.PlayerGui:FindFirstChild("MobileAimbotGui") then
     LocalPlayer.PlayerGui.MobileAimbotGui:Destroy()
 end
 
--- สร้าง ScreenGui หลัก
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "MobileAimbotGui"
 ScreenGui.ResetOnSpawn = false
-pcall(function()
-    ScreenGui.Parent = CoreGui
-end)
-if not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- สร้างวงกลม FOV ด้วย UI (ปรับขนาดแบบ Radius ปกติ ไม่ให้ใหญ่ล้นจอ)
+-- วงกลม FOV
 local FOVUI = Instance.new("Frame")
 FOVUI.Name = "FOVCircle"
 FOVUI.AnchorPoint = Vector2.new(0.5, 0.5)
 FOVUI.BackgroundTransparency = 1
-FOVUI.Visible = false -- ซ่อนไว้ก่อนจนกว่าจะเข้าเกม
+FOVUI.Visible = false
 FOVUI.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -107,25 +101,25 @@ UICorner.Parent = FOVUI
 
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Thickness = 1.5
-UIStroke.Color = CurrentThemeColor
+UIStroke.Color = Color3.fromRGB(96, 205, 255)
 UIStroke.Transparency = 0.3
 UIStroke.Parent = FOVUI
 
--- เส้นเล็งศัตรู (RedLine / Tracer)
-local RedLine = Drawing.new("Line")
-RedLine.Visible = false
-RedLine.Thickness = 1.5
-RedLine.Color = CurrentThemeColor
-RedLine.Transparency = 0.8
+-- เส้น Snapline พุ่งจากตัวละครเราไปหาเป้าหมาย
+local Snapline = Drawing.new("Line")
+Snapline.Visible = false
+Snapline.Color = CurrentThemeColor
+Snapline.Thickness = 1.5
+Snapline.Transparency = 0.8
 
--- ปุ่มเปิด-ปิด Camlock บนจอมือถือ
+-- ปุ่ม Camlock
 local CamlockButton = Instance.new("TextButton")
 CamlockButton.Name = "CamlockButton"
 CamlockButton.Size = UDim2.new(0, 120, 0, 45)
 CamlockButton.Position = UDim2.new(0.85, -60, 0.4, 0)
 CamlockButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 CamlockButton.BackgroundTransparency = 0.3
-CamlockButton.TextColor3 = CurrentThemeColor
+CamlockButton.TextColor3 = Color3.fromRGB(96, 205, 255)
 CamlockButton.TextSize = 14
 CamlockButton.Font = Enum.Font.GothamBold
 CamlockButton.Text = "CAMLOCK: OFF"
@@ -162,50 +156,25 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.UserInputType == getgenv().CamlockKey then
-        if not UserInputService.TouchEnabled then
-            isCamlockActive = true
-        end
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == getgenv().CamlockKey then
-        if not UserInputService.TouchEnabled then
-            isCamlockActive = false
-        end
-    end
-end)
-
 local function ShouldIgnoreTarget(targetCharacter)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
     if not targetPlayer then return true end
-    if targetPlayer.Team == LocalPlayer.Team then
-        return true
-    end
+    if targetPlayer.Team == LocalPlayer.Team then return true end
     local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid.Health <= 0 then
-        return true
-    end
+    if humanoid and humanoid.Health <= 0 then return true end
     return false
 end
 
+-- ฟังก์ชันเลือกตำแหน่งอ้างอิงตามค่า FOVPositionMode ที่ปรับจาก UI
 local function GetReferencePosition()
-    if getgenv().FOVPositionMode == "Middle" then
-        local viewportSize = Camera.ViewportSize
-        return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-    else
-        if UserInputService.TouchEnabled then
-            return LastMousePosition
-        end
-        pcall(function()
-            local mouseLoc = UserInputService:GetMouseLocation()
-            if mouseLoc and not (mouseLoc.X == 0 and mouseLoc.Y == 0) then
-                LastMousePosition = mouseLoc
-            end
-        end)
+    local viewportSize = Camera.ViewportSize
+    local mode = tostring(getgenv().FOVPositionMode):lower()
+    
+    if mode == "mouse/touch" or mode == "mousetouch" or mode == "mouse" then
         return LastMousePosition
+    else
+        -- ค่าเริ่มต้นคือ "Middle"
+        return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     end
 end
 
@@ -244,51 +213,49 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-local SuccessMouse, MouseObj = pcall(function()
-    return LocalPlayer:GetMouse()
-end)
+pcall(function()
+    local SuccessMouse, MouseObj = pcall(function() return LocalPlayer:GetMouse() end)
+    local gmt = getrawmetatable(game)
+    local oldIndex = gmt.__index
+    local oldNamecall = gmt.__namecall
+    setreadonly(gmt, false)
 
-local gmt = getrawmetatable(game)
-local oldIndex = gmt.__index
-local oldNamecall = gmt.__namecall
-setreadonly(gmt, false)
-
-gmt.__index = newcclosure(function(self, idx)
-    if getgenv().SilentAimEnabled and getgenv().CurrentTarget and SuccessMouse and self == MouseObj then
-        if idx == "Hit" or idx == "hit" then
-            return getgenv().CurrentTarget.CFrame
-        elseif idx == "Target" or idx == "target" then
-            return getgenv().CurrentTarget
-        end
-    end
-    return oldIndex(self, idx)
-end)
-
-gmt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local args = { ... }
-
-    if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
-        for i, arg in ipairs(args) do
-            if typeof(arg) == "Vector3" then
-                args[i] = getgenv().CurrentTarget.Position
-            elseif typeof(arg) == "CFrame" then
-                args[i] = getgenv().CurrentTarget.CFrame
+    gmt.__index = newcclosure(function(self, idx)
+        if getgenv().SilentAimEnabled and getgenv().CurrentTarget and SuccessMouse and self == MouseObj then
+            if idx == "Hit" or idx == "hit" then
+                return getgenv().CurrentTarget.CFrame
+            elseif idx == "Target" or idx == "target" then
+                return getgenv().CurrentTarget
             end
         end
-        return oldNamecall(self, table.unpack(args))
-    end
+        return oldIndex(self, idx)
+    end)
 
-    return oldNamecall(self, ...)
+    gmt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = { ... }
+
+        if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
+            for i, arg in ipairs(args) do
+                if typeof(arg) == "Vector3" then
+                    args[i] = getgenv().CurrentTarget.Position
+                elseif typeof(arg) == "CFrame" then
+                    args[i] = getgenv().CurrentTarget.CFrame
+                end
+            end
+            return oldNamecall(self, table.unpack(args))
+        end
+
+        return oldNamecall(self, ...)
+    end)
+
+    setreadonly(gmt, true)
 end)
 
-setreadonly(gmt, true)
-
 RunService.RenderStepped:Connect(function()
-    -- เช็คว่าอยู่ในเกมจริงไหม (ถ้ายังอยู่หน้าเมนูหลัก ให้ซ่อนวงกลมทันที)
     if not LocalPlayer.Character or not Workspace.CurrentCamera then
         if FOVUI then FOVUI.Visible = false end
-        if RedLine then RedLine.Visible = false end
+        Snapline.Visible = false
         return
     end
 
@@ -299,12 +266,11 @@ RunService.RenderStepped:Connect(function()
         FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
         local size = getgenv().FOVRadius * 2
         FOVUI.Size = UDim2.new(0, size, 0, size)
-        UIStroke.Color = CurrentThemeColor
     end
 
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
-        if RedLine then RedLine.Visible = false end
+        Snapline.Visible = false
         return
     end
 
@@ -314,31 +280,31 @@ RunService.RenderStepped:Connect(function()
         Camera.CFrame = CFrame.new(Camera.CFrame.Position, getgenv().CurrentTarget.Position)
     end
 
-    if getgenv().CurrentTarget and getgenv().ShowTracer and RedLine and getgenv().SilentAimEnabled then
-        local myChar = LocalPlayer.Character
-        local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
+    -- เส้น Snapline ลากจากตัวละครเราไปหาเป้าหมาย
+    if getgenv().CurrentTarget and getgenv().ShowTracer then
+        local myCharacter = LocalPlayer.Character
+        local myRootPart = myCharacter and (myCharacter:FindFirstChild("HumanoidRootPart") or myCharacter:FindFirstChild("Torso"))
 
-        if myHead then
-            local headScreenPos, headOnScreen = Camera:WorldToViewportPoint(myHead.Position)
+        if myRootPart then
+            local myScreenPos, myOnScreen = Camera:WorldToViewportPoint(myRootPart.Position)
             local targetScreenPos, targetOnScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
 
-            if targetOnScreen and headOnScreen then
-                RedLine.From = Vector2.new(headScreenPos.X, headScreenPos.Y)
-                RedLine.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
-                RedLine.Color = CurrentThemeColor
-                RedLine.Visible = true
+            if targetOnScreen then
+                Snapline.From = Vector2.new(myScreenPos.X, myScreenPos.Y) 
+                Snapline.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+                Snapline.Visible = true
             else
-                RedLine.Visible = false
+                Snapline.Visible = false
             end
         else
-            RedLine.Visible = false
+            Snapline.Visible = false
         end
     else
-        if RedLine then
-            RedLine.Visible = false
-        end
+        Snapline.Visible = false
     end
 end)
+
+
 
 
 
