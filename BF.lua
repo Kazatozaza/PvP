@@ -32,7 +32,7 @@ local tag = window:CreateTag({
 })
 
 tag:Set({ 
-    text = "Version1 Free", 
+    text = "Version1.1 Free", 
     color = Color3.fromRGB(72, 202, 228) 
 })
 
@@ -40,7 +40,6 @@ local Home = window:CreateTab({ name = "Home", icon = 125823673784681 })
 local Main = window:CreateTab({ name = "Combat", icon = 125823673784681 })
 local General = window:CreateTab({ name = "General", icon = 93364949241311 })
 local Visuals = window:CreateTab({ name = "Visuals", icon = 93364949241311 })
-
 
 
 
@@ -69,14 +68,14 @@ getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
-getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle" -- รองรับ "Middle" หรือ "Mouse/Touch"
+getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle" 
 getgenv().LockedPartName = "Head"
 
+getgenv().PredictionEnabled = getgenv().PredictionEnabled ~= false and true
+getgenv().PredictionFactor = getgenv().PredictionFactor or 0.135
 getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
-getgenv().CamlockKey = Enum.UserInputType.MouseButton2
 
-local CurrentThemeColor = Color3.fromRGB(255, 60, 60) -- สีแดง
-local isCamlockActive = false
+local CurrentThemeColor = Color3.fromRGB(255, 60, 60)
 
 if LocalPlayer.PlayerGui:FindFirstChild("MobileAimbotGui") then
     LocalPlayer.PlayerGui.MobileAimbotGui:Destroy()
@@ -112,36 +111,6 @@ Snapline.Color = CurrentThemeColor
 Snapline.Thickness = 1.5
 Snapline.Transparency = 0.8
 
--- ปุ่ม Camlock
-local CamlockButton = Instance.new("TextButton")
-CamlockButton.Name = "CamlockButton"
-CamlockButton.Size = UDim2.new(0, 120, 0, 45)
-CamlockButton.Position = UDim2.new(0.85, -60, 0.4, 0)
-CamlockButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-CamlockButton.BackgroundTransparency = 0.3
-CamlockButton.TextColor3 = Color3.fromRGB(96, 205, 255)
-CamlockButton.TextSize = 14
-CamlockButton.Font = Enum.Font.GothamBold
-CamlockButton.Text = "CAMLOCK: OFF"
-CamlockButton.Active = true
-CamlockButton.Draggable = true 
-CamlockButton.Parent = ScreenGui
-
-local ButtonCorner = Instance.new("UICorner")
-ButtonCorner.CornerRadius = UDim.new(0, 8)
-ButtonCorner.Parent = CamlockButton
-
-CamlockButton.MouseButton1Click:Connect(function()
-    isCamlockActive = not isCamlockActive
-    if isCamlockActive then
-        CamlockButton.Text = "CAMLOCK: ON"
-        CamlockButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    else
-        CamlockButton.Text = "CAMLOCK: OFF"
-        CamlockButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    end
-end)
-
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 UserInputService.InputChanged:Connect(function(input)
@@ -159,13 +128,13 @@ end)
 local function ShouldIgnoreTarget(targetCharacter)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
     if not targetPlayer then return true end
-    if targetPlayer.Team == LocalPlayer.Team then return true end
+    if targetPlayer == LocalPlayer then return true end
+    if targetPlayer.Team and LocalPlayer.Team and targetPlayer.Team == LocalPlayer.Team then return true end
     local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
     if humanoid and humanoid.Health <= 0 then return true end
     return false
 end
 
--- ฟังก์ชันเลือกตำแหน่งอ้างอิงตามค่า FOVPositionMode ที่ปรับจาก UI
 local function GetReferencePosition()
     local viewportSize = Camera.ViewportSize
     local mode = tostring(getgenv().FOVPositionMode):lower()
@@ -173,9 +142,18 @@ local function GetReferencePosition()
     if mode == "mouse/touch" or mode == "mousetouch" or mode == "mouse" then
         return LastMousePosition
     else
-        -- ค่าเริ่มต้นคือ "Middle"
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     end
+end
+
+local function GetPredictedPosition(targetPart)
+    if not targetPart then return Vector3.new(0,0,0) end
+    local basePos = targetPart.Position
+    if getgenv().PredictionEnabled then
+        local velocity = targetPart.AssemblyLinearVelocity or Vector3.new(0,0,0)
+        return basePos + (velocity * getgenv().PredictionFactor)
+    end
+    return basePos
 end
 
 local function GetTargetInFOV(refPos)
@@ -222,8 +200,9 @@ pcall(function()
 
     gmt.__index = newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and getgenv().CurrentTarget and SuccessMouse and self == MouseObj then
+            local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
             if idx == "Hit" or idx == "hit" then
-                return getgenv().CurrentTarget.CFrame
+                return CFrame.new(targetPos)
             elseif idx == "Target" or idx == "target" then
                 return getgenv().CurrentTarget
             end
@@ -236,11 +215,12 @@ pcall(function()
         local args = { ... }
 
         if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
+            local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
             for i, arg in ipairs(args) do
                 if typeof(arg) == "Vector3" then
-                    args[i] = getgenv().CurrentTarget.Position
+                    args[i] = targetPos
                 elseif typeof(arg) == "CFrame" then
-                    args[i] = getgenv().CurrentTarget.CFrame
+                    args[i] = CFrame.new(targetPos)
                 end
             end
             return oldNamecall(self, table.unpack(args))
@@ -276,11 +256,11 @@ RunService.RenderStepped:Connect(function()
 
     getgenv().CurrentTarget = GetTargetInFOV(refPos)
 
-    if getgenv().CamlockEnabled and isCamlockActive and getgenv().CurrentTarget then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, getgenv().CurrentTarget.Position)
+    if getgenv().CamlockEnabled and getgenv().CurrentTarget then
+        local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
     end
 
-    -- เส้น Snapline ลากจากตัวละครเราไปหาเป้าหมาย
     if getgenv().CurrentTarget and getgenv().ShowTracer then
         local myCharacter = LocalPlayer.Character
         local myRootPart = myCharacter and (myCharacter:FindFirstChild("HumanoidRootPart") or myCharacter:FindFirstChild("Torso"))
@@ -303,7 +283,6 @@ RunService.RenderStepped:Connect(function()
         Snapline.Visible = false
     end
 end)
-
 
 
 
