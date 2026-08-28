@@ -1,24 +1,29 @@
 local _version = "1.6.66"
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))() 
 
+if getgenv().DestinyHubWindow then
+    pcall(function()
+        getgenv().DestinyHubWindow:Destroy()
+    end)
+end
+
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))() 
 
 local Window = WindUI:CreateWindow({
     Icon = "crown", 
-    Title = "Destiny Hub", -- window title
+    Title = "Destiny Hub", 
     Author = "https://discord.gg/R74798dMZ6", 
     Folder = "MyConfigFile", 
     Theme = "Midnight", 
-    Size = UDim2.fromOffset(600, 480), -- window size
+    Size = UDim2.fromOffset(590, 500),
 })
 
 
+getgenv().DestinyHubWindow = Window
 
 
 Window:Section({
     Title = "Player Settings",
 })
-
-
 
 local CombatTab = Window:Tab({
     Title = "Combat",
@@ -44,6 +49,11 @@ Window:Section({
 local Visuals = Window:Tab({
     Title = "Visuals",
     Icon = "eye"
+})
+
+local Server = Window:Tab({
+    Title = "Server",
+    Icon = "terminal"
 })
 
 
@@ -176,54 +186,45 @@ DotCorner.CornerRadius = UDim.new(1, 0)
 DotCorner.Parent = CenterDot
 
 
--- สร้างเส้น
+
+
 local Snapline = Drawing.new("Line")
 Snapline.Visible = false
-Snapline.Thickness = 1.5                   -- ความหนาเส้น
-Snapline.Color = Color3.fromRGB(255, 255, 255) -- สีขาว
-Snapline.Transparency = 1                  -- ความทึบ (1=ทึบสุด)
-Snapline.From = Vector2.new(0, 0)          -- จุดเริ่มต้น
-Snapline.To = Vector2.new(0, 0)            -- จุดปลาย
+Snapline.Thickness = 1.5         
+Snapline.Color = Color3.fromRGB(255, 255, 255) 
+Snapline.Transparency = 1              
+Snapline.From = Vector2.new(0, 0)         
+Snapline.To = Vector2.new(0, 0)            
 
--- บริการพื้นฐานของ Roblox
 local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 
--- ✅ ฟังก์ชันอัปเดตตำแหน่งเส้น
 function SetSnapline(startPos, endPos)
     Snapline.From = startPos
     Snapline.To = endPos
     Snapline.Visible = true
 end
 
--- ✅ ฟังก์ชันซ่อนเส้น
 function HideSnapline()
     Snapline.Visible = false
 end
 
--- ✅ เพิ่มเติมสำหรับมือถือ: ดึงตำแหน่งกึ่งกลางหน้าจออัตโนมัติ (สำหรับลากเส้นจากกลางจอไปหาเป้าหมาย)
 function GetScreenCenter()
     local viewportSize = Camera.ViewportSize
     return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
 end
 
--- ✅ ตัวอย่างการใช้งานร่วมกับ RenderStepped (รองรับทั้งมือถือและคอม)
 game:GetService("RunService").RenderStepped:Connect(function()
-    -- ตัวอย่าง: ลากเส้นจากกลางจอ (เหมาะกับมือถือ) ไปที่ตำแหน่งเมาส์หรือนิ้วสัมผัส
-    -- หรือถ้าทำ Aimbot ให้เปลี่ยน endPos เป็น Vector2 ของเป้าหมาย (Player Head)
     
-    local startPoint = GetScreenCenter() -- จุดเริ่มต้น (กลางจอ)
+    local startPoint = GetScreenCenter() 
     
-    -- รองรับการแตะหน้าจอจิ้มค้างบนมือถือ หรือใช้ MousePosition บน PC
     local touchLocations = UserInputService:GetTouchPositions()
     local endPoint
     
     if #touchLocations > 0 then
-        -- ถ้าจื้อมือถืออยู่ ให้เส้นพุ่งไปที่นิ้วที่สัมผัส
         endPoint = Vector2.new(touchLocations[1].Position.X, touchLocations[1].Position.Y)
     else
-        -- ถ้าไม่มีการสัมผัส ให้ซ่อนเส้นหรือใช้ตำแหน่งอื่น
-        -- endPoint = Vector2.new(Mouse.X, Mouse.Y)
+
     end
     
     if endPoint then
@@ -232,6 +233,9 @@ game:GetService("RunService").RenderStepped:Connect(function()
         HideSnapline()
     end
 end)
+
+
+
 ---------------------------------------------------------------------------------------
 
 
@@ -2034,6 +2038,185 @@ GeneralTab:Toggle({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+local ServerManagement = Server:Section({ Title = "Server Management" })
+
+local InputJobId = ""
+local SpamJoinActive = false
+
+Server:Input({
+    Title = "Server Job ID",
+    Placeholder = "Enter target Job ID...",
+    Value = "",
+    Callback = function(text)
+        InputJobId = text
+    end,
+})
+
+Server:Toggle({
+    Title = "Spam Join Server",
+    Value = false,
+    Callback = function(Value)
+        SpamJoinActive = Value
+        
+        if SpamJoinActive then
+            if InputJobId == "" or InputJobId == nil then
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "Please enter a valid Job ID first!",
+                    Icon = "alert-circle",
+                    Duration = 3,
+                })
+                SpamJoinActive = false
+                return
+            end
+            
+            WindUI:Notify({
+                Title = "Spam Join Started",
+                Content = "Attempting to join the target server...",
+                Icon = "play",
+                Duration = 3,
+            })
+            
+            task.spawn(function()
+                while SpamJoinActive do
+                    pcall(function()
+                        local TeleportService = game:GetService("TeleportService")
+                        local Players = game:GetService("Players")
+                        local LocalPlayer = Players.LocalPlayer
+                        
+                        if InputJobId ~= "" then
+                            TeleportService:TeleportToPlaceInstance(game.PlaceId, InputJobId, LocalPlayer)
+                        end
+                    end)
+                    task.wait(3)
+                end
+            end)
+        end
+    end,
+})
+
+Server:Button({
+    Title = "Join Server",
+    Callback = function()
+        if InputJobId == "" or InputJobId == nil then
+            WindUI:Notify({
+                Title = "Error",
+                Content = "กรุณากรอก Job ID ก่อน!",
+                Icon = "alert-circle",
+                Duration = 3,
+            })
+            return
+        end
+        
+        WindUI:Notify({
+            Title = "Connecting",
+            Content = "กำลังพยายามเข้าสู่เซิร์ฟเวอร์...",
+            Icon = "loader",
+            Duration = 3,
+        })
+        
+        local success, err = pcall(function()
+            local TeleportService = game:GetService("TeleportService")
+            local Players = game:GetService("Players")
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, InputJobId, Players.LocalPlayer)
+        end)
+        
+        if not success then
+            WindUI:Notify({
+                Title = "Teleport Failed (Error 773)",
+                Content = "เซิร์ฟเวอร์เต็ม, ปิดตัวลงแล้ว หรือเป็น Private Server ที่ไม่มีสิทธิ์เข้า",
+                Icon = "x-circle",
+                Duration = 4,
+            })
+        end
+    end,
+})
+
+Server:Button({
+    Title = "Copy server code",
+    Callback = function()
+        pcall(function()
+            local currentJobId = game.JobId
+            if setclipboard then
+                setclipboard(currentJobId)
+                WindUI:Notify({
+                    Title = "Success",
+                    Content = "Copied current Job ID to clipboard!",
+                    Icon = "check-circle",
+                    Duration = 3,
+                })
+            elseif toclipboard then
+                toclipboard(currentJobId)
+                WindUI:Notify({
+                    Title = "Success",
+                    Content = "Copied current Job ID to clipboard!",
+                    Icon = "check-circle",
+                    Duration = 3,
+                })
+            end
+        end)
+    end,
+})
+
+Server:Button({
+    Title = "Rejoin Server",
+    Callback = function()
+        WindUI:Notify({
+            Title = "Rejoining",
+            Content = "กำลังกลับเข้าสู่เซิร์ฟเวอร์เดิม...",
+            Icon = "refresh-cw",
+            Duration = 3,
+        })
+        pcall(function()
+            local TeleportService = game:GetService("TeleportService")
+            local Players = game:GetService("Players")
+            local LocalPlayer = Players.LocalPlayer
+            
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        end)
+    end,
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 local CombatBuffsSection = GeneralTab:Section({ Title = "Combat Attack" })
 
 local FastAttackToggle = GeneralTab:Toggle({
@@ -2237,9 +2420,6 @@ Visuals:Toggle({
 
 
 
-
-
-
 local SafeModeSection = GeneralTab:Section({ Title = "Safe Mode" })
 
 GeneralTab:Toggle({
@@ -2387,6 +2567,180 @@ local UIKeybind = Config:Keybind({
 
 
 
+-- // Configuration & Safety Checks
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
+local StarterGui = game:GetService("StarterGui")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- // Notification Helper
+local function notify(title, content)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = content,
+            Duration = 3
+        })
+    end)
+end
+
+local Button = FPSBoost:Button({
+    Title = "Ultimate FPS Boost",
+    Desc = "Advanced multi-layered performance optimization system.",
+    Callback = function()
+        notify("FPS Boost", "Initializing comprehensive optimization...")
+
+        -- [1] Core Engine & Rendering Tweaks
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level0
+            UserSettings():GetService("UserGameSettings").SavedQualityLevel = Enum.SavedQualityLevel.Level1
+            
+            -- Disable extensive graphic physics elements
+            Workspace.FallenPartsDestroyHeight = 0
+            for _, v in ipairs(Workspace:GetChildren()) do
+                if v:IsA("Clouds") or v:IsA("Atmosphere") or v:IsA("Wind") or v:IsA("PostEffect") then
+                    v:Destroy()
+                end
+            end
+        end)
+
+        -- [2] Deep Lighting Stripping
+        pcall(function()
+            Lighting.GlobalShadows = false
+            Lighting.Brightness = 2
+            Lighting.FogEnd = 9e9
+            Lighting.FogStart = 9e9
+            Lighting.ClockTime = 14
+            Lighting.GeographicLatitude = 0
+            Lighting.Ambient = Color3.fromRGB(200, 200, 200)
+            Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+
+            for _, child in ipairs(Lighting:GetChildren()) do
+                if child:IsA("PostEffect") or child:IsA("Sky") or child:IsA("Atmosphere") or child:IsA("Clouds") or child:IsA("BlurEffect") or child:IsA("SunRaysEffect") or child:IsA("ColorCorrectionEffect") or child:IsA("BloomEffect") then
+                    child:Destroy()
+                end
+            end
+        end)
+
+        -- [3] Terrain & Environment Stripping
+        pcall(function()
+            local Terrain = Workspace:FindFirstChildOfClass("Terrain")
+            if Terrain then
+                Terrain.WaterWaveSize = 0
+                Terrain.WaterWaveTransparency = 1
+                Terrain.WaterTransparency = 1
+                Terrain.WaterReflectance = 0
+                Terrain.Decoration = false
+                pcall(function()
+                    Terrain:Clear()
+                end)
+            end
+        end)
+
+        -- [4] Audio & UI Resource Management
+        pcall(function()
+            SoundService.RespectFilteringEnabled = true
+            for _, sound in ipairs(SoundService:GetDescendants()) do
+                if sound:IsA("Sound") then
+                    sound.Volume = 0
+                end
+            end
+        end)
+
+        -- [5] Advanced Part & Material Optimization Pipeline
+        local function optimizePart(v)
+            if v:IsA("BasePart") then
+                -- Exclude local characters and active gameplay skill effects
+                local modelParent = v.Parent
+                local isCharacter = modelParent and (modelParent:FindFirstChild("Humanoid") or modelParent:IsA("Accessory"))
+                local isEffect = modelParent and modelParent.Name:lower():find("effect") or v.Name:lower():find("effect")
+
+                if not isCharacter and not isEffect then
+                    v.Material = Enum.Material.SmoothPlastic
+                    v.Reflectance = 0
+                    v.CastShadow = false
+                    v.Color = Color3.fromRGB(150, 150, 150)
+                end
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+                if not v.Parent:FindFirstChild("Humanoid") then
+                    v.Enabled = false
+                end
+            elseif v:IsA("MeshPart") then
+                local modelParent = v.Parent
+                local isCharacter = modelParent and modelParent:FindFirstChild("Humanoid")
+                if not isCharacter then
+                    v.TextureID = ""
+                    v.Material = Enum.Material.SmoothPlastic
+                    v.CastShadow = false
+                end
+            end
+        end
+
+        -- Batch run through existing workspace descendants
+        task.spawn(function()
+            local descendants = Workspace:GetDescendants()
+            for i = 1, #descendants do
+                pcall(function()
+                    optimizePart(descendants[i])
+                end)
+                if i % 500 == 0 then
+                    task.wait() -- Prevent script exhaustion/timeouts
+                end
+            end
+        end)
+
+        -- [6] Dynamic Event Listener for Future Map Elements
+        pcall(function()
+            if not getgenv().FPSBoostConnection then
+                getgenv().FPSBoostConnection = Workspace.DescendantAdded:Connect(function(v)
+                    pcall(function()
+                        task.wait(0.1)
+                        if v then
+                            optimizePart(v)
+                        end
+                    end)
+                end)
+            end
+        end)
+
+        -- [7] Memory Cleanup and Garbage Collection
+        pcall(function()
+            collectgarbage("collect")
+        end)
+
+        notify("FPS Boost", "Optimization complete! Frame rate profile maximized.")
+    end
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 local screenGui = Instance.new("ScreenGui")
@@ -2396,7 +2750,7 @@ screenGui.ResetOnSpawn = false
 
 local container = Instance.new("Frame")
 container.Size = UDim2.new(0, 130, 0, 110)
-container.Position = UDim2.new(0, 15, 0, 110)
+container.Position = UDim2.new(0, 15, 0, 15)
 container.BackgroundTransparency = 1
 container.Active = false
 container.Parent = screenGui
@@ -2431,19 +2785,20 @@ local function createButton(text, textColor, order, callback)
     button.TextScaled = true
     button.Font = Enum.Font.SourceSansBold
 
-    -- ระบบสลับสถานะ เปิด/ปิด (Toggle)
     local activeState = false
     button.MouseButton1Click:Connect(function()
         activeState = not activeState
         
         if activeState then
-            -- ตอนเปิด (เปลี่ยนสีปุ่มให้สว่างขึ้น หรือเปลี่ยนสีขอบให้เด่นขึ้น)
             button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            uiStroke.Color = textColor -- ใช้สีตามตัวอักษรเป็นสีขอบตอนเปิด
+            if uiStroke then
+                uiStroke.Color = textColor 
+            end
         else
-            -- ตอนปิด (กลับเป็นสีเดิม)
             button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-            uiStroke.Color = Color3.fromRGB(55, 55, 55)
+            if uiStroke then
+                uiStroke.Color = Color3.fromRGB(55, 55, 55)
+            end
         end
 
         if callback then
