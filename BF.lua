@@ -1,12 +1,17 @@
 local _version = "1.6.66"
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))() 
 
+
 local Window = WindUI:CreateWindow({
+    Icon = "crown", 
     Title = "Destiny Hub", -- window title
-    Author = "https://discord.gg/R74798dMZ6", -- window subtitle. optional
-    Folder = "MyConfigFile", -- folder to save keys and images
-    
+    Author = "https://discord.gg/R74798dMZ6", 
+    Folder = "MyConfigFile", 
+    Theme = "Midnight", 
+    Size = UDim2.fromOffset(600, 480), -- window size
 })
+
+
 
 
 Window:Section({
@@ -14,31 +19,34 @@ Window:Section({
 })
 
 
--- ⚔️ ต่อสู้
+
 local CombatTab = Window:Tab({
     Title = "Combat",
     Icon = "swords"
 })
 CombatTab:Select()
--- 🛠️ ทั่วไป
+
 local GeneralTab = Window:Tab({
     Title = "General",
     Icon = "settings"
 })
 
-
+local FPSBoost = Window:Tab({
+    Title = "FPS Boost",
+    Icon = "activity"
+})
 
 Window:Section({
     Title = "Main Features",
 })
 
--- 📊 อื่นๆ ที่ 1
+
 local Visuals = Window:Tab({
     Title = "Visuals",
     Icon = "eye"
 })
 
--- 📊 อื่นๆ ที่ 2
+
 local Config = Window:Tab({
     Title = "Config",
     Icon = "wrench"
@@ -331,8 +339,6 @@ end
 
 
 
-
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
@@ -341,7 +347,7 @@ pcall(function()
         getgenv().SilentAimEnabled = false
     end
 
-    -- 1. ฟังก์ชันรองรับสำหรับ PC (ดัก Metatable ของ Mouse)
+    -- ฟังก์ชันสำหรับ PC (ดัก Metatable ของ Mouse)
     local successMouse, mouseObj = pcall(function() return LocalPlayer:GetMouse() end)
     if successMouse and mouseObj and getrawmetatable and setreadonly then
         local gmt = getrawmetatable(game)
@@ -367,28 +373,8 @@ pcall(function()
 
         setreadonly(gmt, true)
     end
-
-    -- 2. ฟังก์ชันสำรองสำหรับ Mobile (กรณี executor ไม่รองรับ getrawmetatable)
-    local tool = script.Parent
-    if tool and tool:IsA("Tool") then
-        tool.Activated:Connect(function()
-            if not getgenv().SilentAimEnabled then return end
-            
-            local target = getgenv().CurrentTarget
-            if target and target.Parent then
-                local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
-                if rootPart then
-                    local args = {
-                        vector.create(rootPart.Position.X, rootPart.Position.Y, rootPart.Position.Z)
-                    }
-                    pcall(function()
-                        LocalPlayer.Character:WaitForChild("Superhuman"):WaitForChild("RemoteEvent"):FireServer(unpack(args))
-                    end)
-                end
-            end
-        end)
-    end
 end)
+
 
 
 
@@ -401,27 +387,24 @@ pcall(function()
 
     gmt.__namecall = newcclosure(function(self, ...)
         local method = getnamecallmethod()
-        local args = { ... }
 
-        -- ตรวจสอบเงื่อนไข Silent Aim และ Target
         if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
             local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
+            local args = { ... }
             
-            for i, arg in ipairs(args) do
-                if typeof(arg) == "Vector3" then
-                    -- ถ้าอาร์กิวเมนต์เป็น Vector3 (ตำแหน่งเป้าหมาย) เปลี่ยนเป็นตำแหน่งศัตรู
+            for i = 1, #args do
+                local arg = args[i]
+                local argType = typeof(arg)
+                
+                if argType == "Vector3" then
                     args[i] = targetPos
-                elseif typeof(arg) == "CFrame" then
-                    -- ถ้าอาร์กิวเมนต์เป็น CFrame (ตำแหน่ง + ทิศทางสกิล) ให้รักษา rotation เดิมแต่เปลี่ยนตำแหน่ง (Position) ไปที่ศัตรู
+                elseif argType == "CFrame" then
                     local _, _, _, r00, r01, r02, r10, r11, r12, r20, r21, r22 = arg:GetComponents()
-                    args[i] = CFrame.new(
-                        targetPos.X, targetPos.Y, targetPos.Z,
-                        r00, r01, r02, r10, r11, r12, r20, r21, r22
-                    )
+                    args[i] = CFrame.new(targetPos.X, targetPos.Y, targetPos.Z, r00, r01, r02, r10, r11, r12, r20, r21, r22)
                 end
             end
             
-            return oldNamecall(self, table.unpack(args))
+            return oldNamecall(self, unpack(args))
         end
 
         return oldNamecall(self, ...)
@@ -429,6 +412,16 @@ pcall(function()
 
     setreadonly(gmt, true)
 end)
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -527,8 +520,6 @@ end)
 
 
 -- แดช วิ่งเร็วขึ้น กระโดดสูงขึ้น
-
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -569,7 +560,7 @@ end
 
 -- ==================== 3. ลูปการทำงานเบื้องหลัง (RunService Loops) ====================
 
--- ลูปทำงานกระโดด
+-- รวมลูปทำงานไว้ใน RenderStepped เดียวเพื่อประสิทธิภาพที่ดีขึ้น
 RunService.RenderStepped:Connect(function(deltaTime)
     local character = GetCharacter()
     if not character then return end
@@ -577,31 +568,20 @@ RunService.RenderStepped:Connect(function(deltaTime)
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
 
+    -- จัดการระบบกระโดด
     if JumpEnabled then
         UpdateJump(humanoid)
     else
-        -- คืนค่าเดิมเมื่อปิด
         if humanoid.JumpPower ~= 50 then
             humanoid.JumpPower = 50
         end
     end
+
+    -- จัดการระบบพุ่ง (Dash)
+    if DashEnabled then
+        UpdateDash(character, humanoid, deltaTime)
+    end
 end)
-
--- ลูปทำงานพุ่ง (Dash)
-RunService.RenderStepped:Connect(function(deltaTime)
-    if not DashEnabled then return end
-
-    local character = GetCharacter()
-    if not character then return end
-
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-
-    UpdateDash(character, humanoid, deltaTime)
-end)
-
-
-
 
 
 
@@ -1308,7 +1288,7 @@ local LocalPlayer = Players.LocalPlayer
 -- System Control Variables (Hardcore Config)
 local FollowEnabled = false
 local FollowDistance = 300
-local TpBehindDistance = 0
+local TpBehindDistance = 5
 local FollowKeybind = Enum.KeyCode.E
 
 local currentTarget = nil
@@ -1441,8 +1421,16 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- โจมตี
 
+
+
+
+
+
+
+
+
+-- โจมตี
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1455,7 +1443,37 @@ local registerAttack = netModule:WaitForChild("RE/RegisterAttack")
 
 local fastAttackConnection = nil
 
--- ฟังก์ชันหลักสำหรับเปิด-ปิดระบบโจมตีออร์โต้ (รวมผู้เล่นและมอนสเตอร์)
+-- ฟังก์ชันสำหรับส่งรีโมท M1 ผลไม้ปีศาจ
+local function fireFruitM1(targetRoot)
+    local character = player.Character
+    if not character then return end
+    
+    -- ค้นหา Tool หรือ Object ผลไม้ปีศาจที่ตัวละครถืออยู่ หรือมีอยู่ใน Character
+    for _, item in ipairs(character:GetChildren()) do
+        if item:IsA("Tool") or item.Name:find("Dragon") or item:FindFirstChild("RemoteEvent") then
+            local remoteEvent = item:FindFirstChild("RemoteEvent")
+            local leftClickRemote = item:FindFirstChild("LeftClickRemote")
+            
+            if remoteEvent then
+                pcall(function()
+                    remoteEvent:FireServer(false)
+                end)
+            end
+            
+            if leftClickRemote then
+                pcall(function()
+                    local args = {
+                        targetRoot.Position, -- ใช้ตำแหน่งเป้าหมายหรือทิศทางที่ต้องการ
+                        1
+                    }
+                    leftClickRemote:FireServer(unpack(args))
+                end)
+            end
+        end
+    end
+end
+
+-- ฟังก์ชันหลักสำหรับเปิด-ปิดระบบโจมตีออร์โต้
 local function SetFastAttack(state)
     _G.FastAttackRunning = state
     
@@ -1475,13 +1493,13 @@ local function SetFastAttack(state)
             if not character or not character:FindFirstChild("HumanoidRootPart") then return end
             local rootPart = character.HumanoidRootPart
             
-            -- ฟังก์ชันช่วยส่งรีโมทโจมตีเป้าหมาย
+            -- ฟังก์ชันช่วยส่งรีโมทโจมตีเป้าหมาย (รวมการตีปกติและผลไม้)
             local function attackTarget(targetRoot)
                 if targetRoot then
                     local argsHit = {
-                        targetRoot, -- พาร์ทเป้าหมายที่โดนตี
+                        targetRoot,
                         {},
-                        [4] = "211ee8ef" -- Hash อ้างอิงรีโมท
+                        [4] = "211ee8ef"
                     }
                     registerHit:FireServer(unpack(argsHit))
                     
@@ -1490,6 +1508,9 @@ local function SetFastAttack(state)
                         1
                     }
                     registerAttack:FireServer(unpack(argsAttack))
+                    
+                    -- เพิ่มการโจมตี M1 ของผลไม้ปีศาจ
+                    fireFruitM1(targetRoot)
                 end
             end
             
@@ -1509,7 +1530,7 @@ local function SetFastAttack(state)
                 end
             end
             
-            -- 2. ตีผู้เล่นคนอื่นในเซิร์ฟเวอร์ (Workspace.Characters หรือผ่าน Players Service)
+            -- 2. ตีผู้เล่นคนอื่นในเซิร์ฟเวอร์
             for _, otherPlayer in ipairs(Players:GetPlayers()) do
                 if otherPlayer ~= player then
                     local targetChar = otherPlayer.Character
@@ -1517,10 +1538,9 @@ local function SetFastAttack(state)
                         local targetRoot = targetChar.HumanoidRootPart
                         local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
                         
-                        -- เช็คว่าผู้เล่นยังมีชีวิตอยู่
                         if humanoid and humanoid.Health > 0 then
                             local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                            if distance <= 60 then -- ระยะโจมตี
+                            if distance <= 60 then
                                 attackTarget(targetRoot)
                             end
                         end
@@ -1560,205 +1580,81 @@ end
 -- ฮิตBox
 
 
-
--- ==========================================
--- 1. CONFIG & SYSTEM CORE (Enhanced)
--- ==========================================
-local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
-local ConfigFileName = "HitboxExpander_Config.json"
-local availableParts = {"Head", "HumanoidRootPart"}
-
--- ฟังก์ชันบันทึกค่าลงไฟล์
-local function saveConfig()
-    pcall(function()
-        local configData = {
-            HitboxEnabled = getgenv().HitboxEnabled,
-            HitboxSize = getgenv().HitboxSize,
-            HitboxPartName = getgenv().HitboxPartName,
-            HitboxColor = {getgenv().HitboxColor.R, getgenv().HitboxColor.G, getgenv().HitboxColor.B},
-            HitboxShowBox = getgenv().HitboxShowBox
-        }
-        if writefile then
-            writefile(ConfigFileName, HttpService:JSONEncode(configData))
-        end
-    end)
-end
-
--- ฟังก์ชันโหลดค่าจากไฟล์
-local function loadConfig()
-    if readfile and isfile and isfile(ConfigFileName) then
-        pcall(function()
-            local result = HttpService:JSONDecode(readfile(ConfigFileName))
-            if type(result) == "table" then
-                getgenv().HitboxEnabled = result.HitboxEnabled
-                getgenv().HitboxSize = result.HitboxSize
-                getgenv().HitboxPartName = result.HitboxPartName
-                if result.HitboxColor then
-                    getgenv().HitboxColor = Color3.new(result.HitboxColor[1], result.HitboxColor[2], result.HitboxColor[3])
-                end
-                getgenv().HitboxShowBox = result.HitboxShowBox
-            end
-        end)
-    end
-end
-
--- กำหนดค่าเริ่มต้น
-getgenv().HitboxEnabled = getgenv().HitboxEnabled or false
+-- ค่าคอนฟิกสำหรับขยายหัวโดยเฉพาะ
+getgenv().HitboxEnabled = getgenv().HitboxEnabled or true
 getgenv().HitboxSize = getgenv().HitboxSize or 18
-getgenv().HitboxPartName = getgenv().HitboxPartName or "Head" 
 getgenv().HitboxColor = getgenv().HitboxColor or Color3.fromRGB(96, 205, 255)
 getgenv().HitboxShowBox = getgenv().HitboxShowBox or true
 
--- โหลดค่าเดิมทันที
-loadConfig()
-
--- ฟังก์ชันคืนค่าขนาดเดิมให้กับฮิตบ็อกซ์
 local function resetPlayerHitbox(character)
     if not character then return end
-    for _, partName in ipairs(availableParts) do
-        local part = character:FindFirstChild(partName)
-        if part then
-            local originalSize = part:FindFirstChild("OriginalSize")
-            if originalSize then
-                part.Size = originalSize.Value
-                originalSize:Destroy()
-            end
-            local selectionBox = part:FindFirstChild("CustomHitboxSelectionBox")
-            if selectionBox then
-                selectionBox:Destroy()
-            end
-            part.Transparency = 0
-            part.CanCollide = true
-            part.CastShadow = true
+    local head = character:FindFirstChild("Head")
+    if head then
+        local originalSize = head:FindFirstChild("OriginalSize")
+        if originalSize then
+            head.Size = originalSize.Value
+            originalSize:Destroy()
         end
+        local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
+        if selectionBox then selectionBox:Destroy() end
+        head.Transparency = 0
+        head.CanCollide = true
+        head.CastShadow = true
     end
 end
 
-local trackedHumanoids = {}
-
-local function setupPlayer(player)
-    player.CharacterAdded:Connect(function(character)
-        task.wait(0.5)
-        resetPlayerHitbox(character)
-    end)
-end
-
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        setupPlayer(player)
-    end
-end
-
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then
-        setupPlayer(player)
-    end
-end)
-
--- ลูปการทำงานหลัก
+-- ลูปการทำงานหลักเฉพาะหัว
 RunService.RenderStepped:Connect(function()
-    if not getgenv().HitboxEnabled or not getgenv().HitboxPartName or getgenv().HitboxPartName == "" then
-        return
-    end
+    if not getgenv().HitboxEnabled then return end
 
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
+        if player ~= LocalPlayer and player.Character then
             local character = player.Character
-            if character then
-                local humanoid = character:FindFirstChildOfClass("Humanoid")
-                
-                if humanoid and humanoid.Health > 0 then
-                    -- รีเซ็ตพาร์ทที่ไม่ได้เลือก
-                    for _, partName in ipairs(availableParts) do
-                        if partName ~= getgenv().HitboxPartName then
-                            local part = character:FindFirstChild(partName)
-                            if part then
-                                local originalSize = part:FindFirstChild("OriginalSize")
-                                if originalSize then
-                                    part.Size = originalSize.Value
-                                    originalSize:Destroy()
-                                end
-                                local selectionBox = part:FindFirstChild("CustomHitboxSelectionBox")
-                                if selectionBox then
-                                    selectionBox:Destroy()
-                                end
-                                part.Transparency = 0
-                                part.CanCollide = true
-                                part.CastShadow = true
-                            end
-                        end
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            
+            if humanoid and humanoid.Health > 0 then
+                local head = character:FindFirstChild("Head")
+                if head then
+                    -- บันทึกขนาดเดิมเก็บไว้ครั้งแรก
+                    local originalSize = head:FindFirstChild("OriginalSize")
+                    if not originalSize then
+                        originalSize = Instance.new("Vector3Value")
+                        originalSize.Name = "OriginalSize"
+                        originalSize.Value = head.Size
+                        originalSize.Parent = head
                     end
-
-                    -- ติดตามสถานะตาย
-                    if not trackedHumanoids[humanoid] then
-                        trackedHumanoids[humanoid] = humanoid.Died:Connect(function()
-                            resetPlayerHitbox(character)
-                            trackedHumanoids[humanoid] = nil
-                        end)
-                    end
-
-                    -- ขยายพาร์ทที่เลือก
-                    local part = character:FindFirstChild(getgenv().HitboxPartName)
-                    if part then
-                        local originalSize = part:FindFirstChild("OriginalSize")
-                        if not originalSize then
-                            originalSize = Instance.new("Vector3Value")
-                            originalSize.Name = "OriginalSize"
-                            if part.Size.X > 5 then
-                                originalSize.Value = Vector3.new(2, 1, 1)
-                            else
-                                originalSize.Value = part.Size
-                            end
-                            originalSize.Parent = part
+                    
+                    -- จัดการกรอบเส้น (SelectionBox)
+                    local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
+                    if getgenv().HitboxShowBox then
+                        if not selectionBox then
+                            selectionBox = Instance.new("SelectionBox")
+                            selectionBox.Name = "CustomHitboxSelectionBox"
+                            selectionBox.Parent = head
                         end
-                        
-                        -- จัดการเรื่องการแสดงผลกรอบ (Visual) แยกต่างหากตรงนี้
-                        local selectionBox = part:FindFirstChild("CustomHitboxSelectionBox")
-                        if getgenv().HitboxShowBox then
-                            if not selectionBox then
-                                selectionBox = Instance.new("SelectionBox")
-                                selectionBox.Name = "CustomHitboxSelectionBox"
-                                selectionBox.Parent = part
-                            end
-                            selectionBox.Adornee = part
-                            selectionBox.Color3 = getgenv().HitboxColor
-                            selectionBox.LineThickness = 0.001
-                        else
-                            if selectionBox then
-                                selectionBox:Destroy()
-                            end
-                        end
-                        
-                        -- กำหนดขนาดและสถานะ Hitbox เสมอ (ไม่ให้โดนปิดตามปุ่ม Visual)
-                        part.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                        part.Transparency = 1 
-                        part.CanCollide = false
-                        part.CastShadow = false
+                        selectionBox.Adornee = head
+                        selectionBox.Color3 = getgenv().HitboxColor
+                        selectionBox.LineThickness = 0.001
+                    elseif selectionBox then
+                        selectionBox:Destroy()
                     end
-                else
-                    resetPlayerHitbox(character)
+                    
+                    -- ขยายขนาดหัวและปรับสถานะ
+                    head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                    head.Transparency = 1 
+                    head.CanCollide = false
+                    head.CastShadow = false
                 end
+            else
+                resetPlayerHitbox(character)
             end
         end
     end
 end)
-
-Players.PlayerRemoving:Connect(function(player)
-    if player.Character then
-        resetPlayerHitbox(player.Character)
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid and trackedHumanoids[humanoid] then
-            trackedHumanoids[humanoid]:Disconnect()
-            trackedHumanoids[humanoid] = nil
-        end
-    end
-end)
-
-
 
 
 
@@ -1866,9 +1762,12 @@ end)
 
 
 
-local AimSection = CombatTab:Section({ Title = "Visual & Aim Settings" })
+local AimSection = CombatTab:Section({ Title = "Visual & Settings" })
+
+
 CombatTab:Toggle({
     Title = "CamLock (PC/Mobile)",
+    Desc = "Lock onto targets instantly with smooth camera movement across PC and mobile.",
     Flag = "camlock_toggle",
     Value = getgenv().CamlockEnabled,
     Callback = function(Value)
@@ -1881,35 +1780,38 @@ CombatTab:Toggle({
 
 CombatTab:Toggle({
     Title = "Silent Aim",
+    Desc = "Hit your shots effortlessly without needing precise crosshair placement.",
     Flag = "silent_aim_toggle",
     Value = getgenv().SilentAimEnabled,
     Callback = function(Value)
         getgenv().SilentAimEnabled = Value
         if not Value and not getgenv().CamlockEnabled then
             getgenv().CurrentTarget = nil
-            if Snapline then Snapline.Visible = false end -- แก้จาก RedLine เป็น Snapline
+            if Snapline then Snapline.Visible = false end
         end
     end,
 })
 
 CombatTab:Toggle({
     Title = "Show FOV Circle",
+    Desc = "Display a customizable FOV circle boundary on your screen.",
     Flag = "show_fov_toggle",
     Value = getgenv().ShowFOV,
     Callback = function(Value)
         getgenv().ShowFOV = Value
-        if FOVUI then FOVUI.Visible = Value end -- แก้จาก FOVCircle เป็น FOVUI
+        if FOVUI then FOVUI.Visible = Value end
     end,
 })
 
 CombatTab:Toggle({
     Title = "Show Red Snapline",
+    Desc = "Render a dynamic red line connecting directly to your active target.",
     Flag = "show_snapline_toggle",
     Value = getgenv().ShowTracer,
     Callback = function(Value)
         getgenv().ShowTracer = Value
         if not Value and Snapline then
-            Snapline.Visible = false -- แก้จาก RedLine เป็น Snapline
+            Snapline.Visible = false
         end
     end,
 })
@@ -1918,6 +1820,7 @@ local AimConfigSection = CombatTab:Section({ Title = "Aim Configurations" })
 
 CombatTab:Dropdown({
     Title = "FOV Position",
+    Desc = "Choose whether the FOV center follows your mouse/touch or stays locked to the screen center.",
     Flag = "fov_position_dropdown",
     Values = { "Mouse/Touch", "Middle" },
     Value = getgenv().FOVPositionMode,
@@ -1929,6 +1832,7 @@ CombatTab:Dropdown({
 
 CombatTab:Dropdown({
     Title = "Silent Aim Mode",
+    Desc = "Switch targeting parameters between custom FOV radius, 180° sweep, or full 360° coverage.",
     Flag = "silent_aim_mode_dropdown",
     Values = { "FOV", "180°", "360°" },
     Value = "FOV",
@@ -1948,6 +1852,7 @@ CombatTab:Dropdown({
 
 CombatTab:Slider({
     Title = "FOV Size",
+    Desc = "Scale the FOV radius to broaden or narrow your detection zone.",
     Flag = "fov_size_slider",
     Increment = 1,
     Value = {
@@ -1962,6 +1867,7 @@ CombatTab:Slider({
 
 CombatTab:Slider({
     Title = "Max Distance",
+    Desc = "Set the absolute maximum distance threshold for target acquisition.",
     Flag = "max_distance_slider",
     Increment = 1,
     Value = {
@@ -1977,16 +1883,14 @@ CombatTab:Slider({
 
 
 
-
 local HitboxSection = CombatTab:Section({ Title = "Hitbox Expander" })
-
 CombatTab:Toggle({
     Title = "Expand Hitboxes",
+    Desc = "Enlarge player hitboxes for easier and more reliable hits.",
     Flag = "HitboxToggle",
     Value = getgenv().HitboxEnabled,
     Callback = function(state)
         getgenv().HitboxEnabled = state
-        saveConfig() -- บันทึกค่าอัตโนมัติ
         if not state then
             for _, player in ipairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character then
@@ -1999,17 +1903,17 @@ CombatTab:Toggle({
 
 CombatTab:Toggle({
     Title = "Show Hitbox Visual",
+    Desc = "Render a visible outline around the expanded hitbox area.",
     Flag = "HitboxVisualToggle",
     Value = getgenv().HitboxShowBox,
     Callback = function(state)
         getgenv().HitboxShowBox = state
-        saveConfig() -- บันทึกค่าอัตโนมัติ
         if not state then
             for _, player in ipairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character then
-                    local part = player.Character:FindFirstChild(getgenv().HitboxPartName)
-                    if part then
-                        local selectionBox = part:FindFirstChild("CustomHitboxSelectionBox")
+                    local head = player.Character:FindFirstChild("Head")
+                    if head then
+                        local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
                         if selectionBox then
                             selectionBox:Destroy()
                         end
@@ -2022,6 +1926,7 @@ CombatTab:Toggle({
 
 CombatTab:Slider({
     Title = "Hitbox Scale",
+    Desc = "Adjust the size multiplier for the target hitboxes.",
     Flag = "HitboxSizeSlider",
     Value = {
         Min = 10,
@@ -2031,21 +1936,8 @@ CombatTab:Slider({
     Increment = 1,
     Callback = function(value)
         getgenv().HitboxSize = value
-        saveConfig() -- บันทึกค่าอัตโนมัติเมื่อเลื่อนสไลเดอร์
     end,
 })
-
-CombatTab:Dropdown({
-    Title = "Modules",
-    Flag = "HitboxModuleDropdown",
-    Values = availableParts,
-    Value = getgenv().HitboxPartName,
-    Callback = function(selected)
-        local mode = type(selected) == "table" and selected[1] or selected
-        getgenv().HitboxPartName = mode
-    end,
-})
-
 
 
 
@@ -2146,6 +2038,7 @@ local CombatBuffsSection = GeneralTab:Section({ Title = "Combat Attack" })
 
 local FastAttackToggle = GeneralTab:Toggle({
     Title = "Fast Attack",
+    Desc = "Combat/Fruit/Sword",
     Flag = "FastAttack",
     Value = false,
     Callback = function(state)
@@ -2155,6 +2048,7 @@ local FastAttackToggle = GeneralTab:Toggle({
 
 GeneralTab:Toggle({
     Title = "Auto Buso",
+    Desc = "Automatically enables Buso Haki",
     Flag = "AutoHakiCheck",
     Value = false,
     Callback = function(state)
@@ -2174,8 +2068,6 @@ GeneralTab:Toggle({
         end
     end,
 })
-
-
 
 
 
@@ -2426,10 +2318,11 @@ GeneralTab:Toggle({
 })
 
 
-local UtilitySection = GeneralTab:Section({ Title = "Hardcore Target Tracker" })
+local UtilitySection = GeneralTab:Section({ Title = "Elite Target Tracker" })
 
 FollowToggle = GeneralTab:Toggle({
-    Title = "Auto-Follow (Hardcore Mode)",
+    Title = "Elite Pursuit Mode",
+    Desc = "Automatically track and follow your hardcore target",
     Flag = "FollowToggle",
     Value = false,
     Callback = function(state)
@@ -2439,22 +2332,24 @@ FollowToggle = GeneralTab:Toggle({
 })
 
 local Keybind = GeneralTab:Keybind({
-    Title = "Toggle Keybind",
+    Title = "Target Lock Key",
+    Desc = "Keybind to trigger pursuit features",
     Flag = "UIKeybind",
-    Value = "E", -- เปลี่ยนค่าเริ่มต้นเป็นสตริงเพื่อความเสถียรกับ WindUI
+    Value = "E",
     Callback = function(key)
         if typeof(key) == "EnumItem" then
             FollowKeybind = key
         elseif type(key) == "string" then
-            -- แปลงสตริงตัวอักษรให้เป็น Enum.KeyCode อัตโนมัติ
             pcall(function()
                 FollowKeybind = Enum.KeyCode[key]
             end)
         end
     end,
 })
+
 local Slider = GeneralTab:Slider({
-    Title = "Follow Distance",
+    Title = "Pursuit Radius",
+    Desc = "Maximum distance to maintain from target",
     Flag = "VolumeSlider",
     Increment = 1,
     Value = {
@@ -2463,6 +2358,115 @@ local Slider = GeneralTab:Slider({
         Default = 250
     },
     Callback = function(value)
-        FollowDistance = value -- แก้จาก Value (ตัวใหญ่) เป็น value (ตัวเล็ก)
+        FollowDistance = value
     end,
 })
+
+
+
+
+
+
+local HideShowUI = Config:Section({ Title = "Hide / Show UI" })
+
+local UIKeybind = Config:Keybind({
+    Title = "Interface Toggle",
+    Desc = "Keybind to show or hide the user interface",
+    Flag = "UIKeybindUIKeybind", 
+    Value = "V",
+    Callback = function(key)
+        Window:Toggle()
+    end
+})
+
+
+
+
+
+
+
+
+
+
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CustomMobileTogglesStyle"
+screenGui.Parent = game.CoreGui
+screenGui.ResetOnSpawn = false
+
+local container = Instance.new("Frame")
+container.Size = UDim2.new(0, 130, 0, 110)
+container.Position = UDim2.new(0, 15, 0, 110)
+container.BackgroundTransparency = 1
+container.Active = false
+container.Parent = screenGui
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = container
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8)
+
+local function createButton(text, textColor, order, callback)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 130, 0, 40)
+    button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    button.BackgroundTransparency = 0.1
+    button.BorderSizePixel = 0
+    button.LayoutOrder = order
+    button.AutoButtonColor = false
+    button.Parent = container
+
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 8)
+    uiCorner.Parent = button
+
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Parent = button
+    uiStroke.Color = Color3.fromRGB(55, 55, 55)
+    uiStroke.Thickness = 1.5
+    uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+
+    button.Text = text
+    button.TextColor3 = textColor
+    button.TextScaled = true
+    button.Font = Enum.Font.SourceSansBold
+
+    -- ระบบสลับสถานะ เปิด/ปิด (Toggle)
+    local activeState = false
+    button.MouseButton1Click:Connect(function()
+        activeState = not activeState
+        
+        if activeState then
+            -- ตอนเปิด (เปลี่ยนสีปุ่มให้สว่างขึ้น หรือเปลี่ยนสีขอบให้เด่นขึ้น)
+            button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            uiStroke.Color = textColor -- ใช้สีตามตัวอักษรเป็นสีขอบตอนเปิด
+        else
+            -- ตอนปิด (กลับเป็นสีเดิม)
+            button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            uiStroke.Color = Color3.fromRGB(55, 55, 55)
+        end
+
+        if callback then
+            callback(activeState)
+        end
+    end)
+
+    return button
+end
+
+createButton("Camera Lock", Color3.fromRGB(0, 170, 255), 2, function(Value)
+    getgenv().CamlockEnabled = Value
+    if not Value then
+        getgenv().CurrentTarget = nil
+    end
+end)
+
+createButton("Teleport player", Color3.fromRGB(0, 170, 255), 3, function(state)
+    FollowEnabled = state
+    getgenv().TPToTargetEnabled = state
+    getgenv().FollowEnabled = state 
+    if not state then 
+        currentTarget = nil 
+        getgenv().CurrentTarget = nil 
+    end
+end)
