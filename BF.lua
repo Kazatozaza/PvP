@@ -333,36 +333,62 @@ end
 
 
 
-
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
 pcall(function()
-    local SuccessMouse, MouseObj = pcall(function() return LocalPlayer:GetMouse() end)
-    
-    -- ถ้าบนมือถือไม่มี MouseObj หรือรันไม่ได้ ให้ข้ามการฮุก metatable ของ mouse ไปเพื่อไม่ให้สคริปต์พัง
-    if not SuccessMouse or not MouseObj then return end
+    if not getgenv().SilentAimEnabled then
+        getgenv().SilentAimEnabled = false
+    end
 
-    local gmt = getrawmetatable(game)
-    local oldIndex = gmt.__index
-    setreadonly(gmt, false)
+    -- 1. ฟังก์ชันรองรับสำหรับ PC (ดัก Metatable ของ Mouse)
+    local successMouse, mouseObj = pcall(function() return LocalPlayer:GetMouse() end)
+    if successMouse and mouseObj and getrawmetatable and setreadonly then
+        local gmt = getrawmetatable(game)
+        local oldIndex = gmt.__index
+        setreadonly(gmt, false)
 
-    gmt.__index = newcclosure(function(self, idx)
-        if getgenv().SilentAimEnabled and getgenv().CurrentTarget and self == MouseObj then
-            -- เพิ่มการเช็คความปลอดภัยว่าเป้าหมายยังมีตัวตนอยู่จริง
-            if getgenv().CurrentTarget and getgenv().CurrentTarget.Parent then
-                local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
-                if idx == "Hit" or idx == "hit" then
-                    return CFrame.new(targetPos)
-                elseif idx == "Target" or idx == "target" then
-                    return getgenv().CurrentTarget
+        gmt.__index = newcclosure(function(self, idx)
+            if getgenv().SilentAimEnabled and getgenv().CurrentTarget and self == mouseObj then
+                local target = getgenv().CurrentTarget
+                if target and target.Parent then
+                    local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
+                    if rootPart then
+                        if idx == "Hit" or idx == "hit" then
+                            return CFrame.new(rootPart.Position)
+                        elseif idx == "Target" or idx == "target" then
+                            return rootPart
+                        end
+                    end
                 end
             end
-        end
-        return oldIndex(self, idx)
-    end)
+            return oldIndex(self, idx)
+        end)
 
-    setreadonly(gmt, true)
+        setreadonly(gmt, true)
+    end
+
+    -- 2. ฟังก์ชันสำรองสำหรับ Mobile (กรณี executor ไม่รองรับ getrawmetatable)
+    local tool = script.Parent
+    if tool and tool:IsA("Tool") then
+        tool.Activated:Connect(function()
+            if not getgenv().SilentAimEnabled then return end
+            
+            local target = getgenv().CurrentTarget
+            if target and target.Parent then
+                local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
+                if rootPart then
+                    local args = {
+                        vector.create(rootPart.Position.X, rootPart.Position.Y, rootPart.Position.Z)
+                    }
+                    pcall(function()
+                        LocalPlayer.Character:WaitForChild("Superhuman"):WaitForChild("RemoteEvent"):FireServer(unpack(args))
+                    end)
+                end
+            end
+        end)
+    end
 end)
-
 
 
 
