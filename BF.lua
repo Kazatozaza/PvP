@@ -6,7 +6,6 @@ local Window = WindUI:CreateWindow({
     Author = "https://discord.gg/R74798dMZ6", -- window subtitle. optional
     Folder = "MyConfigFile", -- folder to save keys and images
     
-  
 })
 
 
