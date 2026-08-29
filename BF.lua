@@ -2746,63 +2746,96 @@ local Button = FPSBoost:Button({
 
 
 
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CustomMobileTogglesStyle"
-screenGui.Parent = game.CoreGui
+screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local container = Instance.new("Frame")
-container.Size = UDim2.new(0, 130, 0, 110)
-container.Position = UDim2.new(0, 15, 0, 15)
+container.Size = UDim2.new(0, 120, 0, 96) -- ปรับความกว้างจาก 160 เป็น 120
+container.Position = UDim2.new(0, 20, 0, 20)
 container.BackgroundTransparency = 1
-container.Active = false
 container.Parent = screenGui
 
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = container
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.Padding = UDim.new(0, 10)
 
-local function createButton(text, textColor, order, callback)
+local function createButton(text, accentColor, order, callback)
     local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 130, 0, 40)
-    button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    button.BackgroundTransparency = 0.1
+    button.Size = UDim2.new(0, 120, 0, 38) -- ปรับความกว้างจาก 160 เป็น 120
+    button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+    button.BackgroundTransparency = 0.15
     button.BorderSizePixel = 0
     button.LayoutOrder = order
     button.AutoButtonColor = false
+    button.Text = ""
     button.Parent = container
 
     local uiCorner = Instance.new("UICorner")
-    uiCorner.CornerRadius = UDim.new(0, 8)
+    uiCorner.CornerRadius = UDim.new(0, 10)
     uiCorner.Parent = button
 
+    local shadow = Instance.new("UIStroke")
+    shadow.Name = "Shadow"
+    shadow.Parent = button
+    shadow.Color = Color3.fromRGB(0, 0, 0)
+    shadow.Transparency = 0.5
+    shadow.Thickness = 2.5
+    shadow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
     local uiStroke = Instance.new("UIStroke")
+    uiStroke.Name = "Border"
     uiStroke.Parent = button
-    uiStroke.Color = Color3.fromRGB(55, 55, 55)
+    uiStroke.Color = Color3.fromRGB(45, 45, 55)
     uiStroke.Thickness = 1.5
     uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 
-    button.Text = text
-    button.TextColor3 = textColor
-    button.TextScaled = true
-    button.Font = Enum.Font.SourceSansBold
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -20, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = text
+    textLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+    textLabel.TextSize = 12 -- ปรับขนาดตัวอักษรลงนิดหน่อยเพื่อให้พอดีกับปุ่มที่แคบลง
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.Parent = button
+
+    local indicator = Instance.new("Frame")
+    indicator.Size = UDim2.new(0, 6, 0, 6)
+    indicator.Position = UDim2.new(1, -14, 0.5, -3)
+    indicator.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+    indicator.BorderSizePixel = 0
+    indicator.Parent = button
+
+    local indCorner = Instance.new("UICorner")
+    indCorner.CornerRadius = UDim.new(1, 0)
+    indCorner.Parent = indicator
 
     local activeState = false
+    
     button.MouseButton1Click:Connect(function()
         activeState = not activeState
         
+        local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        
         if activeState then
-            button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            if uiStroke then
-                uiStroke.Color = textColor 
-            end
+            TweenService:Create(button, tweenInfo, {BackgroundColor3 = Color3.fromRGB(28, 28, 36)}):Play()
+            TweenService:Create(uiStroke, tweenInfo, {Color = accentColor}):Play()
+            TweenService:Create(textLabel, tweenInfo, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            TweenService:Create(indicator, tweenInfo, {BackgroundColor3 = accentColor}):Play()
         else
-            button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-            if uiStroke then
-                uiStroke.Color = Color3.fromRGB(55, 55, 55)
-            end
+            TweenService:Create(button, tweenInfo, {BackgroundColor3 = Color3.fromRGB(18, 18, 22)}):Play()
+            TweenService:Create(uiStroke, tweenInfo, {Color = Color3.fromRGB(45, 45, 55)}):Play()
+            TweenService:Create(textLabel, tweenInfo, {TextColor3 = Color3.fromRGB(200, 200, 210)}):Play()
+            TweenService:Create(indicator, tweenInfo, {BackgroundColor3 = Color3.fromRGB(70, 70, 80)}):Play()
         end
 
         if callback then
@@ -2813,19 +2846,20 @@ local function createButton(text, textColor, order, callback)
     return button
 end
 
-createButton("Camera Lock", Color3.fromRGB(0, 170, 255), 2, function(Value)
+createButton("Camera Lock", Color3.fromRGB(0, 229, 255), 1, function(Value)
     getgenv().CamlockEnabled = Value
     if not Value then
         getgenv().CurrentTarget = nil
     end
 end)
 
-createButton("Teleport player", Color3.fromRGB(0, 170, 255), 3, function(state)
+createButton("Teleport Player", Color3.fromRGB(0, 229, 255), 2, function(state)
     FollowEnabled = state
     getgenv().TPToTargetEnabled = state
-    getgenv().FollowEnabled = state 
-    if not state then 
-        currentTarget = nil 
-        getgenv().CurrentTarget = nil 
+    getgenv().FollowEnabled = state
+
+    if not state then
+        currentTarget = nil
+        getgenv().CurrentTarget = nil
     end
 end)
