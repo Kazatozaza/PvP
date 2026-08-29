@@ -187,54 +187,66 @@ DotCorner.Parent = CenterDot
 
 
 
-
 local Snapline = Drawing.new("Line")
 Snapline.Visible = false
-Snapline.Thickness = 1.5         
-Snapline.Color = Color3.fromRGB(255, 255, 255) 
+Snapline.Thickness = 2         
+Snapline.Color = Color3.fromRGB(255, 0, 0) 
 Snapline.Transparency = 1              
-Snapline.From = Vector2.new(0, 0)         
-Snapline.To = Vector2.new(0, 0)            
+Snapline.From = Vector2.new(0, 0)        
+Snapline.To = Vector2.new(0, 0)          
 
 local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
-function SetSnapline(startPos, endPos)
-    Snapline.From = startPos
-    Snapline.To = endPos
-    Snapline.Visible = true
-end
+function GetClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
-function HideSnapline()
-    Snapline.Visible = false
-end
-
-function GetScreenCenter()
-    local viewportSize = Camera.ViewportSize
-    return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-end
-
-game:GetService("RunService").RenderStepped:Connect(function()
-    
-    local startPoint = GetScreenCenter() 
-    
-    local touchLocations = UserInputService:GetTouchPositions()
-    local endPoint
-    
-    if #touchLocations > 0 then
-        endPoint = Vector2.new(touchLocations[1].Position.X, touchLocations[1].Position.Y)
-    else
-
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local hrp = player.Character.HumanoidRootPart
+            local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            
+            if onScreen then
+                local screenCoord = Vector2.new(screenPos.X, screenPos.Y)
+                local distance = (screenCoord - screenCenter).Magnitude
+                
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
     end
+
+    return closestPlayer
+end
+
+RunService.RenderStepped:Connect(function()
+    local viewportSize = Camera.ViewportSize
+    local startPoint = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     
-    if endPoint then
-        SetSnapline(startPoint, endPoint)
+    local target = GetClosestPlayer()
+    
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local targetPos = target.Character.HumanoidRootPart.Position
+        local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
+        
+        if onScreen then
+            Snapline.From = startPoint
+            Snapline.To = Vector2.new(screenPos.X, screenPos.Y)
+            Snapline.Visible = true
+        else
+            Snapline.Visible = false
+        end
     else
-        HideSnapline()
+        Snapline.Visible = false
     end
 end)
-
-
 
 ---------------------------------------------------------------------------------------
 
@@ -428,9 +440,6 @@ end)
 
 
 
-
-
-
 RunService.RenderStepped:Connect(function()
     if not LocalPlayer.Character or not Workspace.CurrentCamera then
         if FOVUI then FOVUI.Visible = false end
@@ -455,29 +464,37 @@ RunService.RenderStepped:Connect(function()
 
     getgenv().CurrentTarget = GetTargetInFOV(refPos)
 
-    if getgenv().CamlockEnabled and getgenv().CurrentTarget then
+    -- ตรวจสอบระยะห่างจากตัวเราถึงเป้าหมาย
+    local inRange = false
+    if getgenv().CurrentTarget then
+        local myRoot = LocalPlayer.Character and (LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Torso"))
+        if myRoot then
+            local distance = (getgenv().CurrentTarget.Position - myRoot.Position).Magnitude
+            if distance <= (getgenv().MaxDistance or math.huge) then
+                inRange = true
+            end
+        else
+            inRange = true
+        end
+    end
+
+    if getgenv().CamlockEnabled and getgenv().CurrentTarget and inRange then
         local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
         Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
     end
 
-    if getgenv().CurrentTarget and getgenv().ShowTracer then
+    if getgenv().CurrentTarget and inRange and getgenv().ShowTracer then
         local targetScreenPos, targetOnScreen = Camera:WorldToViewportPoint(getgenv().CurrentTarget.Position)
 
         if targetOnScreen then
             local startPos
-            
-            -- ✅ เลือกระหว่างพุ่งจากกลางจอ (ดีสำหรับมือถือ) หรือพุ่งจากตัวละคร
-            -- กำหนดค่าใน Config ได้ เช่น: getgenv().TracerOrigin = "Center" หรือ "Bottom" หรือ "Character"
             local originType = getgenv().TracerOrigin or "Center" 
             
             if originType == "Center" then
-                -- พุ่งจากกึ่งกลางหน้าจอ (เหมาะกับมือถือและ Camlock)
                 startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
             elseif originType == "Bottom" then
-                -- พุ่งจากขอบจอด้านล่างตรงกลาง
                 startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
             else
-                -- แบบเดิม: พุ่งจากตัวละครของเรา
                 local myCharacter = LocalPlayer.Character
                 local myRootPart = myCharacter and (myCharacter:FindFirstChild("HumanoidRootPart") or myCharacter:FindFirstChild("Torso"))
                 if myRootPart then
@@ -498,7 +515,6 @@ RunService.RenderStepped:Connect(function()
         Snapline.Visible = false
     end
 end)
-
 
 
 
