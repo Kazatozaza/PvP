@@ -8,32 +8,85 @@ end
 
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))() 
 
-local Window = WindUI:CreateWindow({
-    Icon = "crown", 
-    Title = "Destiny Hub", 
-    Author = "https://discord.gg/R74798dMZ6", 
-    Folder = "MyConfigFile", 
-    Theme = "Midnight", 
-    Size = UDim2.fromOffset(590, 500),
+WindUI:AddTheme({
+    Name = "Cyberpunk Neon",
+    
+    Accent = Color3.fromHex("#FF007F"),
+    Background = Color3.fromHex("#0A0A0F"),
+    Outline = Color3.fromHex("#FF007F"),
+    Text = Color3.fromHex("#FFFFFF"),
+    Placeholder = Color3.fromHex("#8E6B8C"), -- ปรับโทนสีเทาอมม่วงให้เข้ากับบรรยากาศโลโก้
+    Button = Color3.fromHex("#1F1424"),   -- ปรับพื้นปุ่มให้มีเฉดม่วงเข้มขึ้นเล็กน้อย
+    Icon = Color3.fromHex("#FF007F"),
+
+    Toggle = Color3.fromHex("#FF007F"),
+    ToggleBar = Color3.fromHex("#FFFFFF"),
+
+    SliderIcon = Color3.fromHex("#FF007F"),
+    Slider = Color3.fromHex("#A855F7"),     -- เปลี่ยนสีสไลเดอร์ให้เป็นสีม่วงโทนเดียวกับลูกเล่นในโลโก้
+    SliderThumb = Color3.fromHex("#FFFFFF"),
+    SliderIconFrom = Color3.fromHex("#FF007F"),
+    SliderIconTo = Color3.fromHex("#00F0FF"),
+
+    Notification = Color3.fromHex("#0A0A0F"),
+    NotificationTitle = Color3.fromHex("#FF007F"),
+    NotificationTitleTransparency = 0,
+    NotificationContent = Color3.fromHex("#FFFFFF"),
+    NotificationContentTransparency = 0.3,
+    NotificationDuration = Color3.fromHex("#00F0FF"),
+    NotificationDurationTransparency = 0.9,
+    NotificationBorder = Color3.fromHex("#FF007F"),
+    NotificationBorderTransparency = 0.5,
 })
+
+local Window = WindUI:CreateWindow({
+    Title = "Destiny Hub",
+    Icon = "rbxassetid://107885166490282",
+    Author = "Version Free",
+    Folder = "Destiny Hub",
+    
+    Size = UDim2.fromOffset(600, 480),
+    Transparent = true,
+    Theme = "Cyberpunk Neon", 
+    Resizable = true,
+    SideBarWidth = 200,
+    HideSearchBar = false, 
+    ScrollBarEnabled = true,
+
+    BackgroundImageTransparency = 0.3,
+})
+
+
 
 
 getgenv().DestinyHubWindow = Window
+Window:Tag({
+    Title = "Mobile/PC",
+    Icon = "",
+    Color = Color3.fromHex("#FF007F"), 
+})
+
+
 
 
 Window:Section({
-    Title = "Player Settings",
+    Title = "Main Features",
 })
+
+local GeneralTab = Window:Tab({
+    Title = "General",
+    Icon = "cpu"
+})
+GeneralTab:Select()
 
 local CombatTab = Window:Tab({
     Title = "Combat",
     Icon = "swords"
 })
-CombatTab:Select()
 
-local GeneralTab = Window:Tab({
-    Title = "General",
-    Icon = "settings"
+local Visuals = Window:Tab({
+    Title = "Visuals",
+    Icon = "crosshair" 
 })
 
 local FPSBoost = Window:Tab({
@@ -42,13 +95,7 @@ local FPSBoost = Window:Tab({
 })
 
 Window:Section({
-    Title = "Main Features",
-})
-
-
-local Visuals = Window:Tab({
-    Title = "Visuals",
-    Icon = "eye"
+    Title = "Config & Server",
 })
 
 local Server = Window:Tab({
@@ -56,12 +103,10 @@ local Server = Window:Tab({
     Icon = "terminal"
 })
 
-
 local Config = Window:Tab({
     Title = "Config",
     Icon = "wrench"
 })
-
 
 
 local MyConfig = Window.ConfigManager:Config("DestinyConfig")
@@ -385,9 +430,6 @@ end)
 
 
 
-
-
-
 pcall(function()
     local gmt = getrawmetatable(game)
     local oldNamecall = gmt.__namecall
@@ -395,24 +437,70 @@ pcall(function()
 
     gmt.__namecall = newcclosure(function(self, ...)
         local method = getnamecallmethod()
+        local args = { ... }
 
-        if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
-            local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
-            local args = { ... }
-            
-            for i = 1, #args do
-                local arg = args[i]
-                local argType = typeof(arg)
-                
-                if argType == "Vector3" then
-                    args[i] = targetPos
-                elseif argType == "CFrame" then
-                    local _, _, _, r00, r01, r02, r10, r11, r12, r20, r21, r22 = arg:GetComponents()
-                    args[i] = CFrame.new(targetPos.X, targetPos.Y, targetPos.Z, r00, r01, r02, r10, r11, r12, r20, r21, r22)
+        local silentAimEnabled = getgenv().SilentAimEnabled
+        local currentTarget = getgenv().CurrentTarget
+        local targetPos = nil
+
+        if silentAimEnabled and currentTarget then
+            targetPos = GetPredictedPosition(currentTarget)
+        end
+
+        if targetPos then
+            -- 1. จัดการ Raycast ปกติ
+            if method == "Raycast" then
+                if typeof(args[2]) == "Vector3" then
+                    local origin = args[1]
+                    local direction = args[2]
+                    local camera = workspace.CurrentCamera
+                    
+                    if (camera and (origin - camera.CFrame.Position).Magnitude < 5) or direction.Magnitude < 10 then
+                        return oldNamecall(self, unpack(args))
+                    end
+
+                    args[2] = (targetPos - origin).Unit * direction.Magnitude
+                    return oldNamecall(self, unpack(args))
                 end
+                
+            -- 2. จัดการ Raycast แบบเก่า
+            elseif method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+                if typeof(args[1]) == "Ray" then
+                    local oldRay = args[1]
+                    args[1] = Ray.new(oldRay.Origin, (targetPos - oldRay.Origin).Unit * oldRay.Direction.Magnitude)
+                    return oldNamecall(self, unpack(args))
+                end
+
+            -- 3. จัดการ Remote (FireServer / InvokeServer) พร้อมระบบเจาะลึก Table
+            elseif method == "FireServer" or method == "InvokeServer" then
+                -- ฟังก์ชันช่วยค้นหาและแทนที่ข้อมูลพิกัดข้างใน Table แบบRecursive
+                Moar = function(tbl)
+                    for k, v in pairs(tbl) do
+                        local t = typeof(v)
+                        if t == "Vector3" then
+                            tbl[k] = targetPos
+                        elseif t == "CFrame" then
+                            local _, _, _, r00, r01, r02, r10, r11, r12, r20, r21, r22 = v:GetComponents()
+                            tbl[k] = CFrame.new(targetPos.X, targetPos.Y, targetPos.Z, r00, r01, r02, r10, r11, r12, r20, r21, r22)
+                        elseif t == "table" then
+                            Moar(v)
+                        end
+                    end
+                end
+
+                for i, arg in ipairs(args) do
+                    local t = typeof(arg)
+                    if t == "Vector3" then
+                        args[i] = targetPos
+                    elseif t == "CFrame" then
+                        local _, _, _, r00, r01, r02, r10, r11, r12, r20, r21, r22 = arg:GetComponents()
+                        args[i] = CFrame.new(targetPos.X, targetPos.Y, targetPos.Z, r00, r01, r02, r10, r11, r12, r20, r21, r22)
+                    elseif t == "table" then
+                        Moar(arg)
+                    end
+                end
+                return oldNamecall(self, unpack(args))
             end
-            
-            return oldNamecall(self, unpack(args))
         end
 
         return oldNamecall(self, ...)
@@ -420,15 +508,6 @@ pcall(function()
 
     setreadonly(gmt, true)
 end)
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1261,7 +1340,7 @@ RunService.Heartbeat:Connect(function()
         setSafeNoclip(true)
         hrp.AssemblyLinearVelocity = Vector3.new(0, flySpeed, 0)
         hrp.AssemblyAngularVelocity = Vector3.zero
-        char:PivotTo(hrp.CFrame + Vector3.new(0, 500, 0))
+        char:PivotTo(hrp.CFrame + Vector3.new(0, 550, 0))
         hum.PlatformStand = true
         notify("Safe Mode", "Critical HP! Emergency teleport & high-speed flight activated!")
     end
@@ -1938,7 +2017,7 @@ CombatTab:Slider({
     Flag = "HitboxSizeSlider",
     Value = {
         Min = 10,
-        Max = 120,
+        Max = 300,
         Default = getgenv().HitboxSize
     },
     Increment = 1,
