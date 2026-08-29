@@ -305,38 +305,81 @@ end
 
 
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- ตั้งค่าตัวแปร Global
+getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
+getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
 pcall(function()
-    if not getgenv().SilentAimEnabled then
-        getgenv().SilentAimEnabled = false
+    local mouse = LocalPlayer:GetMouse()
+    
+    -- รองรับทั้ง PC (Mouse) และ Mobile (Touch / Viewport)
+    local function getModifiedResult(idx)
+        local target = getgenv().CurrentTarget
+        if target and target.Parent then
+            local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                if idx == "Hit" then
+                    return CFrame.new(rootPart.Position)
+                elseif idx == "Target" then
+                    return rootPart
+                end
+            end
+        end
+        return nil
     end
 
-    -- ฟังก์ชันสำหรับ PC (ดัก Metatable ของ Mouse)
-    local successMouse, mouseObj = pcall(function() return LocalPlayer:GetMouse() end)
-    if successMouse and mouseObj and getrawmetatable and setreadonly then
-        local gmt = getrawmetatable(game)
-        local oldIndex = gmt.__index
-        setreadonly(gmt, false)
+    -- Hook Metamethod สำหรับ PC และระบบสากล
+    if hookmetamethod then
+        local oldIndex
+        oldIndex = hookmetamethod(game, "__index", function(self, idx)
+            if getgenv().SilentAimEnabled and self == mouse then
+                local result = getModifiedResult(idx)
+                if result then return result end
+            end
+            return oldIndex(self, idx)
+        end)
+    else
+        local mt = getrawmetatable(game)
+        local oldIndex = mt.__index
+        
+        setreadonly(mt, false)
+        mt.__index = newcclosure(function(self, idx)
+            if getgenv().SilentAimEnabled and self == mouse then
+                local result = getModifiedResult(idx)
+                if result then return result end
+            end
+            return oldIndex(self, idx)
+        end)
+        setreadonly(mt, true)
+    end
 
-        gmt.__index = newcclosure(function(self, idx)
-            if getgenv().SilentAimEnabled and getgenv().CurrentTarget and self == mouseObj then
-                local target = getgenv().CurrentTarget
-                if target and target.Parent then
-                    local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
-                    if rootPart then
-                        if idx == "Hit" or idx == "hit" then
-                            return CFrame.new(rootPart.Position)
-                        elseif idx == "Target" or idx == "target" then
-                            return rootPart
+    -- เพิ่มเติมสำหรับมือถือ: ดักฟังก์ชันปืนที่ยิงผ่าน ScreenPointToRay หรือ Mouse.Hit ในบางเกม
+    if Drawing and UserInputService.TouchEnabled then
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local method = getnamecallmethod()
+            local args = {...}
+            
+            if getgenv().SilentAimEnabled and getgenv().CurrentTarget then
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                    local target = getgenv().CurrentTarget
+                    if target and target.Parent then
+                        local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
+                        if rootPart then
+                            -- เปลี่ยน Ray ให้พุ่งไปที่เป้าหมายบนมือถือโดยตรง
+                            local origin = Camera.CFrame.Position
+                            local direction = (rootPart.Position - origin).Unit * 1000
+                            return Ray.new(origin, direction)
                         end
                     end
                 end
             end
-            return oldIndex(self, idx)
+            return oldNamecall(self, ...)
         end)
-
-        setreadonly(gmt, true)
     end
 end)
 
