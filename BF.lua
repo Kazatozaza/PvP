@@ -570,7 +570,33 @@ pcall(function()
             return oldNamecall(self, unpack(args))
         end)
     end
+
+    -- เพิ่มการรองรับสำหรับมือถือ (Touch Screen / Drawing)
+    if Drawing and UserInputService.TouchEnabled then
+        local oldTouchNamecall
+        oldTouchNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local method = getnamecallmethod()
+            local args = {...}
+            
+            if getgenv().SilentAimEnabled and getgenv().CurrentTarget then
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                    local target = getgenv().CurrentTarget
+                    if target and target.Parent then
+                        local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
+                        if rootPart then
+                            local origin = Camera.CFrame.Position
+                            local direction = (rootPart.Position - origin).Unit * 1000
+                            return Ray.new(origin, direction)
+                        end
+                    end
+                end
+            end
+            
+            return oldTouchNamecall(self, unpack(args))
+        end)
+    end
 end)
+
 
 
 
