@@ -491,79 +491,97 @@ local Camera = workspace.CurrentCamera
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- ฟังก์ชันสำหรับดึง RootPart ของเป้าหมาย
-local function getRoot()
-    local target = getgenv().CurrentTarget
-    if target and target.Parent then
-        return target.Parent:FindFirstChild("HumanoidRootPart")
+-- ใช้ Task.spawn แยกการทำงานออกไปเพื่อไม่ให้บล็อกการโหลดเข้าเกม (ไม่ให้ UI ค้าง)
+task.spawn(function()
+    -- รอให้ผู้เล่นโหลดเข้าเกมและตัวละครพร้อมใช้งาน
+    if not LocalPlayer.Character then
+        LocalPlayer.CharacterAdded:Wait()
     end
-    return nil
-end
 
-pcall(function()
-    local mouse = LocalPlayer:GetMouse()
+    -- ป้องกัน Error กรณีหา Mouse ไม่เจอ
+    local Mouse = nil
+    pcall(function()
+        Mouse = LocalPlayer:GetMouse()
+    end)
 
-    if hookmetamethod and checkcaller then
-        local oldIndex
-        oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-            if not checkcaller() and getgenv().SilentAimEnabled and self == mouse then
-                if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
-                    local r = getRoot()
-                    if r then
-                        if idx == "Hit" then 
-                            return CFrame.new(r.Position) 
-                        elseif idx == "Target" then 
-                            return r 
-                        elseif idx == "X" or idx == "Y" then 
-                            local sp = Camera:WorldToScreenPoint(r.Position)
-                            return sp[idx]
+    -- ฟังก์ชันสำหรับดึง RootPart ของเป้าหมายที่ปลอดภัยขึ้น
+    local function getRoot()
+        local target = getgenv().CurrentTarget
+        if target and target.Parent then
+            return target.Parent:FindFirstChild("HumanoidRootPart")
+        end
+        return nil
+    end
+
+    pcall(function()
+        if not Mouse then return end
+
+        if hookmetamethod and checkcaller then
+            local oldIndex
+            oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+                if not checkcaller() and getgenv().SilentAimEnabled and self == Mouse then
+                    if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
+                        local r = getRoot()
+                        if r then
+                            if idx == "Hit" then 
+                                return CFrame.new(r.Position) 
+                            elseif idx == "Target" then 
+                                return r 
+                            elseif idx == "X" or idx == "Y" then 
+                                local sp, visible = Camera:WorldToScreenPoint(r.Position)
+                                return sp[idx]
+                            end
                         end
                     end
                 end
-            end
-            return oldIndex(self, idx)
-        end))
+                return oldIndex(self, idx)
+            end))
 
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-            if not checkcaller() and getgenv().CurrentTarget then
+            local oldNamecall
+            oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
                 local method = getnamecallmethod()
-                if (getgenv().SilentAimEnabled or UserInputService.TouchEnabled) and (method == "ScreenPointToRay" or method == "ViewportPointToRay") then
-                    local r = getRoot()
-                    if r then 
-                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
-                    end
-                end
-            end
-            return oldNamecall(self, ...)
-        end))
-    else
-        -- Fallback สำหรับ Executor ที่ไม่รองรับ hookmetamethod หรือ checkcaller เต็มรูปแบบ
-        local mt = getrawmetatable(game)
-        local oldIndex = mt.__index
-        
-        setreadonly(mt, false)
-        mt.__index = newcclosure(function(self, idx)
-            if getgenv().SilentAimEnabled and self == mouse then
-                if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
-                    local r = getRoot()
-                    if r then
-                        if idx == "Hit" then 
-                            return CFrame.new(r.Position) 
-                        elseif idx == "Target" then 
-                            return r 
-                        elseif idx == "X" or idx == "Y" then 
-                            local sp = Camera:WorldToScreenPoint(r.Position)
-                            return sp[idx]
+                if not checkcaller() and getgenv().CurrentTarget and (method == "ScreenPointToRay" or method == "ViewportPointToRay") then
+                    if getgenv().SilentAimEnabled or UserInputService.TouchEnabled then
+                        local r = getRoot()
+                        if r then 
+                            return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
                         end
                     end
                 end
-            end
-            return oldIndex(self, idx)
-        end)
-        setreadonly(mt, true)
-    end
+                return oldNamecall(self, ...)
+            end))
+        else
+            -- Fallback สำหรับ Executor ที่ใช้ getrawmetatable
+            local mt = getrawmetatable(game)
+            local oldIndex = mt.__index
+            
+            setreadonly(mt, false)
+            mt.__index = newcclosure(function(self, idx)
+                if getgenv().SilentAimEnabled and self == Mouse then
+                    if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
+                        local r = getRoot()
+                        if r then
+                            if idx == "Hit" then 
+                                return CFrame.new(r.Position) 
+                            elseif idx == "Target" then 
+                                return r 
+                            elseif idx == "X" or idx == "Y" then 
+                                local sp = Camera:WorldToScreenPoint(r.Position)
+                                return sp[idx]
+                            end
+                        end
+                    end
+                end
+                return oldIndex(self, idx)
+            end)
+            setreadonly(mt, true)
+        end
+    end)
 end)
+
+
+
+
 
 
 
