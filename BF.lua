@@ -271,68 +271,149 @@ end)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
-local SafeZones = Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("SafeZones")
 
-local function isCombat(p, c)
-    local t = p:GetAttribute("InCombat") or p:GetAttribute("Combat") or p:GetAttribute("CombatTag")
-    if t == true or t == 1 or t == "1" then return true end
-    local ct = p:GetAttribute("CombatTimer") or p:GetAttribute("InCombatTime")
-    if type(ct) == "number" and ct > workspace:GetServerTimeNow() then return true end
+local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") 
+    and Workspace._WorldOrigin:FindFirstChild("SafeZones")
+
+-- 1. ฟังก์ชันเช็คสถานะ InCombat (ปรับปรุงให้แม่นยำ ตรวจสอบทุกรูปแบบ)
+local function isPlayerInCombat(player, character)
+    if not player then return false end
     
-    if c then
-        if c:GetAttribute("InCombat") or c:GetAttribute("Combat") or c:GetAttribute("CombatTag") then return true end
-        local obj = c:FindFirstChild("InCombat") or c:FindFirstChild("Combat") or c:FindFirstChild("CombatTag") or c:FindFirstChild("PvpTag")
-        if obj then
-            if obj:IsA("BoolValue") and obj.Value then return true end
-            if obj:IsA("NumberValue") and obj.Value > 0 then return true end
-            if obj:IsA("ValueBase") and obj.Value ~= "" and obj.Value ~= false then return true end
+    -- เช็ค Attribute ใน Player (รองรับ Boolean, Number, String, และ Combat Timer)
+    local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag")
+    if pCombat == true or pCombat == 1 or pCombat == "1" then
+        return true
+    end
+    
+    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
+    if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
+        return true
+    end
+
+    -- เช็คใน Character
+    if character then
+        local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
+        if cCombat == true or cCombat == 1 or cCombat == "1" then
+            return true
+        end
+
+        -- เช็ค Value Object ชั่วคราวในตัวละคร (BoolValue, NumberValue, StringValue)
+        local combatObj = character:FindFirstChild("InCombat") 
+            or character:FindFirstChild("Combat") 
+            or character:FindFirstChild("CombatTag")
+            or character:FindFirstChild("PvpTag")
+
+        if combatObj then
+            if combatObj:IsA("BoolValue") and combatObj.Value == true then
+                return true
+            elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
+                return true
+            elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" then
+                return true
+            elseif combatObj:IsA("ValueBase") then
+                return true
+            end
         end
     end
+
     return false
 end
 
-local function isInRadius(c)
-    if not c or not c:FindFirstChild("HumanoidRootPart") or not SafeZones then return false end
-    local pos = c.HumanoidRootPart.Position
-    for _, z in ipairs(SafeZones:GetChildren()) do
-        if z:IsA("BasePart") then
-            local mesh = z:FindFirstChildOfClass("SpecialMesh")
-            local rad = mesh and (mesh.Scale.X / 2 * math.max(z.Size.X, z.Size.Z)) or (math.max(z.Size.X, z.Size.Z) / 2)
-            if (pos - z.Position).Magnitude <= rad then return true end
+-- 2. ฟังก์ชันเช็คว่าตัวละครอยู่ใน Safe Zone ทรงกลมหรือไม่
+local function isInSafeZoneRadius(character)
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
+    if not safeZonesFolder then return false end
+    
+    local charPos = character.HumanoidRootPart.Position
+    
+    for _, zonePart in ipairs(safeZonesFolder:GetChildren()) do
+        if zonePart:IsA("BasePart") then
+            local zonePos = zonePart.Position
+            local radius = 0
+            
+            local mesh = zonePart:FindFirstChildOfClass("SpecialMesh")
+            if mesh then
+                radius = mesh.Scale.X / 2
+                radius = radius * math.max(zonePart.Size.X, zonePart.Size.Z)
+            else
+                radius = math.max(zonePart.Size.X, zonePart.Size.Z) / 2
+            end
+            
+            local distance = (charPos - zonePos).Magnitude
+            if distance <= radius then
+                return true
+            end
         end
     end
+    
     return false
 end
 
-local function isSafeZone(p, c)
-    if isCombat(p, c) then return false end
-    return (p:GetAttribute("SafeZone") or (c and c:GetAttribute("SafeZone")) or isInRadius(c) or (c and c:FindFirstChild("TempSafeZone"))) == true
-end
+-- 3. ฟังก์ชันเช็คสถานะ Safe Zone (ถ้าติด InCombat อยู่ จะไม่นับว่า Safe)
+local function isPlayerInSafeZone(player, character)
+    if isPlayerInCombat(player, character) then
+        return false
+    end
 
-local function ShouldIgnoreTarget(tc)
-    local tp = Players:GetPlayerFromCharacter(tc)
-    if not tp or tp == LocalPlayer or tp:GetAttribute("PvpDisabled") == true or isSafeZone(tp, tc) then return true end
-    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" and tp.Team == LocalPlayer.Team then return true end
-    local hum = tc:FindFirstChildOfClass("Humanoid")
-    return hum and hum.Health <= 0
-end
-
-local function getPlayerStatus(p)
-    local c = p.Character
-    local pvp = p:GetAttribute("PvpDisabled") == true and "ปิด PvP" or "เปิด PvP"
-    local combat = isCombat(p, c)
-    local sz = isSafeZone(p, c)
+    local inSafeZoneAttr = player:GetAttribute("SafeZone") or (character and character:GetAttribute("SafeZone"))
+    local inRadius = character and isInSafeZoneRadius(character)
+    local hasTempSafeZone = character and character:FindFirstChild("TempSafeZone")
     
-    local szStatus = "Normal Zone"
-    if combat and isInRadius(c) then szStatus = "Safe Zone (Combat Bypass)"
-    elseif sz then szStatus = "Safe Zone" end
-
-    return string.format("%s | %s | %s", pvp, szStatus, combat and "InCombat" or "Ready")
+    return (inSafeZoneAttr == true or inRadius or hasTempSafeZone) == true
 end
 
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then
-        getPlayerStatus(p)
+-- 4. เช็คทีมและสถานะเป้าหมาย (สำหรับ Aimbot / Target Targeting)
+local function ShouldIgnoreTarget(targetCharacter)
+    local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
+    if not targetPlayer then return true end
+    if targetPlayer == LocalPlayer then return true end
+    
+    local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled")
+    if pvpDisabled == true then 
+        return true 
+    end
+    
+    if isPlayerInSafeZone(targetPlayer, targetCharacter) then
+        return true
+    end
+    
+    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
+        if targetPlayer.Team and targetPlayer.Team == LocalPlayer.Team then 
+            return true 
+        end
+    end
+    
+    local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health <= 0 then return true end
+    
+    return false
+end
+
+-- 5. ฟังก์ชันดึงสถานะสำหรับ ESP
+local function getPlayerStatus(player)
+    local character = player.Character
+    local pvpDisabled = player:GetAttribute("PvpDisabled")
+    local pvpStatus = pvpDisabled == true and "ปิด PvP" or "เปิด PvP"
+    
+    local inCombat = isPlayerInCombat(player, character)
+    local inSafeZone = isPlayerInSafeZone(player, character)
+    
+    local safeZoneStatus = "Normal Zone"
+    if inCombat and isInSafeZoneRadius(character) then
+        safeZoneStatus = "Safe Zone (Combat Bypass)"
+    elseif inSafeZone then
+        safeZoneStatus = "Safe Zone"
+    end
+
+    local combatStatus = inCombat and "InCombat" or "Ready"
+   
+    return pvpStatus .. " | " .. safeZoneStatus .. " | " .. combatStatus
+end
+
+-- ตัวอย่างการแสดงผล ESP
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        local statusText = getPlayerStatus(player)
     end
 end
 
@@ -403,46 +484,88 @@ end
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
+-- ตั้งค่าตัวแปร Global
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
+-- ฟังก์ชันสำหรับดึง RootPart ของเป้าหมาย
 local function getRoot()
-    local t = getgenv().CurrentTarget
-    return (t and t.Parent) and t.Parent:FindFirstChild("HumanoidRootPart") or nil
+    local target = getgenv().CurrentTarget
+    if target and target.Parent then
+        return target.Parent:FindFirstChild("HumanoidRootPart")
+    end
+    return nil
 end
 
--- Hook Mouse & Viewport Metamethods
 pcall(function()
     local mouse = LocalPlayer:GetMouse()
-    
+
     if hookmetamethod and checkcaller then
-        local oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+        local oldIndex
+        oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
             if not checkcaller() and getgenv().SilentAimEnabled and self == mouse then
-                local r = getRoot()
-                if r then
-                    if idx == "Hit" then return CFrame.new(r.Position) end
-                    if idx == "Target" then return r end
-                    if idx == "X" or idx == "Y" then return Camera:WorldToScreenPoint(r.Position)[idx] end
+                if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
+                    local r = getRoot()
+                    if r then
+                        if idx == "Hit" then 
+                            return CFrame.new(r.Position) 
+                        elseif idx == "Target" then 
+                            return r 
+                        elseif idx == "X" or idx == "Y" then 
+                            local sp = Camera:WorldToScreenPoint(r.Position)
+                            return sp[idx]
+                        end
+                    end
                 end
             end
             return oldIndex(self, idx)
         end))
 
-        hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
             if not checkcaller() and getgenv().CurrentTarget then
                 local method = getnamecallmethod()
                 if (getgenv().SilentAimEnabled or UserInputService.TouchEnabled) and (method == "ScreenPointToRay" or method == "ViewportPointToRay") then
                     local r = getRoot()
-                    if r then return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) end
+                    if r then 
+                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
+                    end
                 end
             end
             return oldNamecall(self, ...)
         end))
+    else
+        -- Fallback สำหรับ Executor ที่ไม่รองรับ hookmetamethod หรือ checkcaller เต็มรูปแบบ
+        local mt = getrawmetatable(game)
+        local oldIndex = mt.__index
+        
+        setreadonly(mt, false)
+        mt.__index = newcclosure(function(self, idx)
+            if getgenv().SilentAimEnabled and self == mouse then
+                if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
+                    local r = getRoot()
+                    if r then
+                        if idx == "Hit" then 
+                            return CFrame.new(r.Position) 
+                        elseif idx == "Target" then 
+                            return r 
+                        elseif idx == "X" or idx == "Y" then 
+                            local sp = Camera:WorldToScreenPoint(r.Position)
+                            return sp[idx]
+                        end
+                    end
+                end
+            end
+            return oldIndex(self, idx)
+        end)
+        setreadonly(mt, true)
     end
 end)
+
+
 
 -- Hook Remote Arguments (FireServer / InvokeServer)
 pcall(function()
