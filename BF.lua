@@ -404,11 +404,10 @@ end
 
 
 
-
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
 
 if getgenv()._SilentAimLoaded then 
     warn("Already loaded!") 
@@ -419,18 +418,23 @@ getgenv()._SilentAimLoaded = true
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
+local mouse = LocalPlayer:GetMouse()
+
 local function getRoot()
     local t = getgenv().CurrentTarget
-    return (t and t.Parent) and t.Parent:FindFirstChild("HumanoidRootPart") or nil
+    if t and t.Parent then
+        return t.Parent:FindFirstChild("HumanoidRootPart")
+    end
+    return nil
 end
 
 pcall(function()
-    local mouse = LocalPlayer:GetMouse()
-    if not hookmetamethod then return end
+    if not hookmetamethod or not checkcaller then return end
 
     local oldIndex
-    oldIndex = hookmetamethod(game, "__index", function(self, idx)
-        if getgenv().SilentAimEnabled and self == mouse then
+    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+        -- เช็ค caller เพื่อกัน Anti-Cheat บางตัวที่ตรวจสอบมาจากฝั่ง Server/CoreScript
+        if not checkcaller() and getgenv().SilentAimEnabled and self == mouse then
             if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
                 local r = getRoot()
                 if r then
@@ -438,23 +442,20 @@ pcall(function()
                         return CFrame.new(r.Position) 
                     elseif idx == "Target" then 
                         return r 
-                    elseif idx == "X" then 
+                    elseif idx == "X" or idx == "Y" then 
                         local sp = Camera:WorldToScreenPoint(r.Position)
-                        return sp.X
-                    elseif idx == "Y" then 
-                        local sp = Camera:WorldToScreenPoint(r.Position)
-                        return sp.Y
+                        return sp[idx]
                     end
                 end
             end
         end
         return oldIndex(self, idx)
-    end)
+    end))
 
     local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        if getgenv().SilentAimEnabled and getgenv().CurrentTarget then
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        if not checkcaller() and getgenv().SilentAimEnabled and getgenv().CurrentTarget then
+            local method = getnamecallmethod()
             if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
                 local r = getRoot()
                 if r then 
@@ -463,8 +464,11 @@ pcall(function()
             end
         end
         return oldNamecall(self, ...)
-    end)
+    end))
 end)
+
+
+
 
 
 
