@@ -488,8 +488,8 @@ local Camera = workspace.CurrentCamera
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- กำหนดชื่อ RemoteEvent ของเกมที่คุณต้องการดักจับ (เปลี่ยนตามเกมนั้นๆ)
-local TARGET_REMOTE_NAMES = {"CombatRemote", "AttackEvent", "SkillRemote"}
+-- เปลี่ยนชื่อ Remote ตามที่ Blox Fruits ใช้ (ส่วนใหญ่ใช้ Remotes หรือสคริปต์กลาง)
+local TARGET_REMOTE_NAMES = {"CommF_", "ShootRemote", "CombatEvent"}
 
 pcall(function()
     local mouse = LocalPlayer:GetMouse()
@@ -509,8 +509,8 @@ pcall(function()
         return nil
     end
 
-    -- Hook Metamethod หลักสำหรับ Mouse และ RemoteEvent (__index และ __namecall)
     if hookmetamethod then
+        -- 1. Hook __index สำหรับ Mouse
         local oldIndex
         oldIndex = hookmetamethod(game, "__index", function(self, idx)
             if getgenv().SilentAimEnabled and self == mouse then
@@ -520,13 +520,14 @@ pcall(function()
             return oldIndex(self, idx)
         end)
 
+        -- 2. Hook __namecall เพียงครั้งเดียว (รวมทั้ง PC และ Mobile เพื่อป้องกัน UI บัค)
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
             local method = getnamecallmethod()
             local args = {...}
             
             if getgenv().SilentAimEnabled and getgenv().CurrentTarget then
-                -- 1. ดักจับ Raycast
+                -- ดักจับ Raycast ทั้งคอมและมือถือ
                 if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
                     local target = getgenv().CurrentTarget
                     if target and target.Parent then
@@ -539,7 +540,7 @@ pcall(function()
                     end
                 end
 
-                -- 2. ดักจับ RemoteEvent (FireServer) แบบปลอดภัย
+                -- ดักจับ RemoteEvent (FireServer)
                 if method == "FireServer" then
                     local isTargetRemote = false
                     for _, remoteName in ipairs(TARGET_REMOTE_NAMES) do
@@ -570,31 +571,6 @@ pcall(function()
             return oldNamecall(self, unpack(args))
         end)
     end
-
-    -- เพิ่มการรองรับสำหรับมือถือ (Touch Screen / Drawing)
-    if Drawing and UserInputService.TouchEnabled then
-        local oldTouchNamecall
-        oldTouchNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod()
-            local args = {...}
-            
-            if getgenv().SilentAimEnabled and getgenv().CurrentTarget then
-                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                    local target = getgenv().CurrentTarget
-                    if target and target.Parent then
-                        local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
-                        if rootPart then
-                            local origin = Camera.CFrame.Position
-                            local direction = (rootPart.Position - origin).Unit * 1000
-                            return Ray.new(origin, direction)
-                        end
-                    end
-                end
-            end
-            
-            return oldTouchNamecall(self, unpack(args))
-        end)
-    end
 end)
 
 
@@ -612,25 +588,23 @@ pcall(function()
         local method = getnamecallmethod()
         local args = { ... }
 
-        -- ตรวจสอบเงื่อนไข Silent Aim และ Target
         if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
-            local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
-            
-            for i, arg in ipairs(args) do
-                if typeof(arg) == "Vector3" then
-                    -- ถ้าอาร์กิวเมนต์เป็น Vector3 (ตำแหน่งเป้าหมาย) เปลี่ยนเป็นตำแหน่งศัตรู
-                    args[i] = targetPos
-                elseif typeof(arg) == "CFrame" then
-                    -- ถ้าอาร์กิวเมนต์เป็น CFrame (ตำแหน่ง + ทิศทางสกิล) ให้รักษา rotation เดิมแต่เปลี่ยนตำแหน่ง (Position) ไปที่ศัตรู
-                    local _, _, _, r00, r01, r02, r10, r11, r12, r20, r21, r22 = arg:GetComponents()
-                    args[i] = CFrame.new(
-                        targetPos.X, targetPos.Y, targetPos.Z,
-                        r00, r01, r02, r10, r11, r12, r20, r21, r22
-                    )
+            local success, targetPos = pcall(function()
+                return GetPredictedPosition(getgenv().CurrentTarget)
+            end)
+
+            if success and targetPos then
+                for i, arg in ipairs(args) do
+                    if typeof(arg) == "Vector3" then
+                        args[i] = targetPos
+                    elseif typeof(arg) == "CFrame" then
+                        local rotX, rotY, rotZ = arg:ToEulerAnglesXYZ()
+                        args[i] = CFrame.new(targetPos) * CFrame.fromEulerAnglesXYZ(rotX, rotY, rotZ)
+                    end
                 end
             end
             
-            return oldNamecall(self, table.unpack(args))
+            return oldNamecall(self, unpack(args))
         end
 
         return oldNamecall(self, ...)
@@ -638,9 +612,6 @@ pcall(function()
 
     setreadonly(gmt, true)
 end)
-
-
-
 
 
 
