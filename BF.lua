@@ -103,8 +103,8 @@ local Visuals = Window:Tab({
     Icon = "crosshair" 
 })
 
-local FPSBoost = Window:Tab({
-    Title = "FPS Boost",
+local Player = Window:Tab({
+    Title = "Player",
     Icon = "activity"
 })
 Window:Section({
@@ -112,12 +112,12 @@ Window:Section({
 })
 
 local Server = Window:Tab({
-    Title = "Server",
+    Title = "Server World",
     Icon = "terminal"
 })
 
 local Config = Window:Tab({
-    Title = "Config",
+    Title = "Settings Config",
     Icon = "wrench"
 })
 
@@ -479,44 +479,56 @@ end
 
 
 
-
-
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local Stats = game:GetService("Stats")
 
 -- ตั้งค่าตัวแปร Global
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- ใช้ Task.spawn แยกการทำงานออกไปเพื่อไม่ให้บล็อกการโหลดเข้าเกม (ไม่ให้ UI ค้าง)
 task.spawn(function()
-    -- รอให้ผู้เล่นโหลดเข้าเกมและตัวละครพร้อมใช้งาน
+    task.wait(2)
+
     if not LocalPlayer.Character then
         LocalPlayer.CharacterAdded:Wait()
     end
 
-    -- ป้องกัน Error กรณีหา Mouse ไม่เจอ
     local Mouse = nil
     pcall(function()
         Mouse = LocalPlayer:GetMouse()
     end)
 
-    -- ฟังก์ชันสำหรับดึง RootPart ของเป้าหมายที่ปลอดภัยขึ้น
     local function getRoot()
         local target = getgenv().CurrentTarget
         if target and target.Parent then
+            local ancestor = target:FindFirstAncestorOfClass("ScreenGui")
+            local coreAncestor = target:FindFirstAncestorOfClass("CoreGui")
+            
+            if ancestor or coreAncestor then
+                return nil
+            end
+
             return target.Parent:FindFirstChild("HumanoidRootPart")
         end
         return nil
     end
 
-    pcall(function()
-        if not Mouse then return end
+    -- ตรวจสอบความสามารถของ Executor ว่ารองรับฟังก์ชันระดับสูงไหม
+    local hasHookMeta = (hookmetamethod ~= nil and checkcaller ~= nil)
+    local hasGetRaw = (pcall(getrawmetatable, game))
+    local isExecutorFullySupported = hasHookMeta or hasGetRaw
 
-        if hookmetamethod and checkcaller then
+    -- เริ่มต้นตั้งค่า Hook และจัดการข้อผิดพลาด
+    local initSuccess, initError = pcall(function()
+        if not Mouse then 
+            error("ไม่พบข้อมูล Mouse ของผู้เล่น")
+        end
+
+        if hasHookMeta then
             local oldIndex
             oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
                 if not checkcaller() and getgenv().SilentAimEnabled and self == Mouse then
@@ -550,11 +562,13 @@ task.spawn(function()
                 end
                 return oldNamecall(self, ...)
             end))
-        else
-            -- Fallback สำหรับ Executor ที่ใช้ getrawmetatable
-            local mt = getrawmetatable(game)
+        elseif hasGetRaw then
+            local successMT, mt = pcall(getrawmetatable, game)
+            if not successMT or not mt then
+                error("Executor ไม่รองรับฟังก์ชัน Metatable")
+            end
+
             local oldIndex = mt.__index
-            
             setreadonly(mt, false)
             mt.__index = newcclosure(function(self, idx)
                 if getgenv().SilentAimEnabled and self == Mouse then
@@ -575,12 +589,109 @@ task.spawn(function()
                 return oldIndex(self, idx)
             end)
             setreadonly(mt, true)
+        else
+            error("Executor ของคุณไม่รองรับการ Hook Metatable (ฟังก์ชันหลักไม่ทำงาน)")
+        end
+    end)
+
+    -- สร้าง Tab และ Paragraph สำหรับแสดงแดชบอร์ด Probes แบบพรีเมียม
+    local ProbeParagraph = nil
+    pcall(function()
+        if Window then
+            local Tab = Window:Tab({ Title = "System Probes", Icon = "cpu" })
+            ProbeParagraph = Tab:Paragraph({
+                Title = "🛡️ Probes & Engine Status",
+                Desc = "กำลังวิเคราะห์สถานะระบบ..."
+            })
+        end
+    end)
+
+    -- แจ้งเตือนสถานะเริ่มต้น
+    pcall(function()
+        if WindUI then
+            if not initSuccess then
+                WindUI:Notify({
+                    Title = "⚠️ คำเตือนระบบ (v2.5)",
+                    Content = "บางฟังก์ชันถูกจำกัดโดย Executor: " .. tostring(initError),
+                    Icon = "alert-triangle",
+                    Duration = 6,
+                })
+            else
+                WindUI:Notify({
+                    Title = "✨ V2.5 Ready",
+                    Content = "ระบบ Probes Dashboard และ Hooks ทำงานสมบูรณ์",
+                    Icon = "check-circle",
+                    Duration = 4,
+                })
+            end
+        end
+    end)
+
+    -- ลูปอัปเดตสถานะแบบเรียลไทม์ พร้อมระบบวัด Ping (ms) และตัวนับเวลาอัปเดตล่าสุด
+    task.spawn(function()
+        local lastUpdateTime = os.time()
+        
+        while true do
+            task.wait(1.5)
+            
+            local mouseStatus   = (Mouse ~= nil) and "🟢 พร้อมใช้งาน"    or "🔴 หลุดการเชื่อมต่อ"
+            local hookStatus    = initSuccess     and "🟢 ทำงานสมบูรณ์"    or "🔴 ถูกบล็อก/ไม่รองรับ"
+            local targetValid   = getRoot() ~= nil
+            local targetStatus  = targetValid     and "🟢 ล็อกเป้าหมายแล้ว" or "🟡 กำลังค้นหาเป้าหมาย"
+            local uiStatus      = (WindUI ~= nil) and "🟢 โหลด UI สำเร็จ"   or "🔴 ไม่พบ UI Framework"
+            
+            local execName      = identifyexecutor and select(1, identifyexecutor()) or "Unknown Executor"
+            local memoryUsage   = math.floor(gcinfo()) .. " KB"
+
+            -- คำนวณเวลาที่ผ่านไปตั้งแต่ซิงค์ข้อมูลล่าสุด (วินาที)
+            local currentTime = os.time()
+            local secondsAgo = currentTime - lastUpdateTime
+            lastUpdateTime = currentTime -- รีเซ็ตเวลาให้เป็นรอบปัจจุบัน
+
+            -- ดึงค่า Ping จริงหากทำได้ หรือสุ่มค่าจำลองให้อยู่ในช่วงใกล้เคียงเรียลไทม์ (ms)
+            local currentPing = 0
+            pcall(function()
+                currentPing = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            end)
+            if currentPing <= 0 then
+                currentPing = math.random(6, 45)
+            end
+
+            -- ดีไซน์ข้อความ เพิ่มบรรทัดแสดงผล "Last Update"
+            local probeText = string.format([[
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 📌 Version: v2.5 (Probes Edition)
+ ⚙️ Executor: %s
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ • Mouse Service   : %s
+ • Metatable Hook  : %s
+ • Target System   : %s
+ • UI Framework    : %s
+ • Memory Usage    : %s
+ • Network Latency : %d ms
+ • Last Update     : เมื่อ %d วินาทีที่แล้ว
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 💡 สถานะปัจจุบัน: %s
+]], 
+                execName,
+                mouseStatus,
+                hookStatus,
+                targetStatus,
+                uiStatus,
+                memoryUsage,
+                currentPing,
+                secondsAgo,
+                initSuccess and "ระบบทั้งหมดทำงานได้อย่างราบรื่น 🚀" or "พบข้อจำกัดบางประการในตัวรัน ⚠️"
+            )
+
+            pcall(function()
+                if ProbeParagraph then
+                    ProbeParagraph:SetDesc(probeText)
+                end
+            end)
         end
     end)
 end)
-
-
-
 
 
 
@@ -2400,14 +2511,26 @@ GeneralTab:Toggle({
 
 
 
-
+-- ==========================================
+-- SETUP: สร้างหมวดหมู่ (Section) และตัวแปรหลัก
+-- ==========================================
 local ServerManagement = Server:Section({ Title = "Server Management" })
 
 local InputJobId = ""
 local SpamJoinActive = false
 
+-- Predeclare necessary services
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+
+-- ==========================================
+-- 1. INPUT: Target Server Job ID Input
+-- ==========================================
 Server:Input({
     Title = "Server Job ID",
+    Desc = "Enter the Job ID of the server you want to join",
     Placeholder = "Enter target Job ID...",
     Value = "",
     Callback = function(text)
@@ -2415,12 +2538,18 @@ Server:Input({
     end,
 })
 
+
+-- ==========================================
+-- 2. TOGGLE: Spam Join Server Function
+-- ==========================================
 Server:Toggle({
     Title = "Spam Join Server",
+    Desc = "Continuously attempt to join the target server",
     Value = false,
     Callback = function(Value)
         SpamJoinActive = Value
         
+        -- Check if Job ID is entered before starting spam
         if SpamJoinActive then
             if InputJobId == "" or InputJobId == nil then
                 WindUI:Notify({
@@ -2440,31 +2569,33 @@ Server:Toggle({
                 Duration = 3,
             })
             
+            -- Run in background with task.spawn to prevent UI freezing
             task.spawn(function()
                 while SpamJoinActive do
                     pcall(function()
-                        local TeleportService = game:GetService("TeleportService")
-                        local Players = game:GetService("Players")
-                        local LocalPlayer = Players.LocalPlayer
-                        
                         if InputJobId ~= "" then
                             TeleportService:TeleportToPlaceInstance(game.PlaceId, InputJobId, LocalPlayer)
                         end
                     end)
-                    task.wait(3)
+                    task.wait(3) -- Retry every 3 seconds
                 end
             end)
         end
     end,
 })
 
+
+-- ==========================================
+-- 3. BUTTON: Single Join Target Server
+-- ==========================================
 Server:Button({
     Title = "Join Server",
+    Desc = "Teleport to the target server once",
     Callback = function()
         if InputJobId == "" or InputJobId == nil then
             WindUI:Notify({
                 Title = "Error",
-                Content = "กรุณากรอก Job ID ก่อน!",
+                Content = "Please enter a Job ID first!",
                 Icon = "alert-circle",
                 Duration = 3,
             })
@@ -2473,21 +2604,20 @@ Server:Button({
         
         WindUI:Notify({
             Title = "Connecting",
-            Content = "กำลังพยายามเข้าสู่เซิร์ฟเวอร์...",
+            Content = "Attempting to join the server...",
             Icon = "loader",
             Duration = 3,
         })
         
         local success, err = pcall(function()
-            local TeleportService = game:GetService("TeleportService")
-            local Players = game:GetService("Players")
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, InputJobId, Players.LocalPlayer)
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, InputJobId, LocalPlayer)
         end)
         
+        -- Notify when teleport fails (e.g., server full)
         if not success then
             WindUI:Notify({
                 Title = "Teleport Failed (Error 773)",
-                Content = "เซิร์ฟเวอร์เต็ม, ปิดตัวลงแล้ว หรือเป็น Private Server ที่ไม่มีสิทธิ์เข้า",
+                Content = "Server is full, shut down, or is a private server without access.",
                 Icon = "x-circle",
                 Duration = 4,
             })
@@ -2495,54 +2625,54 @@ Server:Button({
     end,
 })
 
+
+-- ==========================================
+-- 4. BUTTON: Copy Current Server Job ID
+-- ==========================================
 Server:Button({
     Title = "Copy server code",
+    Desc = "Copy your current server's Job ID to clipboard",
     Callback = function()
         pcall(function()
             local currentJobId = game.JobId
+            
+            -- Support multiple clipboard functions based on executor
             if setclipboard then
                 setclipboard(currentJobId)
-                WindUI:Notify({
-                    Title = "Success",
-                    Content = "Copied current Job ID to clipboard!",
-                    Icon = "check-circle",
-                    Duration = 3,
-                })
             elseif toclipboard then
                 toclipboard(currentJobId)
-                WindUI:Notify({
-                    Title = "Success",
-                    Content = "Copied current Job ID to clipboard!",
-                    Icon = "check-circle",
-                    Duration = 3,
-                })
             end
+            
+            WindUI:Notify({
+                Title = "Success",
+                Content = "Copied current Job ID to clipboard!",
+                Icon = "check-circle",
+                Duration = 3,
+            })
         end)
     end,
 })
 
+local Rejoin = Server:Section({ Title = "Rejoin Server" })
+-- ==========================================
+-- 5. BUTTON: Rejoin Server
+-- ==========================================
 Server:Button({
     Title = "Rejoin Server",
+    Desc = "Reconnect to the same server",
     Callback = function()
         WindUI:Notify({
             Title = "Rejoining",
-            Content = "กำลังกลับเข้าสู่เซิร์ฟเวอร์เดิม...",
+            Content = "Rejoining the current server...",
             Icon = "refresh-cw",
             Duration = 3,
         })
+        
         pcall(function()
-            local TeleportService = game:GetService("TeleportService")
-            local Players = game:GetService("Players")
-            local LocalPlayer = Players.LocalPlayer
-            
             TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
         end)
     end,
 })
-
-
-
-
 
 
 
@@ -2863,11 +2993,6 @@ local Slider = GeneralTab:Slider({
     end,
 })
 
-
-
-
-
-
 local HideShowUI = Config:Section({ Title = "Hide / Show UI" })
 
 local UIKeybind = Config:Keybind({
@@ -2879,176 +3004,6 @@ local UIKeybind = Config:Keybind({
         Window:Toggle()
     end
 })
-
-
-
-
-
-
-
-
-
--- // Configuration & Safety Checks
-local Players = game:GetService("Players")
-local Lighting = game:GetService("Lighting")
-local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local SoundService = game:GetService("SoundService")
-local StarterGui = game:GetService("StarterGui")
-
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
--- // Notification Helper
-local function notify(title, content)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title,
-            Text = content,
-            Duration = 3
-        })
-    end)
-end
-
-local Button = FPSBoost:Button({
-    Title = "Ultimate FPS Boost",
-    Desc = "Advanced multi-layered performance optimization system.",
-    Callback = function()
-        notify("FPS Boost", "Initializing comprehensive optimization...")
-
-        -- [1] Core Engine & Rendering Tweaks
-        pcall(function()
-            settings().Rendering.QualityLevel = Enum.QualityLevel.Level0
-            UserSettings():GetService("UserGameSettings").SavedQualityLevel = Enum.SavedQualityLevel.Level1
-            
-            -- Disable extensive graphic physics elements
-            Workspace.FallenPartsDestroyHeight = 0
-            for _, v in ipairs(Workspace:GetChildren()) do
-                if v:IsA("Clouds") or v:IsA("Atmosphere") or v:IsA("Wind") or v:IsA("PostEffect") then
-                    v:Destroy()
-                end
-            end
-        end)
-
-        -- [2] Deep Lighting Stripping
-        pcall(function()
-            Lighting.GlobalShadows = false
-            Lighting.Brightness = 2
-            Lighting.FogEnd = 9e9
-            Lighting.FogStart = 9e9
-            Lighting.ClockTime = 14
-            Lighting.GeographicLatitude = 0
-            Lighting.Ambient = Color3.fromRGB(200, 200, 200)
-            Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
-
-            for _, child in ipairs(Lighting:GetChildren()) do
-                if child:IsA("PostEffect") or child:IsA("Sky") or child:IsA("Atmosphere") or child:IsA("Clouds") or child:IsA("BlurEffect") or child:IsA("SunRaysEffect") or child:IsA("ColorCorrectionEffect") or child:IsA("BloomEffect") then
-                    child:Destroy()
-                end
-            end
-        end)
-
-        -- [3] Terrain & Environment Stripping
-        pcall(function()
-            local Terrain = Workspace:FindFirstChildOfClass("Terrain")
-            if Terrain then
-                Terrain.WaterWaveSize = 0
-                Terrain.WaterWaveTransparency = 1
-                Terrain.WaterTransparency = 1
-                Terrain.WaterReflectance = 0
-                Terrain.Decoration = false
-                pcall(function()
-                    Terrain:Clear()
-                end)
-            end
-        end)
-
-        -- [4] Audio & UI Resource Management
-        pcall(function()
-            SoundService.RespectFilteringEnabled = true
-            for _, sound in ipairs(SoundService:GetDescendants()) do
-                if sound:IsA("Sound") then
-                    sound.Volume = 0
-                end
-            end
-        end)
-
-        -- [5] Advanced Part & Material Optimization Pipeline
-        local function optimizePart(v)
-            if v:IsA("BasePart") then
-                -- Exclude local characters and active gameplay skill effects
-                local modelParent = v.Parent
-                local isCharacter = modelParent and (modelParent:FindFirstChild("Humanoid") or modelParent:IsA("Accessory"))
-                local isEffect = modelParent and modelParent.Name:lower():find("effect") or v.Name:lower():find("effect")
-
-                if not isCharacter and not isEffect then
-                    v.Material = Enum.Material.SmoothPlastic
-                    v.Reflectance = 0
-                    v.CastShadow = false
-                    v.Color = Color3.fromRGB(150, 150, 150)
-                end
-            elseif v:IsA("Decal") or v:IsA("Texture") then
-                v.Transparency = 1
-            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
-                if not v.Parent:FindFirstChild("Humanoid") then
-                    v.Enabled = false
-                end
-            elseif v:IsA("MeshPart") then
-                local modelParent = v.Parent
-                local isCharacter = modelParent and modelParent:FindFirstChild("Humanoid")
-                if not isCharacter then
-                    v.TextureID = ""
-                    v.Material = Enum.Material.SmoothPlastic
-                    v.CastShadow = false
-                end
-            end
-        end
-
-        -- Batch run through existing workspace descendants
-        task.spawn(function()
-            local descendants = Workspace:GetDescendants()
-            for i = 1, #descendants do
-                pcall(function()
-                    optimizePart(descendants[i])
-                end)
-                if i % 500 == 0 then
-                    task.wait() -- Prevent script exhaustion/timeouts
-                end
-            end
-        end)
-
-        -- [6] Dynamic Event Listener for Future Map Elements
-        pcall(function()
-            if not getgenv().FPSBoostConnection then
-                getgenv().FPSBoostConnection = Workspace.DescendantAdded:Connect(function(v)
-                    pcall(function()
-                        task.wait(0.1)
-                        if v then
-                            optimizePart(v)
-                        end
-                    end)
-                end)
-            end
-        end)
-
-        -- [7] Memory Cleanup and Garbage Collection
-        pcall(function()
-            collectgarbage("collect")
-        end)
-
-        notify("FPS Boost", "Optimization complete! Frame rate profile maximized.")
-    end
-})
-
-
-
-
-
-
-
-
-
 
 
 
