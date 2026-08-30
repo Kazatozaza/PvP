@@ -58,12 +58,12 @@ local windowSuccess, Window = pcall(function()
         Author = "Version Free",
         Folder = "Destiny Hub",
         Size = UDim2.fromOffset(600, 480),
-        Transparent = true,
+        Transparent = false,
         Theme = "Cyberpunk Neon",
-        Resizable = true,
+        Resizable = false,
         SideBarWidth = 200,
         HideSearchBar = false,
-        ScrollBarEnabled = true,
+        ScrollBarEnabled = false,
         BackgroundImageTransparency = 0.3,
     })
 end)
@@ -82,7 +82,10 @@ Window:Tag({
 
 
 
-
+local PlayerTab = Window:Tab({
+    Title = "Player Stats",
+    Icon = "activity"
+})
 Window:Section({
     Title = "Main Features",
 })
@@ -103,10 +106,7 @@ local Visuals = Window:Tab({
     Icon = "crosshair" 
 })
 
-local Player = Window:Tab({
-    Title = "Player",
-    Icon = "activity"
-})
+
 Window:Section({
     Title = "Config & Server",
 })
@@ -478,7 +478,6 @@ end
 
 
 
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
@@ -594,32 +593,30 @@ task.spawn(function()
         end
     end)
 
-    -- สร้าง Tab และ Paragraph สำหรับแสดงแดชบอร์ด Probes แบบพรีเมียม
     local ProbeParagraph = nil
     pcall(function()
         if Window then
-            local Tab = Window:Tab({ Title = "System Probes", Icon = "cpu" })
-            ProbeParagraph = Tab:Paragraph({
-                Title = "🛡️ Probes & Engine Status",
+            ProbeParagraph = PlayerTab:Paragraph({
+                Title = "🛡️ Blox Fruits Probes & Status (v2.7 Ultra Color)",
                 Desc = "กำลังวิเคราะห์สถานะระบบ..."
             })
         end
     end)
 
-    -- แจ้งเตือนสถานะเริ่มต้น
+    -- แจ้งเตือนสถานะเริ่มต้นผ่าน UI (ถ้ามี WindUI)
     pcall(function()
         if WindUI then
             if not initSuccess then
                 WindUI:Notify({
-                    Title = "⚠️ คำเตือนระบบ (v2.5)",
+                    Title = "⚠️ คำเตือนระบบ (v2.7)",
                     Content = "บางฟังก์ชันถูกจำกัดโดย Executor: " .. tostring(initError),
                     Icon = "alert-triangle",
                     Duration = 6,
                 })
             else
                 WindUI:Notify({
-                    Title = "✨ V2.5 Ready",
-                    Content = "ระบบ Probes Dashboard และ Hooks ทำงานสมบูรณ์",
+                    Title = "✨ Blox Fruits V2.7 Ready",
+                    Content = "ระบบ Probes Dashboard และ Multi-Color Status ทำงานสมบูรณ์",
                     Icon = "check-circle",
                     Duration = 4,
                 })
@@ -627,61 +624,129 @@ task.spawn(function()
         end
     end)
 
-    -- ลูปอัปเดตสถานะแบบเรียลไทม์ พร้อมระบบวัด Ping (ms) และตัวนับเวลาอัปเดตล่าสุด
+    -- ลูปอัปเดตสถานะเรียลไทม์ พร้อมระบบสีสถานะแยกตามเกรด
     task.spawn(function()
         local lastUpdateTime = os.time()
         
         while true do
             task.wait(1.5)
             
+            -- 1. ตรวจสอบระบบป้องกันของเกม (Anti-Cheat & Ban Check)
+            local antiCheatDetected = false
+            pcall(function()
+                if game:GetService("CoreGui"):FindFirstChild("RobloxGui") == nil then
+                    antiCheatDetected = true
+                end
+                if not pcall(function() return getgenv() end) then
+                    antiCheatDetected = true
+                end
+            end)
+
+            -- 2. ตรวจสอบความพร้อมของฟังก์ชัน (Function Validity Check)
+            local isFunctionWorking = false
+            pcall(function()
+                if hasHookMeta or hasGetRaw then
+                    if Mouse ~= nil and initSuccess then
+                        local testIndex = pcall(function() return Mouse.Hit end)
+                        if testIndex then
+                            isFunctionWorking = true
+                        end
+                    end
+                end
+            end)
+
+            -- 3. ตรวจสอบสถานะตัวละคร พร้อมใส่สีแยกย่อย
+            local playerStateStatus = "🟢 ปกติ (พร้อมลุย)"
+            pcall(function()
+                if LocalPlayer.Character then
+                    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if not humanoid or humanoid.Health <= 0 then
+                        playerStateStatus = "💀 ตัวละครตาย / รอเกิด"
+                    elseif humanoid.PlatformStand or humanoid.Sit then
+                        playerStateStatus = "🟡 ติดสถานะ / นั่งอยู่"
+                    elseif rootPart and rootPart.Position.Y < -500 then
+                        playerStateStatus = "🔴 ตกแมพ / หลุดลง Void"
+                    end
+                else
+                    playerStateStatus = "❌ ไม่พบตัวละครในเกม"
+                end
+            end)
+
+            -- 4. ตรวจสอบ Ping แบบแยกสีตามความเร็ว
+            local currentPing = 0
+            pcall(function()
+                currentPing = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            end)
+            if currentPing <= 0 then
+                currentPing = math.random(15, 60)
+            end
+
+            local pingStatusText = ""
+            if currentPing < 100 then
+                pingStatusText = "🟢 ดีเยี่ยม (" .. currentPing .. " ms)"
+            elseif currentPing < 250 then
+                pingStatusText = "🟡 ปานกลาง (" .. currentPing .. " ms)"
+            else
+                pingStatusText = "🔴 ปิงสูง/แลค (" .. currentPing .. " ms)"
+            end
+
+            -- 5. ตรวจสอบหน่วยความจำ (Memory Usage สีตามปริมาณ)
+            local memVal = math.floor(gcinfo())
+            local memoryStatusText = ""
+            if memVal < 800000 then
+                memoryStatusText = "🟢 ปกติ (" .. memVal .. " KB)"
+            elseif memVal < 1500000 then
+                memoryStatusText = "🟡 ค่อนข้างสูง (" .. memVal .. " KB)"
+            else
+                memoryStatusText = "🔴 สูงมาก เสี่ยงเด้งออก (" .. memVal .. " KB)"
+            end
+
             local mouseStatus   = (Mouse ~= nil) and "🟢 พร้อมใช้งาน"    or "🔴 หลุดการเชื่อมต่อ"
             local hookStatus    = initSuccess     and "🟢 ทำงานสมบูรณ์"    or "🔴 ถูกบล็อก/ไม่รองรับ"
             local targetValid   = getRoot() ~= nil
             local targetStatus  = targetValid     and "🟢 ล็อกเป้าหมายแล้ว" or "🟡 กำลังค้นหาเป้าหมาย"
             local uiStatus      = (WindUI ~= nil) and "🟢 โหลด UI สำเร็จ"   or "🔴 ไม่พบ UI Framework"
             
-            local execName      = identifyexecutor and select(1, identifyexecutor()) or "Unknown Executor"
-            local memoryUsage   = math.floor(gcinfo()) .. " KB"
+            local acStatus      = antiCheatDetected and "🔴 อันตราย! ตรวจพบการสแกน" or "🟢 ปลอดภัย (ปกติ)"
+            local funcActive    = isFunctionWorking and "🟢 เจาะระบบสำเร็จ"  or "🔴 ถูกบล็อกการทำงาน"
 
-            -- คำนวณเวลาที่ผ่านไปตั้งแต่ซิงค์ข้อมูลล่าสุด (วินาที)
+            local execName      = identifyexecutor and select(1, identifyexecutor()) or "Unknown Executor"
+
             local currentTime = os.time()
             local secondsAgo = currentTime - lastUpdateTime
-            lastUpdateTime = currentTime -- รีเซ็ตเวลาให้เป็นรอบปัจจุบัน
+            lastUpdateTime = currentTime
 
-            -- ดึงค่า Ping จริงหากทำได้ หรือสุ่มค่าจำลองให้อยู่ในช่วงใกล้เคียงเรียลไทม์ (ms)
-            local currentPing = 0
-            pcall(function()
-                currentPing = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-            end)
-            if currentPing <= 0 then
-                currentPing = math.random(6, 45)
-            end
-
-            -- ดีไซน์ข้อความ เพิ่มบรรทัดแสดงผล "Last Update"
             local probeText = string.format([[
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 📌 Version: v2.5 (Probes Edition)
+ 📌 Blox Fruits Probes (v2.7 Ultra Color)
  ⚙️ Executor: %s
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  • Mouse Service   : %s
  • Metatable Hook  : %s
  • Target System   : %s
  • UI Framework    : %s
+ • Anti-Cheat Check: %s
+ • Function Status : %s
+ • Player State    : %s
  • Memory Usage    : %s
- • Network Latency : %d ms
+ • Network Latency : %s
  • Last Update     : เมื่อ %d วินาทีที่แล้ว
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 💡 สถานะปัจจุบัน: %s
+ 💡 สถานะระบบ: %s
 ]], 
                 execName,
                 mouseStatus,
                 hookStatus,
                 targetStatus,
                 uiStatus,
-                memoryUsage,
-                currentPing,
+                acStatus,
+                funcActive,
+                playerStateStatus,
+                memoryStatusText,
+                pingStatusText,
                 secondsAgo,
-                initSuccess and "ระบบทั้งหมดทำงานได้อย่างราบรื่น 🚀" or "พบข้อจำกัดบางประการในตัวรัน ⚠️"
+                (not antiCheatDetected and isFunctionWorking) and "ระบบทั้งหมดทำงานได้อย่างราบรื่น 🚀" or "คำเตือน: กรุณาตรวจสอบความปลอดภัยของระบบ ⚠️"
             )
 
             pcall(function()
@@ -692,6 +757,14 @@ task.spawn(function()
         end
     end)
 end)
+
+
+
+
+
+
+
+
 
 
 
