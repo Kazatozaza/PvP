@@ -829,7 +829,8 @@ local connection = nil
 local function getOrCreatePlatform()
     if not platform or not platform.Parent then
         platform = Instance.new("Part")
-        platform.Size = Vector3.new(100, 1, 100) 
+        -- ขยายขนาดแพลตฟอร์มให้ใหญ่ขึ้นมากๆ (1000x1x1000)
+        platform.Size = Vector3.new(1000, 1, 1000) 
         platform.Anchored = true
         platform.CanCollide = true
         platform.Transparency = 1 -- ล่องหน
@@ -874,12 +875,13 @@ local function ToggleWaterGodMode(state)
         if waterPlane then
             local waterY = waterPlane.Position.Y
             
-            if rootPart.Position.Y <= (waterY + 5) then
+            if rootPart.Position.Y <= (waterY + 1) then
                 if currentPlatform.Parent ~= Workspace then
                     currentPlatform.Parent = Workspace
                 end
                 
-                currentPlatform.Position = Vector3.new(rootPart.Position.X, waterY, rootPart.Position.Z)
+                -- ล็อกตำแหน่ง X และ Z ให้ตรงกับผู้เล่นตลอดเวลา แต่ขยายขนาดครอบคลุมกว้างมาก
+                currentPlatform.Position = Vector3.new(rootPart.Position.X, waterY - 2, rootPart.Position.Z)
                 
                 if hum then
                     hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
@@ -2274,9 +2276,9 @@ GeneralTab:Toggle({
 
 
 local CharacterAbilities = GeneralTab:Section({ Title = "Character & Abilities" })
-
 GeneralTab:Toggle({
     Title = "Auto Race V4",
+    Desc = "Automatically triggers and upgrades Race V4 ability when the gauge is full.",
     Flag = "AutoRaceV4_Toggle",
     Value = false,
     Callback = function(state)
@@ -2286,6 +2288,7 @@ GeneralTab:Toggle({
 
 GeneralTab:Toggle({
     Title = "Auto Race V3",
+    Desc = "Automatically activates your Race V3 ability as soon as it becomes ready.",
     Flag = "AutoRaceAbility",
     Value = false,
     Callback = function(state)
@@ -2295,6 +2298,7 @@ GeneralTab:Toggle({
 
 GeneralTab:Toggle({
     Title = "Walking on Water (Full Map)",
+    Desc = "Generates an invisible ice platform beneath you to walk across any water body seamlessly.",
     Flag = "IceWalk",
     Value = false,
     Callback = function(state)
@@ -2360,8 +2364,6 @@ GeneralTab:Toggle({
         end)
     end,
 })
-
-
 
 
 
