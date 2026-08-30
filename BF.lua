@@ -271,152 +271,70 @@ end)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
+local SafeZones = Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("SafeZones")
 
-local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") 
-    and Workspace._WorldOrigin:FindFirstChild("SafeZones")
-
--- 1. ฟังก์ชันเช็คสถานะ InCombat (ปรับปรุงให้แม่นยำ ตรวจสอบทุกรูปแบบ)
-local function isPlayerInCombat(player, character)
+-- เช็คสถานะการต่อสู้ (Combat)
+local function isPlayerInCombat(player, char)
     if not player then return false end
+    if player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag") then return true end
     
-    -- เช็ค Attribute ใน Player (รองรับ Boolean, Number, String, และ Combat Timer)
-    local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag")
-    if pCombat == true or pCombat == 1 or pCombat == "1" then
-        return true
+    local cTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
+    if type(cTime) == "number" and cTime > workspace:GetServerTimeNow() then return true end
+
+    if char then
+        if char:GetAttribute("InCombat") or char:GetAttribute("Combat") or char:GetAttribute("CombatTag") then return true end
+        local obj = char:FindFirstChild("InCombat") or char:FindFirstChild("Combat") or char:FindFirstChild("CombatTag") or char:FindFirstChild("PvpTag")
+        if obj then return obj:IsA("ValueBase") and (obj:IsA("BoolValue") and obj.Value or obj:IsA("NumberValue") and obj.Value > 0 or obj:IsA("StringValue") and obj.Value ~= "" or true) end
     end
-    
-    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
-    if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
-        return true
-    end
-
-    -- เช็คใน Character
-    if character then
-        local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
-        if cCombat == true or cCombat == 1 or cCombat == "1" then
-            return true
-        end
-
-        -- เช็ค Value Object ชั่วคราวในตัวละคร (BoolValue, NumberValue, StringValue)
-        local combatObj = character:FindFirstChild("InCombat") 
-            or character:FindFirstChild("Combat") 
-            or character:FindFirstChild("CombatTag")
-            or character:FindFirstChild("PvpTag")
-
-        if combatObj then
-            if combatObj:IsA("BoolValue") and combatObj.Value == true then
-                return true
-            elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
-                return true
-            elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" then
-                return true
-            elseif combatObj:IsA("ValueBase") then
-                return true
-            end
-        end
-    end
-
     return false
 end
 
--- 2. ฟังก์ชันเช็คว่าตัวละครอยู่ใน Safe Zone ทรงกลมหรือไม่
-local function isInSafeZoneRadius(character)
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
-    if not safeZonesFolder then return false end
-    
-    local charPos = character.HumanoidRootPart.Position
-    
-    for _, zonePart in ipairs(safeZonesFolder:GetChildren()) do
-        if zonePart:IsA("BasePart") then
-            local zonePos = zonePart.Position
-            local radius = 0
-            
-            local mesh = zonePart:FindFirstChildOfClass("SpecialMesh")
-            if mesh then
-                radius = mesh.Scale.X / 2
-                radius = radius * math.max(zonePart.Size.X, zonePart.Size.Z)
-            else
-                radius = math.max(zonePart.Size.X, zonePart.Size.Z) / 2
-            end
-            
-            local distance = (charPos - zonePos).Magnitude
-            if distance <= radius then
-                return true
-            end
+-- เช็คพื้นที่ปลอดภัย (Safe Zone)
+local function isInSafeZoneRadius(char)
+    if not char or not char:FindFirstChild("HumanoidRootPart") or not SafeZones then return false end
+    local pos = char.HumanoidRootPart.Position
+    for _, zone in ipairs(SafeZones:GetChildren()) do
+        if zone:IsA("BasePart") then
+            local mesh = zone:FindFirstChildOfClass("SpecialMesh")
+            local radius = (mesh and mesh.Scale.X / 2 * math.max(zone.Size.X, zone.Size.Z)) or (math.max(zone.Size.X, zone.Size.Z) / 2)
+            if (pos - zone.Position).Magnitude <= radius then return true end
         end
     end
-    
     return false
 end
 
--- 3. ฟังก์ชันเช็คสถานะ Safe Zone (ถ้าติด InCombat อยู่ จะไม่นับว่า Safe)
-local function isPlayerInSafeZone(player, character)
-    if isPlayerInCombat(player, character) then
-        return false
-    end
-
-    local inSafeZoneAttr = player:GetAttribute("SafeZone") or (character and character:GetAttribute("SafeZone"))
-    local inRadius = character and isInSafeZoneRadius(character)
-    local hasTempSafeZone = character and character:FindFirstChild("TempSafeZone")
-    
-    return (inSafeZoneAttr == true or inRadius or hasTempSafeZone) == true
+local function isPlayerInSafeZone(player, char)
+    if isPlayerInCombat(player, char) then return false end
+    return (player:GetAttribute("SafeZone") or (char and char:GetAttribute("SafeZone")) or isInSafeZoneRadius(char) or (char and char:FindFirstChild("TempSafeZone"))) == true
 end
 
--- 4. เช็คทีมและสถานะเป้าหมาย (สำหรับ Aimbot / Target Targeting)
-local function ShouldIgnoreTarget(targetCharacter)
-    local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
-    if not targetPlayer then return true end
-    if targetPlayer == LocalPlayer then return true end
-    
-    local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled")
-    if pvpDisabled == true then 
-        return true 
-    end
-    
-    if isPlayerInSafeZone(targetPlayer, targetCharacter) then
-        return true
-    end
-    
-    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
-        if targetPlayer.Team and targetPlayer.Team == LocalPlayer.Team then 
-            return true 
-        end
-    end
-    
-    local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid.Health <= 0 then return true end
-    
-    return false
+-- เช็คว่าควรข้ามเป้าหมายนี้หรือไม่
+local function ShouldIgnoreTarget(targetChar)
+    local targetPlayer = Players:GetPlayerFromCharacter(targetChar)
+    if not targetPlayer or targetPlayer == LocalPlayer or targetPlayer:GetAttribute("PvpDisabled") == true or isPlayerInSafeZone(targetPlayer, targetChar) then return true end
+    if LocalPlayer.Team and targetPlayer.Team == LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then return true end
+    local hum = targetChar:FindFirstChildOfClass("Humanoid")
+    return hum and hum.Health <= 0
 end
 
--- 5. ฟังก์ชันดึงสถานะสำหรับ ESP
+-- ดึงสถานะสำหรับ ESP
 local function getPlayerStatus(player)
-    local character = player.Character
-    local pvpDisabled = player:GetAttribute("PvpDisabled")
-    local pvpStatus = pvpDisabled == true and "ปิด PvP" or "เปิด PvP"
+    local char = player.Character
+    local pvp = player:GetAttribute("PvpDisabled") == true and "ปิด PvP" or "เปิด PvP"
+    local combat = isPlayerInCombat(player, char)
+    local inSafeZone = isPlayerInSafeZone(player, char)
     
-    local inCombat = isPlayerInCombat(player, character)
-    local inSafeZone = isPlayerInSafeZone(player, character)
-    
-    local safeZoneStatus = "Normal Zone"
-    if inCombat and isInSafeZoneRadius(character) then
-        safeZoneStatus = "Safe Zone (Combat Bypass)"
-    elseif inSafeZone then
-        safeZoneStatus = "Safe Zone"
-    end
-
-    local combatStatus = inCombat and "InCombat" or "Ready"
-   
-    return pvpStatus .. " | " .. safeZoneStatus .. " | " .. combatStatus
+    local zoneStatus = (combat and isInSafeZoneRadius(char) and "Safe Zone (Combat Bypass)") or (inSafeZone and "Safe Zone") or "Normal Zone"
+    return string.format("%s | %s | %s", pvp, zoneStatus, combat and "InCombat" or "Ready")
 end
-
 -- ตัวอย่างการแสดงผล ESP
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         local statusText = getPlayerStatus(player)
-        print(player.Name .. " -> " .. statusText)
     end
 end
+
+
 
 -- กำหนดจุดอ้างอิง (กลางจอ หรือ ตามนิ้ว)
 local function GetReferencePosition()
@@ -479,101 +397,74 @@ end
 
 
 
+
+
+
+
+
+
+
+
+
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- ตั้งค่าตัวแปร Global
+if getgenv()._SilentAimLoaded then 
+    warn("Already loaded!") 
+    return 
+end
+
+getgenv()._SilentAimLoaded = true
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- เปลี่ยนชื่อ Remote ตามที่ Blox Fruits ใช้ (ส่วนใหญ่ใช้ Remotes หรือสคริปต์กลาง)
-local TARGET_REMOTE_NAMES = {"CommF_", "ShootRemote", "CombatEvent"}
+local function getRoot()
+    local t = getgenv().CurrentTarget
+    return (t and t.Parent) and t.Parent:FindFirstChild("HumanoidRootPart") or nil
+end
 
 pcall(function()
     local mouse = LocalPlayer:GetMouse()
-    
-    local function getModifiedResult(idx)
-        local target = getgenv().CurrentTarget
-        if target and target.Parent then
-            local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                if idx == "Hit" then
-                    return CFrame.new(rootPart.Position)
-                elseif idx == "Target" then
-                    return rootPart
+    if not hookmetamethod then return end
+
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", function(self, idx)
+        if getgenv().SilentAimEnabled and self == mouse then
+            if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
+                local r = getRoot()
+                if r then
+                    if idx == "Hit" then 
+                        return CFrame.new(r.Position) 
+                    elseif idx == "Target" then 
+                        return r 
+                    elseif idx == "X" then 
+                        local sp = Camera:WorldToScreenPoint(r.Position)
+                        return sp.X
+                    elseif idx == "Y" then 
+                        local sp = Camera:WorldToScreenPoint(r.Position)
+                        return sp.Y
+                    end
                 end
             end
         end
-        return nil
-    end
+        return oldIndex(self, idx)
+    end)
 
-    if hookmetamethod then
-        -- 1. Hook __index สำหรับ Mouse
-        local oldIndex
-        oldIndex = hookmetamethod(game, "__index", function(self, idx)
-            if getgenv().SilentAimEnabled and self == mouse then
-                local result = getModifiedResult(idx)
-                if result then return result end
-            end
-            return oldIndex(self, idx)
-        end)
-
-        -- 2. Hook __namecall เพียงครั้งเดียว (รวมทั้ง PC และ Mobile เพื่อป้องกัน UI บัค)
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod()
-            local args = {...}
-            
-            if getgenv().SilentAimEnabled and getgenv().CurrentTarget then
-                -- ดักจับ Raycast ทั้งคอมและมือถือ
-                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                    local target = getgenv().CurrentTarget
-                    if target and target.Parent then
-                        local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
-                        if rootPart then
-                            local origin = Camera.CFrame.Position
-                            local direction = (rootPart.Position - origin).Unit * 1000
-                            return Ray.new(origin, direction)
-                        end
-                    end
-                end
-
-                -- ดักจับ RemoteEvent (FireServer)
-                if method == "FireServer" then
-                    local isTargetRemote = false
-                    for _, remoteName in ipairs(TARGET_REMOTE_NAMES) do
-                        if self.Name == remoteName then
-                            isTargetRemote = true
-                            break
-                        end
-                    end
-
-                    if isTargetRemote then
-                        local target = getgenv().CurrentTarget
-                        if target and target.Parent then
-                            local rootPart = target.Parent:FindFirstChild("HumanoidRootPart")
-                            if rootPart then
-                                for i, arg in ipairs(args) do
-                                    if typeof(arg) == "Vector3" then
-                                        args[i] = rootPart.Position
-                                    elseif typeof(arg) == "CFrame" then
-                                        args[i] = CFrame.new(rootPart.Position)
-                                    end
-                                end
-                            end
-                        end
-                    end
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if getgenv().SilentAimEnabled and getgenv().CurrentTarget then
+            if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                local r = getRoot()
+                if r then 
+                    return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
                 end
             end
-            
-            return oldNamecall(self, unpack(args))
-        end)
-    end
+        end
+        return oldNamecall(self, ...)
+    end)
 end)
-
-
 
 
 
@@ -588,23 +479,25 @@ pcall(function()
         local method = getnamecallmethod()
         local args = { ... }
 
+        -- ตรวจสอบเงื่อนไข Silent Aim และ Target
         if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
-            local success, targetPos = pcall(function()
-                return GetPredictedPosition(getgenv().CurrentTarget)
-            end)
-
-            if success and targetPos then
-                for i, arg in ipairs(args) do
-                    if typeof(arg) == "Vector3" then
-                        args[i] = targetPos
-                    elseif typeof(arg) == "CFrame" then
-                        local rotX, rotY, rotZ = arg:ToEulerAnglesXYZ()
-                        args[i] = CFrame.new(targetPos) * CFrame.fromEulerAnglesXYZ(rotX, rotY, rotZ)
-                    end
+            local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
+            
+            for i, arg in ipairs(args) do
+                if typeof(arg) == "Vector3" then
+                    -- ถ้าอาร์กิวเมนต์เป็น Vector3 (ตำแหน่งเป้าหมาย) เปลี่ยนเป็นตำแหน่งศัตรู
+                    args[i] = targetPos
+                elseif typeof(arg) == "CFrame" then
+                    -- ถ้าอาร์กิวเมนต์เป็น CFrame (ตำแหน่ง + ทิศทางสกิล) ให้รักษา rotation เดิมแต่เปลี่ยนตำแหน่ง (Position) ไปที่ศัตรู
+                    local _, _, _, r00, r01, r02, r10, r11, r12, r20, r21, r22 = arg:GetComponents()
+                    args[i] = CFrame.new(
+                        targetPos.X, targetPos.Y, targetPos.Z,
+                        r00, r01, r02, r10, r11, r12, r20, r21, r22
+                    )
                 end
             end
             
-            return oldNamecall(self, unpack(args))
+            return oldNamecall(self, table.unpack(args))
         end
 
         return oldNamecall(self, ...)
@@ -1626,7 +1519,6 @@ end
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         local statusText = getPlayerStatus(player)
-        print(player.Name .. " -> " .. statusText)
     end
 end
 -- ค้นหาเป้าหมายที่ใกล้ที่สุด
