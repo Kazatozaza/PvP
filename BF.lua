@@ -273,68 +273,68 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local SafeZones = Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("SafeZones")
 
--- เช็คสถานะการต่อสู้ (Combat)
-local function isPlayerInCombat(player, char)
-    if not player then return false end
-    if player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag") then return true end
+local function isCombat(p, c)
+    local t = p:GetAttribute("InCombat") or p:GetAttribute("Combat") or p:GetAttribute("CombatTag")
+    if t == true or t == 1 or t == "1" then return true end
+    local ct = p:GetAttribute("CombatTimer") or p:GetAttribute("InCombatTime")
+    if type(ct) == "number" and ct > workspace:GetServerTimeNow() then return true end
     
-    local cTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
-    if type(cTime) == "number" and cTime > workspace:GetServerTimeNow() then return true end
-
-    if char then
-        if char:GetAttribute("InCombat") or char:GetAttribute("Combat") or char:GetAttribute("CombatTag") then return true end
-        local obj = char:FindFirstChild("InCombat") or char:FindFirstChild("Combat") or char:FindFirstChild("CombatTag") or char:FindFirstChild("PvpTag")
-        if obj then return obj:IsA("ValueBase") and (obj:IsA("BoolValue") and obj.Value or obj:IsA("NumberValue") and obj.Value > 0 or obj:IsA("StringValue") and obj.Value ~= "" or true) end
-    end
-    return false
-end
-
--- เช็คพื้นที่ปลอดภัย (Safe Zone)
-local function isInSafeZoneRadius(char)
-    if not char or not char:FindFirstChild("HumanoidRootPart") or not SafeZones then return false end
-    local pos = char.HumanoidRootPart.Position
-    for _, zone in ipairs(SafeZones:GetChildren()) do
-        if zone:IsA("BasePart") then
-            local mesh = zone:FindFirstChildOfClass("SpecialMesh")
-            local radius = (mesh and mesh.Scale.X / 2 * math.max(zone.Size.X, zone.Size.Z)) or (math.max(zone.Size.X, zone.Size.Z) / 2)
-            if (pos - zone.Position).Magnitude <= radius then return true end
+    if c then
+        if c:GetAttribute("InCombat") or c:GetAttribute("Combat") or c:GetAttribute("CombatTag") then return true end
+        local obj = c:FindFirstChild("InCombat") or c:FindFirstChild("Combat") or c:FindFirstChild("CombatTag") or c:FindFirstChild("PvpTag")
+        if obj then
+            if obj:IsA("BoolValue") and obj.Value then return true end
+            if obj:IsA("NumberValue") and obj.Value > 0 then return true end
+            if obj:IsA("ValueBase") and obj.Value ~= "" and obj.Value ~= false then return true end
         end
     end
     return false
 end
 
-local function isPlayerInSafeZone(player, char)
-    if isPlayerInCombat(player, char) then return false end
-    return (player:GetAttribute("SafeZone") or (char and char:GetAttribute("SafeZone")) or isInSafeZoneRadius(char) or (char and char:FindFirstChild("TempSafeZone"))) == true
+local function isInRadius(c)
+    if not c or not c:FindFirstChild("HumanoidRootPart") or not SafeZones then return false end
+    local pos = c.HumanoidRootPart.Position
+    for _, z in ipairs(SafeZones:GetChildren()) do
+        if z:IsA("BasePart") then
+            local mesh = z:FindFirstChildOfClass("SpecialMesh")
+            local rad = mesh and (mesh.Scale.X / 2 * math.max(z.Size.X, z.Size.Z)) or (math.max(z.Size.X, z.Size.Z) / 2)
+            if (pos - z.Position).Magnitude <= rad then return true end
+        end
+    end
+    return false
 end
 
--- เช็คว่าควรข้ามเป้าหมายนี้หรือไม่
-local function ShouldIgnoreTarget(targetChar)
-    local targetPlayer = Players:GetPlayerFromCharacter(targetChar)
-    if not targetPlayer or targetPlayer == LocalPlayer or targetPlayer:GetAttribute("PvpDisabled") == true or isPlayerInSafeZone(targetPlayer, targetChar) then return true end
-    if LocalPlayer.Team and targetPlayer.Team == LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then return true end
-    local hum = targetChar:FindFirstChildOfClass("Humanoid")
+local function isSafeZone(p, c)
+    if isCombat(p, c) then return false end
+    return (p:GetAttribute("SafeZone") or (c and c:GetAttribute("SafeZone")) or isInRadius(c) or (c and c:FindFirstChild("TempSafeZone"))) == true
+end
+
+local function ShouldIgnoreTarget(tc)
+    local tp = Players:GetPlayerFromCharacter(tc)
+    if not tp or tp == LocalPlayer or tp:GetAttribute("PvpDisabled") == true or isSafeZone(tp, tc) then return true end
+    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" and tp.Team == LocalPlayer.Team then return true end
+    local hum = tc:FindFirstChildOfClass("Humanoid")
     return hum and hum.Health <= 0
 end
 
--- ดึงสถานะสำหรับ ESP
-local function getPlayerStatus(player)
-    local char = player.Character
-    local pvp = player:GetAttribute("PvpDisabled") == true and "ปิด PvP" or "เปิด PvP"
-    local combat = isPlayerInCombat(player, char)
-    local inSafeZone = isPlayerInSafeZone(player, char)
+local function getPlayerStatus(p)
+    local c = p.Character
+    local pvp = p:GetAttribute("PvpDisabled") == true and "ปิด PvP" or "เปิด PvP"
+    local combat = isCombat(p, c)
+    local sz = isSafeZone(p, c)
     
-    local zoneStatus = (combat and isInSafeZoneRadius(char) and "Safe Zone (Combat Bypass)") or (inSafeZone and "Safe Zone") or "Normal Zone"
-    return string.format("%s | %s | %s", pvp, zoneStatus, combat and "InCombat" or "Ready")
+    local szStatus = "Normal Zone"
+    if combat and isInRadius(c) then szStatus = "Safe Zone (Combat Bypass)"
+    elseif sz then szStatus = "Safe Zone" end
+
+    return string.format("%s | %s | %s", pvp, szStatus, combat and "InCombat" or "Ready")
 end
--- ตัวอย่างการแสดงผล ESP
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        local statusText = getPlayerStatus(player)
+
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then
+        getPlayerStatus(p)
     end
 end
-
-
 
 -- กำหนดจุดอ้างอิง (กลางจอ หรือ ตามนิ้ว)
 local function GetReferencePosition()
@@ -401,79 +401,50 @@ end
 
 
 
-
-
-
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
-local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
-if getgenv()._SilentAimLoaded then 
-    warn("Already loaded!") 
-    return 
-end
-
-getgenv()._SilentAimLoaded = true
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
-local mouse = LocalPlayer:GetMouse()
-
 local function getRoot()
     local t = getgenv().CurrentTarget
-    if t and t.Parent then
-        return t.Parent:FindFirstChild("HumanoidRootPart")
-    end
-    return nil
+    return (t and t.Parent) and t.Parent:FindFirstChild("HumanoidRootPart") or nil
 end
 
+-- Hook Mouse & Viewport Metamethods
 pcall(function()
-    if not hookmetamethod or not checkcaller then return end
-
-    local oldIndex
-    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        -- เช็ค caller เพื่อกัน Anti-Cheat บางตัวที่ตรวจสอบมาจากฝั่ง Server/CoreScript
-        if not checkcaller() and getgenv().SilentAimEnabled and self == mouse then
-            if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
+    local mouse = LocalPlayer:GetMouse()
+    
+    if hookmetamethod and checkcaller then
+        local oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+            if not checkcaller() and getgenv().SilentAimEnabled and self == mouse then
                 local r = getRoot()
                 if r then
-                    if idx == "Hit" then 
-                        return CFrame.new(r.Position) 
-                    elseif idx == "Target" then 
-                        return r 
-                    elseif idx == "X" or idx == "Y" then 
-                        local sp = Camera:WorldToScreenPoint(r.Position)
-                        return sp[idx]
-                    end
+                    if idx == "Hit" then return CFrame.new(r.Position) end
+                    if idx == "Target" then return r end
+                    if idx == "X" or idx == "Y" then return Camera:WorldToScreenPoint(r.Position)[idx] end
                 end
             end
-        end
-        return oldIndex(self, idx)
-    end))
+            return oldIndex(self, idx)
+        end))
 
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        if not checkcaller() and getgenv().SilentAimEnabled and getgenv().CurrentTarget then
-            local method = getnamecallmethod()
-            if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                local r = getRoot()
-                if r then 
-                    return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
+        hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+            if not checkcaller() and getgenv().CurrentTarget then
+                local method = getnamecallmethod()
+                if (getgenv().SilentAimEnabled or UserInputService.TouchEnabled) and (method == "ScreenPointToRay" or method == "ViewportPointToRay") then
+                    local r = getRoot()
+                    if r then return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) end
                 end
             end
-        end
-        return oldNamecall(self, ...)
-    end))
+            return oldNamecall(self, ...)
+        end))
+    end
 end)
 
-
-
-
-
-
-
-
+-- Hook Remote Arguments (FireServer / InvokeServer)
 pcall(function()
     local gmt = getrawmetatable(game)
     local oldNamecall = gmt.__namecall
@@ -483,24 +454,17 @@ pcall(function()
         local method = getnamecallmethod()
         local args = { ... }
 
-        -- ตรวจสอบเงื่อนไข Silent Aim และ Target
         if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
             local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
             
             for i, arg in ipairs(args) do
                 if typeof(arg) == "Vector3" then
-                    -- ถ้าอาร์กิวเมนต์เป็น Vector3 (ตำแหน่งเป้าหมาย) เปลี่ยนเป็นตำแหน่งศัตรู
                     args[i] = targetPos
                 elseif typeof(arg) == "CFrame" then
-                    -- ถ้าอาร์กิวเมนต์เป็น CFrame (ตำแหน่ง + ทิศทางสกิล) ให้รักษา rotation เดิมแต่เปลี่ยนตำแหน่ง (Position) ไปที่ศัตรู
                     local _, _, _, r00, r01, r02, r10, r11, r12, r20, r21, r22 = arg:GetComponents()
-                    args[i] = CFrame.new(
-                        targetPos.X, targetPos.Y, targetPos.Z,
-                        r00, r01, r02, r10, r11, r12, r20, r21, r22
-                    )
+                    args[i] = CFrame.new(targetPos.X, targetPos.Y, targetPos.Z, r00, r01, r02, r10, r11, r12, r20, r21, r22)
                 end
             end
-            
             return oldNamecall(self, table.unpack(args))
         end
 
@@ -509,6 +473,8 @@ pcall(function()
 
     setreadonly(gmt, true)
 end)
+
+
 
 
 
