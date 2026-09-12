@@ -20,53 +20,140 @@ if not success or not WindUI then
     return
 end
 
--- ตั้งค่าธีม
+
 pcall(function()
-    WindUI:AddTheme({
-        Name = "Cyberpunk Neon",
-        Accent = Color3.fromHex("#FF007F"),
-        Background = Color3.fromHex("#0A0A0F"),
-        Outline = Color3.fromHex("#FF007F"),
-        Text = Color3.fromHex("#FFFFFF"),
-        Placeholder = Color3.fromHex("#8E6B8C"),
-        Button = Color3.fromHex("#1F1424"),
-        Icon = Color3.fromHex("#FF007F"),
-        Toggle = Color3.fromHex("#FF007F"),
-        ToggleBar = Color3.fromHex("#FFFFFF"),
-        SliderIcon = Color3.fromHex("#FF007F"),
-        Slider = Color3.fromHex("#A855F7"),
-        SliderThumb = Color3.fromHex("#FFFFFF"),
-        SliderIconFrom = Color3.fromHex("#FF007F"),
-        SliderIconTo = Color3.fromHex("#00F0FF"),
-        Notification = Color3.fromHex("#0A0A0F"),
-        NotificationTitle = Color3.fromHex("#FF007F"),
-        NotificationTitleTransparency = 0,
-        NotificationContent = Color3.fromHex("#FFFFFF"),
-        NotificationContentTransparency = 0.3,
-        NotificationDuration = Color3.fromHex("#00F0FF"),
-        NotificationDurationTransparency = 0.9,
-        NotificationBorder = Color3.fromHex("#FF007F"),
-        NotificationBorderTransparency = 0.5,
+  WindUI:AddTheme({
+    Name = "Dark", -- theme name
+    Primary = Color3.fromHex("#888888"), -- Icon
+    
+    White = Color3.new(1,1,1),
+    Black = Color3.new(0,0,0),
+    
+    Dialog = Color3.fromHex("#121212"), -- Accent
+    
+    Background = Color3.fromHex("#09090b"), -- Accent
+    BackgroundTransparency = 0,
+    Hover = Color3.fromHex("#FFFFFF"), -- Text
+
+    PanelBackground = Color3.fromHex("#121212"), -- White
+    PanelBackgroundTransparency = .95,
+    
+    WindowBackground = Color3.fromHex("#09090b"), -- Background
+    
+    WindowShadow = Color3.new(0,0,0), -- Black
+    
+    WindowTopbarTitle = Color3.fromHex("#FFFFFF"), -- Text
+    WindowTopbarAuthor = Color3.fromHex("#71717a"), -- Text
+    WindowTopbarIcon = Color3.fromHex("#71717a"), -- Icon
+    WindowTopbarButtonIcon = Color3.fromHex("#71717a"), -- Icon
+    
+    WindowSearchBarBackground = Color3.fromHex("#121212"), -- Background
+    
+    TabBackground = Color3.fromHex("#121212"), -- Hover
+    TabBackgroundHover = Color3.fromHex("#18181b"), -- Hover
+    TabBackgroundHoverTransparency = .5,
+    TabBackgroundActive = Color3.fromHex("#27272a"), -- Hover
+    TabBackgroundActiveTransparency = 0,
+    TabText = Color3.fromHex("#a1a1aa"), -- Text
+    TabTextTransparency = 0.2,
+    TabTextTransparencyActive = 0,
+    TabTitle = Color3.fromHex("#FFFFFF"), -- Text
+    TabIcon = Color3.fromHex("#71717a"), -- Icon
+    TabIconTransparency = 0.2,
+    TabIconTransparencyActive = 0,
+    TabBorderTransparency = 1,
+    TabBorderTransparencyActive = 0.9,
+    TabBorder = Color3.fromHex("#27272a"), -- White
+
+    ElementBackground = Color3.fromHex("#121212"), -- Text
+    ElementBackgroundTransparency = .5,
+    ElementBackgroundHover = WindUI.Creator:AddColor("ElementBackground", "#18181b", 1),
+    ElementTitle = Color3.fromHex("#F4F4F5"), -- Text
+    ElementDesc = Color3.fromHex("#71717a"), -- Text
+    ElementIcon = Color3.fromHex("#71717a"), -- Icon
+    
+    PopupBackground = Color3.fromHex("#121212"), -- Background
+    PopupBackgroundTransparency = "BackgroundTransparency",
+    PopupTitle = Color3.fromHex("#FFFFFF"), -- Text
+    PopupContent = Color3.fromHex("#a1a1aa"), -- Text
+    PopupIcon = Color3.fromHex("#71717a"), -- Icon
+    
+    DialogBackground = Color3.fromHex("#121212"), -- Background
+    DialogBackgroundTransparency = "BackgroundTransparency",
+    DialogTitle = Color3.fromHex("#FFFFFF"), -- Text
+    DialogContent = Color3.fromHex("#a1a1aa"), -- Text
+    DialogIcon = Color3.fromHex("#71717a"), -- Icon
+    
+    Toggle = Color3.fromHex("#27272a"), -- Button
+    ToggleBar = Color3.fromHex("#FFFFFF"), -- White
+    
+    Checkbox = Color3.fromHex("#FFFFFF"), -- Primary
+    CheckboxIcon = Color3.fromHex("#000000"), -- White
+    CheckboxBorder = Color3.fromHex("#3f3f46"), -- White
+    CheckboxBorderTransparency = 0,
+    
+    SliderIcon = Color3.fromHex("#71717a"), -- Icon
+
+    Slider = Color3.fromHex("#FFFFFF"), -- Primary
+    SliderThumb = Color3.fromHex("#FFFFFF"), -- White
+    SliderIconFrom = Color3.fromHex("#71717a"), -- SliderIcon
+    SliderIconTo = Color3.fromHex("#71717a"), -- SliderIcon
+    
+    Tooltip = Color3.fromHex("#18181b"),
+    TooltipText = Color3.fromHex("#FFFFFF"), -- White
+    TooltipSecondary = Color3.fromHex("#71717a"), -- Primary
+    TooltipSecondaryText = Color3.fromHex("#FFFFFF"), -- White
+
+    TabSectionIcon = Color3.fromHex("#71717a"), -- Icon
+
+    SectionIcon = Color3.fromHex("#71717a"), -- Icon
+    
+    SectionExpandIcon = Color3.fromHex("#71717a"), -- White
+    SectionExpandIconTransparency = 0,
+    SectionBox = Color3.fromHex("#121212"), -- White
+    SectionBoxTransparency = .5,
+    SectionBoxBorder = Color3.fromHex("#27272a"), -- White
+    SectionBoxBorderTransparency = 0,
+    SectionBoxBackground = Color3.fromHex("#121212"), -- White
+    SectionBoxBackgroundTransparency = .5,
+    
+    SearchBarBorder = Color3.fromHex("#27272a"), -- White
+    SearchBarBorderTransparency = 0,
+    
+    Notification = Color3.fromHex("#121212"), -- Background
+    NotificationTitle = Color3.fromHex("#FFFFFF"), -- Text
+    NotificationTitleTransparency = 0,
+    NotificationContent = Color3.fromHex("#a1a1aa"), -- Text
+    NotificationContentTransparency = 0,
+    NotificationDuration = Color3.fromHex("#FFFFFF"), -- White
+    NotificationDurationTransparency = .9,
+    NotificationBorder = Color3.fromHex("#27272a"), -- White
+    NotificationBorderTransparency = 0,
+    
+    DropdownTabBorder = Color3.fromHex("#27272a"), -- White
+
+    LabelBackground = Color3.fromHex("#121212"), -- White
+    LabelBackgroundTransparency = .5,
+})
+end)
+
+
+
+local windowSuccess, Window = pcall(function()
+    return WindUI:CreateWindow({
+    Title = "Project Destiny [v3.0]",
+    Author = "System Online • Access Granted",
+    Folder = "Destiny Hub",
+    Size = UDim2.fromOffset(600, 470), -- window size
+    Transparent = true, -- window transparency
+    Theme = "Dark", -- library theme
+    Resizable = true, -- the ability to rezize window
+    SideBarWidth = 200, -- sidebar (tabs) width
+    HideSearchBar = true, -- hide search bar
+    ScrollBarEnabled = true, -- scrollbars that are located to the right of the scroll frame
     })
 end)
 
--- สร้างหน้าต่าง UI หลัก
-local windowSuccess, Window = pcall(function()
-    return WindUI:CreateWindow({
-        Title = "Destiny Hub",
-        Icon = "rbxassetid://107885166490282",
-        Author = "Version Free",
-        Folder = "Destiny Hub",
-        Size = UDim2.fromOffset(600, 480),
-        Transparent = false,
-        Theme = "Cyberpunk Neon",
-        Resizable = false,
-        SideBarWidth = 200,
-        HideSearchBar = false,
-        ScrollBarEnabled = false,
-        BackgroundImageTransparency = 0.3,
-    })
-end)
 
 if windowSuccess and Window then
     getgenv().DestinyHubWindow = Window
@@ -74,27 +161,29 @@ else
     warn("Destiny Hub: ไม่สามารถสร้างหน้าต่าง UI ได้")
 end
 
-Window:Tag({
-    Title = "Mobile/PC",
-    Icon = "",
-    Color = Color3.fromHex("#FF007F"), 
-})
 
 
-
-local PlayerTab = Window:Tab({
-    Title = "Player Stats",
-    Icon = "activity"
-})
 Window:Section({
-    Title = "Main Features",
+    Title = "Main - 2",
 })
+
+local Home = Window:Tab({
+    Title = "How to",
+    Icon = "house"
+})
+
 
 local GeneralTab = Window:Tab({
     Title = "General",
     Icon = "gauge"
 })
-GeneralTab:Select()
+
+
+
+Window:Divider() 
+Window:Section({
+    Title = "Combat",
+})
 
 local CombatTab = Window:Tab({
     Title = "Combat",
@@ -106,9 +195,16 @@ local Visuals = Window:Tab({
     Icon = "crosshair" 
 })
 
+local Macro = Window:Tab({
+    Title = "Macro",
+    Icon = "rbxassetid://6023426951" 
+})
 
+
+
+Window:Divider() 
 Window:Section({
-    Title = "Config & Server",
+    Title = "Server & Config",
 })
 
 local Server = Window:Tab({
@@ -121,6 +217,68 @@ local Config = Window:Tab({
     Icon = "wrench"
 })
 
+GeneralTab:Select()
+
+
+
+
+-- ปุ่มสำหรับกดเข้า Discord (คัดลอกลิงก์เชิญอัตโนมัติ)
+Home:Button({
+    Title = "Discord",
+    Desc = "Join our community server",
+    Callback = function()
+        setclipboard("https://discord.gg/dp7QyMwavp")
+    end
+})
+
+
+Home:Button({
+    Title = "YouTube",
+    Desc = "Watch tutorials and updates",
+    Callback = function()
+
+    end
+})
+
+
+local AimSection = Home:Section({ Title = "-----------------------------------------" })
+
+Home:Button({
+    Title = "Reset All Stats",
+    Desc = "Instantly resets all your character stats, giving you the freedom to rebuild your specialized combat build.",
+    Callback = function()
+        local args = {
+            "BlackbeardReward",
+            "Refund",
+            "2"
+        }
+        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+    end
+})
+
+Home:Button({
+    Title = "Pirates",
+    Desc = "Set sail on the open seas as a fierce pirate, seeking ultimate freedom, legendary bounties, and thrilling adventures.",
+    Callback = function()
+        local args = {
+            "SetTeam2",
+            "Pirates"
+        }
+        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+    end
+})
+
+Home:Button({
+    Title = "Marines",
+    Desc = "Enlist in the prestigious Marine forces to uphold justice, maintain world order, and hunt down dangerous outlaws.",
+    Callback = function()
+        local args = {
+            "SetTeam2",
+            "Marines"
+        }
+        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+    end
+})
 
 local MyConfig = Window.ConfigManager:Config("DestinyConfig")
 
@@ -171,8 +329,8 @@ end)
 
 
 
-getgenv().FOVRadius = getgenv().FOVRadius or 270
-getgenv().MaxDistance = getgenv().MaxDistance or 800
+getgenv().FOVRadius = getgenv().FOVRadius or 120
+getgenv().MaxDistance = getgenv().MaxDistance or 1000
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
@@ -364,6 +522,19 @@ end
 
 -- 4. เช็คทีมและสถานะเป้าหมาย (สำหรับ Aimbot / Target Targeting)
 local function ShouldIgnoreTarget(targetCharacter)
+    -- เช็คว่าเป็นมอนสเตอร์ใน Enemies หรือไม่
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    local isEnemyNPC = enemiesFolder and targetCharacter:IsDescendantOf(enemiesFolder)
+    
+    local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health <= 0 then return true end
+
+    -- ถ้าเป็นมอนสเตอร์ NPC ให้ข้ามเงื่อนไขผู้เล่น
+    if isEnemyNPC then
+        return false -- ไม่เมินมอนสเตอร์ตัวนี้ (สามารถล็อคเป้าได้)
+    end
+
+    -- เงื่อนไขเดิมสำหรับผู้เล่น (Players)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
     if not targetPlayer then return true end
     if targetPlayer == LocalPlayer then return true end
@@ -383,11 +554,37 @@ local function ShouldIgnoreTarget(targetCharacter)
         end
     end
     
-    local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid.Health <= 0 then return true end
-    
     return false
 end
+
+local function GetAllValidTargets()
+    local targets = {}
+    local mode = getgenv().TargetMode or "Both"
+
+    -- 1. ถ้าเลือก Players หรือ Both ให้ดึงข้อมูลผู้เล่น
+    if mode == "Both" or mode == "Players Only" then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                table.insert(targets, player.Character)
+            end
+        end
+    end
+
+    -- 2. ถ้าเลือก Enemies หรือ Both ให้ดึงข้อมูลมอนสเตอร์จาก Workspace.Enemies
+    if mode == "Both" or mode == "Enemies Only" then
+        local enemiesFolder = Workspace:FindFirstChild("Enemies")
+        if enemiesFolder then
+            for _, enemyModel in ipairs(enemiesFolder:GetChildren()) do
+                if enemyModel:IsA("Model") then
+                    table.insert(targets, enemyModel)
+                end
+            end
+        end
+    end
+
+    return targets
+end
+
 
 -- 5. ฟังก์ชันดึงสถานะสำหรับ ESP
 local function getPlayerStatus(player)
@@ -441,6 +638,7 @@ local function GetPredictedPosition(targetPart)
 end
 
 -- ค้นหาเป้าหมายที่อยู่ใน FOV
+-- ค้นหาเป้าหมายที่อยู่ใน FOV (รองรับการกรอง TargetMode ทั้ง Players และ Enemies)
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
     local ShortestDistance = (getgenv().FOVRadius >= 99999) and 99999 or getgenv().FOVRadius
@@ -448,25 +646,24 @@ local function GetTargetInFOV(refPos)
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local targetPart = player.Character:FindFirstChild(getgenv().LockedPartName) or player.Character:FindFirstChild("HumanoidRootPart")
-            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    -- เปลี่ยนมาใช้ GetAllValidTargets เพื่อให้กรองตามโหมดที่เลือก (Players / Enemies / Both)
+    for _, char in ipairs(GetAllValidTargets()) do
+        local targetPart = char:FindFirstChild(getgenv().LockedPartName) or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
 
-            if targetPart and humanoid and humanoid.Health > 0 then
-                if not ShouldIgnoreTarget(player.Character) then
-                    local worldDistance = myHRP and (targetPart.Position - myHRP.Position).Magnitude or 0
-                    if worldDistance <= getgenv().MaxDistance then
-                        local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+        if targetPart and humanoid and humanoid.Health > 0 then
+            if not ShouldIgnoreTarget(char) then
+                local worldDistance = myHRP and (targetPart.Position - myHRP.Position).Magnitude or 0
+                if worldDistance <= getgenv().MaxDistance then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
 
-                        if onScreen then
-                            local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                            local distance = (targetPos2D - refPos).Magnitude
+                    if onScreen then
+                        local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
+                        local distance = (targetPos2D - refPos).Magnitude
 
-                            if distance <= ShortestDistance then
-                                ShortestDistance = distance
-                                ClosestTarget = targetPart
-                            end
+                        if distance <= ShortestDistance then
+                            ShortestDistance = distance
+                            ClosestTarget = targetPart
                         end
                     end
                 end
@@ -478,398 +675,252 @@ end
 
 
 
+
+
+
+
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-local Stats = game:GetService("Stats")
 
--- ตั้งค่าตัวแปร Global
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
 task.spawn(function()
-    task.wait(2)
-
-    if not LocalPlayer.Character then
-        LocalPlayer.CharacterAdded:Wait()
-    end
-
-    local Mouse = nil
-    pcall(function()
-        Mouse = LocalPlayer:GetMouse()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    
+    local success, Mouse = pcall(function()
+        return LocalPlayer:GetMouse()
     end)
+    if not success or not Mouse then return end
 
     local function getRoot()
         local target = getgenv().CurrentTarget
         if target and target.Parent then
-            local ancestor = target:FindFirstAncestorOfClass("ScreenGui")
-            local coreAncestor = target:FindFirstAncestorOfClass("CoreGui")
-            
-            if ancestor or coreAncestor then
-                return nil
-            end
-
             return target.Parent:FindFirstChild("HumanoidRootPart")
         end
         return nil
     end
 
-    -- ตรวจสอบความสามารถของ Executor ว่ารองรับฟังก์ชันระดับสูงไหม
-    local hasHookMeta = (hookmetamethod ~= nil and checkcaller ~= nil)
-    local hasGetRaw = (pcall(getrawmetatable, game))
-    local isExecutorFullySupported = hasHookMeta or hasGetRaw
-
-    -- เริ่มต้นตั้งค่า Hook และจัดการข้อผิดพลาด
-    local initSuccess, initError = pcall(function()
-        if not Mouse then 
-            error("ไม่พบข้อมูล Mouse ของผู้เล่น")
-        end
-
-        if hasHookMeta then
-            local oldIndex
-            oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-                if not checkcaller() and getgenv().SilentAimEnabled and self == Mouse then
-                    if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
-                        local r = getRoot()
-                        if r then
-                            if idx == "Hit" then 
-                                return CFrame.new(r.Position) 
-                            elseif idx == "Target" then 
-                                return r 
-                            elseif idx == "X" or idx == "Y" then 
-                                local sp, visible = Camera:WorldToScreenPoint(r.Position)
-                                return sp[idx]
-                            end
-                        end
-                    end
+    local oldIndex, oldNamecall
+    
+    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+        if getgenv().SilentAimEnabled and self == Mouse then
+            local r = getRoot()
+            if r then
+                if idx == "Hit" then 
+                    return r.CFrame
+                elseif idx == "Target" then 
+                    return r
+                elseif idx == "X" or idx == "Y" then 
+                    return Camera:WorldToScreenPoint(r.Position)[idx]
                 end
-                return oldIndex(self, idx)
-            end))
-
-            local oldNamecall
-            oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-                local method = getnamecallmethod()
-                if not checkcaller() and getgenv().CurrentTarget and (method == "ScreenPointToRay" or method == "ViewportPointToRay") then
-                    if getgenv().SilentAimEnabled or UserInputService.TouchEnabled then
-                        local r = getRoot()
-                        if r then 
-                            return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
-                        end
-                    end
-                end
-                return oldNamecall(self, ...)
-            end))
-        elseif hasGetRaw then
-            local successMT, mt = pcall(getrawmetatable, game)
-            if not successMT or not mt then
-                error("Executor ไม่รองรับฟังก์ชัน Metatable")
-            end
-
-            local oldIndex = mt.__index
-            setreadonly(mt, false)
-            mt.__index = newcclosure(function(self, idx)
-                if getgenv().SilentAimEnabled and self == Mouse then
-                    if idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y" then
-                        local r = getRoot()
-                        if r then
-                            if idx == "Hit" then 
-                                return CFrame.new(r.Position) 
-                            elseif idx == "Target" then 
-                                return r 
-                            elseif idx == "X" or idx == "Y" then 
-                                local sp = Camera:WorldToScreenPoint(r.Position)
-                                return sp[idx]
-                            end
-                        end
-                    end
-                end
-                return oldIndex(self, idx)
-            end)
-            setreadonly(mt, true)
-        else
-            error("Executor ของคุณไม่รองรับการ Hook Metatable (ฟังก์ชันหลักไม่ทำงาน)")
-        end
-    end)
-
-    local ProbeParagraph = nil
-    pcall(function()
-        if Window then
-            ProbeParagraph = PlayerTab:Paragraph({
-                Title = "🛡️ Blox Fruits Probes & Status (v2.7 Ultra Color)",
-                Desc = "กำลังวิเคราะห์สถานะระบบ..."
-            })
-        end
-    end)
-
-    -- แจ้งเตือนสถานะเริ่มต้นผ่าน UI (ถ้ามี WindUI)
-    pcall(function()
-        if WindUI then
-            if not initSuccess then
-                WindUI:Notify({
-                    Title = "⚠️ คำเตือนระบบ (v2.7)",
-                    Content = "บางฟังก์ชันถูกจำกัดโดย Executor: " .. tostring(initError),
-                    Icon = "alert-triangle",
-                    Duration = 6,
-                })
-            else
-                WindUI:Notify({
-                    Title = "✨ Blox Fruits V2.7 Ready",
-                    Content = "ระบบ Probes Dashboard และ Multi-Color Status ทำงานสมบูรณ์",
-                    Icon = "check-circle",
-                    Duration = 4,
-                })
             end
         end
-    end)
+        return oldIndex(self, idx)
+    end))
 
-    -- ลูปอัปเดตสถานะเรียลไทม์ พร้อมระบบสีสถานะแยกตามเกรด
-    task.spawn(function()
-        local lastUpdateTime = os.time()
-        
-        while true do
-            task.wait(1.5)
-            
-            -- 1. ตรวจสอบระบบป้องกันของเกม (Anti-Cheat & Ban Check)
-            local antiCheatDetected = false
-            pcall(function()
-                if game:GetService("CoreGui"):FindFirstChild("RobloxGui") == nil then
-                    antiCheatDetected = true
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if getgenv().CurrentTarget and (method == "ScreenPointToRay" or method == "ViewportPointToRay") then
+            if getgenv().SilentAimEnabled or UserInputService.TouchEnabled then
+                local r = getRoot()
+                if r then 
+                    return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
                 end
-                if not pcall(function() return getgenv() end) then
-                    antiCheatDetected = true
-                end
-            end)
-
-            -- 2. ตรวจสอบความพร้อมของฟังก์ชัน (Function Validity Check)
-            local isFunctionWorking = false
-            pcall(function()
-                if hasHookMeta or hasGetRaw then
-                    if Mouse ~= nil and initSuccess then
-                        local testIndex = pcall(function() return Mouse.Hit end)
-                        if testIndex then
-                            isFunctionWorking = true
-                        end
-                    end
-                end
-            end)
-
-            -- 3. ตรวจสอบสถานะตัวละคร พร้อมใส่สีแยกย่อย
-            local playerStateStatus = "🟢 ปกติ (พร้อมลุย)"
-            pcall(function()
-                if LocalPlayer.Character then
-                    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                    local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    if not humanoid or humanoid.Health <= 0 then
-                        playerStateStatus = "💀 ตัวละครตาย / รอเกิด"
-                    elseif humanoid.PlatformStand or humanoid.Sit then
-                        playerStateStatus = "🟡 ติดสถานะ / นั่งอยู่"
-                    elseif rootPart and rootPart.Position.Y < -500 then
-                        playerStateStatus = "🔴 ตกแมพ / หลุดลง Void"
-                    end
-                else
-                    playerStateStatus = "❌ ไม่พบตัวละครในเกม"
-                end
-            end)
-
-            -- 4. ตรวจสอบ Ping แบบแยกสีตามความเร็ว
-            local currentPing = 0
-            pcall(function()
-                currentPing = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-            end)
-            if currentPing <= 0 then
-                currentPing = math.random(15, 60)
             end
-
-            local pingStatusText = ""
-            if currentPing < 100 then
-                pingStatusText = "🟢 ดีเยี่ยม (" .. currentPing .. " ms)"
-            elseif currentPing < 250 then
-                pingStatusText = "🟡 ปานกลาง (" .. currentPing .. " ms)"
-            else
-                pingStatusText = "🔴 ปิงสูง/แลค (" .. currentPing .. " ms)"
-            end
-
-            -- 5. ตรวจสอบหน่วยความจำ (Memory Usage สีตามปริมาณ)
-            local memVal = math.floor(gcinfo())
-            local memoryStatusText = ""
-            if memVal < 800000 then
-                memoryStatusText = "🟢 ปกติ (" .. memVal .. " KB)"
-            elseif memVal < 1500000 then
-                memoryStatusText = "🟡 ค่อนข้างสูง (" .. memVal .. " KB)"
-            else
-                memoryStatusText = "🔴 สูงมาก เสี่ยงเด้งออก (" .. memVal .. " KB)"
-            end
-
-            local mouseStatus   = (Mouse ~= nil) and "🟢 พร้อมใช้งาน"    or "🔴 หลุดการเชื่อมต่อ"
-            local hookStatus    = initSuccess     and "🟢 ทำงานสมบูรณ์"    or "🔴 ถูกบล็อก/ไม่รองรับ"
-            local targetValid   = getRoot() ~= nil
-            local targetStatus  = targetValid     and "🟢 ล็อกเป้าหมายแล้ว" or "🟡 กำลังค้นหาเป้าหมาย"
-            local uiStatus      = (WindUI ~= nil) and "🟢 โหลด UI สำเร็จ"   or "🔴 ไม่พบ UI Framework"
-            
-            local acStatus      = antiCheatDetected and "🔴 อันตราย! ตรวจพบการสแกน" or "🟢 ปลอดภัย (ปกติ)"
-            local funcActive    = isFunctionWorking and "🟢 เจาะระบบสำเร็จ"  or "🔴 ถูกบล็อกการทำงาน"
-
-            local execName      = identifyexecutor and select(1, identifyexecutor()) or "Unknown Executor"
-
-            local currentTime = os.time()
-            local secondsAgo = currentTime - lastUpdateTime
-            lastUpdateTime = currentTime
-
-            local probeText = string.format([[
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 📌 Blox Fruits Probes (v2.7 Ultra Color)
- ⚙️ Executor: %s
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- • Mouse Service   : %s
- • Metatable Hook  : %s
- • Target System   : %s
- • UI Framework    : %s
- • Anti-Cheat Check: %s
- • Function Status : %s
- • Player State    : %s
- • Memory Usage    : %s
- • Network Latency : %s
- • Last Update     : เมื่อ %d วินาทีที่แล้ว
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 💡 สถานะระบบ: %s
-]], 
-                execName,
-                mouseStatus,
-                hookStatus,
-                targetStatus,
-                uiStatus,
-                acStatus,
-                funcActive,
-                playerStateStatus,
-                memoryStatusText,
-                pingStatusText,
-                secondsAgo,
-                (not antiCheatDetected and isFunctionWorking) and "ระบบทั้งหมดทำงานได้อย่างราบรื่น 🚀" or "คำเตือน: กรุณาตรวจสอบความปลอดภัยของระบบ ⚠️"
-            )
-
-            pcall(function()
-                if ProbeParagraph then
-                    ProbeParagraph:SetDesc(probeText)
-                end
-            end)
         end
-    end)
+        return oldNamecall(self, ...)
+    end))
 end)
 
 
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
+-- ใช้ชุดข้อมูลแบบ Dictionary เพื่อให้การค้นหา (Lookup) เร็วขึ้นแบบ O(1) แทนการใช้ ipairs วนลูป
+local allowedRemotes = {
+    shoot = true, fire = true, attack = true, 
+    combat = true, ability = true, skill = true, gun = true
+}
 
+local blockedRemotes = {
+    equip = true, tool = true, inventory = true, 
+    backpack = true, loadout = true, anim = true, sound = true
+}
 
+local function isAllowedRemote(self)
+    local name = self.Name:lower()
+    
+    -- เช็คคำที่ห้ามก่อนเพื่อความเร็ว
+    for blockWord in pairs(blockedRemotes) do
+        if name:find(blockWord, 1, true) then
+            return false
+        end
+    end
+    
+    -- เช็คคำที่อนุญาต
+    for keyword in pairs(allowedRemotes) do
+        if name:find(keyword, 1, true) then
+            return true
+        end
+    end
+    
+    return false
+end
 
-
-
-
-
-
--- Hook Remote Arguments (FireServer / InvokeServer)
 pcall(function()
-    local gmt = getrawmetatable(game)
-    local oldNamecall = gmt.__namecall
-    setreadonly(gmt, false)
-
-    gmt.__namecall = newcclosure(function(self, ...)
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         local method = getnamecallmethod()
-        local args = { ... }
-
+        
         if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
-            local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
-            
-            for i, arg in ipairs(args) do
-                if typeof(arg) == "Vector3" then
-                    args[i] = targetPos
-                elseif typeof(arg) == "CFrame" then
-                    local _, _, _, r00, r01, r02, r10, r11, r12, r20, r21, r22 = arg:GetComponents()
-                    args[i] = CFrame.new(targetPos.X, targetPos.Y, targetPos.Z, r00, r01, r02, r10, r11, r12, r20, r21, r22)
+            if isAllowedRemote(self) then
+                local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
+                if targetPos then
+                    local args = { ... }
+                    for i = 1, #args do
+                        local arg = args[i]
+                        local argType = typeof(arg)
+                        if argType == "Vector3" then
+                            args[i] = targetPos
+                        elseif argType == "CFrame" then
+                            args[i] = arg - arg.Position + targetPos
+                        end
+                    end
+                    return oldNamecall(self, unpack(args))
                 end
             end
-            return oldNamecall(self, table.unpack(args))
         end
 
         return oldNamecall(self, ...)
     end)
-
-    setreadonly(gmt, true)
 end)
 
 
 
 
-
-
-
-
-
-
-
-
-
-RunService.RenderStepped:Connect(function()
-    if not LocalPlayer.Character or not Workspace.CurrentCamera then
+-- อัปเดตส่วน RenderStepped ค้นหาเป้าหมายตามโหมด (ปรับปรุงความเสถียร)
+RunService.RenderStepped:Connect(function(dt)
+    -- ตรวจสอบตัวละครหลักและกล้องอย่างปลอดภัย
+    local character = LocalPlayer.Character
+    local camera = Workspace.CurrentCamera
+    
+    if not character or not camera then
         if FOVUI then FOVUI.Visible = false end
         if Snapline then Snapline.Visible = false end
         getgenv().CurrentTarget = nil
         return
     end
 
+    local myRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
+    if not myRoot then
+        getgenv().CurrentTarget = nil
+        return
+    end
+
     local refPos = GetReferencePosition()
-    
+    local mode = getgenv().SilentAimMode
+
+    -- จัดการการแสดงผล UI ของ FOV
     if FOVUI then
-        FOVUI.Visible = getgenv().ShowFOV
-        if FOVUI.Visible then
-            FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
-            local size = getgenv().FOVRadius * 2
-            FOVUI.Size = UDim2.new(0, size, 0, size)
+        if mode == "360°" or mode == "180°" then
+            FOVUI.Visible = false
+        else
+            FOVUI.Visible = (getgenv().ShowFOV == true)
+            if FOVUI.Visible then
+                FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
+                local size = (getgenv().FOVRadius or 100) * 2
+                FOVUI.Size = UDim2.new(0, size, 0, size)
+            end
         end
     end
 
+    -- ตรวจสอบสถานะการเปิดใช้งาน
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
         if Snapline then Snapline.Visible = false end
         return
     end
 
-    getgenv().CurrentTarget = GetTargetInFOV(refPos)
+    local bestTarget = nil
+    local shortestDistance = math.huge
+    local maxDistance = getgenv().MaxDistance or 1000
+    local validTargets = GetAllValidTargets()
 
-    if getgenv().CamlockEnabled and getgenv().CurrentTarget then
-        local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+    -- ค้นหาเป้าหมายตามโหมดที่เลือก
+    if mode == "360°" then
+        for _, char in ipairs(validTargets) do
+            if char and char ~= character and not ShouldIgnoreTarget(char) then
+                local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+                if rootPart then
+                    local distance = (myRoot.Position - rootPart.Position).Magnitude
+                    if distance <= maxDistance and distance < shortestDistance then
+                        shortestDistance = distance
+                        bestTarget = rootPart
+                    end
+                end
+            end
+        end
+
+    elseif mode == "180°" then
+        local lookVector = camera.CFrame.LookVector
+        for _, char in ipairs(validTargets) do
+            if char and char ~= character and not ShouldIgnoreTarget(char) then
+                local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+                if rootPart then
+                    local directionToTarget = (rootPart.Position - camera.CFrame.Position).Unit
+                    if lookVector:Dot(directionToTarget) > 0 then
+                        local distance = (myRoot.Position - rootPart.Position).Magnitude
+                        if distance <= maxDistance and distance < shortestDistance then
+                            shortestDistance = distance
+                            bestTarget = rootPart
+                        end
+                    end
+                end
+            end
+        end
+
+    else
+        bestTarget = GetTargetInFOV(refPos)
     end
 
+    getgenv().CurrentTarget = bestTarget
+
+    -- ระบบ Camlock (ล็อกมุมกล้องไปยังเป้าหมาย)
+    if getgenv().CamlockEnabled and getgenv().CurrentTarget then
+        local success, targetPos = pcall(function()
+            return GetPredictedPosition(getgenv().CurrentTarget)
+        end)
+        if success and targetPos then
+            camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+        end
+    end
+
+    -- ระบบแสดงเส้น Tracer / Snapline
     if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
-        -- ป้องกันกรณี targetPart เป็น Model แทนที่จะเป็น BasePart ให้ดึง HumanoidRootPart แทน
         if targetPart:IsA("Model") then
             targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart
         end
 
         if targetPart then
-            local targetScreenPos, targetOnScreen = Camera:WorldToViewportPoint(targetPart.Position)
+            local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(targetPart.Position)
 
-            if targetOnScreen then
+            if targetScreenPos.Z > 0 then
                 local startPos
                 local originType = getgenv().TracerOrigin or "Center" 
                 
                 if originType == "Center" then
-                    startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
                 elseif originType == "Bottom" then
-                    startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
                 else
-                    local myCharacter = LocalPlayer.Character
-                    local myRootPart = myCharacter and (myCharacter:FindFirstChild("HumanoidRootPart") or myCharacter:FindFirstChild("Torso"))
-                    if myRootPart then
-                        local myScreenPos, myOnScreen = Camera:WorldToViewportPoint(myRootPart.Position)
-                        startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
-                    else
-                        startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                    end
+                    local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
+                    startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
                 end
 
                 Snapline.From = startPos
@@ -885,14 +936,6 @@ RunService.RenderStepped:Connect(function()
         if Snapline then Snapline.Visible = false end
     end
 end)
-
-
-
-
-
-
-
-
 
 
 
@@ -1006,111 +1049,6 @@ local function CheckAndEnableBuso()
 end
 
 
-
-
-
-
-
-
-
-
-
-
---เดินบนน้ำ
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-
-local LocalPlayer = Players.LocalPlayer
-_G.WaterGodMode = _G.WaterGodMode or false
-
-local platform = nil
-local connection = nil
-
-local function getOrCreatePlatform()
-    if not platform or not platform.Parent then
-        platform = Instance.new("Part")
-        -- ขยายขนาดแพลตฟอร์มให้ใหญ่ขึ้นมากๆ (1000x1x1000)
-        platform.Size = Vector3.new(1000, 1, 1000) 
-        platform.Anchored = true
-        platform.CanCollide = true
-        platform.Transparency = 1 -- ล่องหน
-        platform.Material = Enum.Material.ForceField
-        platform.Parent = nil
-    end
-    return platform
-end
-
-local function ToggleWaterGodMode(state)
-    _G.WaterGodMode = state
-    
-    if not state then
-        if connection then 
-            connection:Disconnect() 
-            connection = nil 
-        end
-        if platform then 
-            platform:Destroy() 
-            platform = nil 
-        end
-        return
-    end
-
-    local currentPlatform = getOrCreatePlatform()
-    
-    connection = RunService.Heartbeat:Connect(function()
-        if not _G.WaterGodMode then return end
-        
-        local character = LocalPlayer.Character
-        if not character or not character:FindFirstChild("HumanoidRootPart") then
-            if currentPlatform.Parent then currentPlatform.Parent = nil end
-            return
-        end
-        
-        local map = Workspace:FindFirstChild("Map")
-        local waterPlane = map and map:FindFirstChild("WaterBase-Plane")
-        
-        local rootPart = character.HumanoidRootPart
-        local hum = character:FindFirstChildOfClass("Humanoid")
-        
-        if waterPlane then
-            local waterY = waterPlane.Position.Y
-            
-            if rootPart.Position.Y <= (waterY + 1) then
-                if currentPlatform.Parent ~= Workspace then
-                    currentPlatform.Parent = Workspace
-                end
-                
-                -- ล็อกตำแหน่ง X และ Z ให้ตรงกับผู้เล่นตลอดเวลา แต่ขยายขนาดครอบคลุมกว้างมาก
-                currentPlatform.Position = Vector3.new(rootPart.Position.X, waterY - 2, rootPart.Position.Z)
-                
-                if hum then
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
-                    if hum:GetState() == Enum.HumanoidStateType.Swimming then
-                        hum:ChangeState(Enum.HumanoidStateType.Running)
-                    end
-                end
-            else
-                if currentPlatform.Parent == Workspace then
-                    currentPlatform.Parent = nil
-                end
-            end
-        else
-            if currentPlatform.Parent == Workspace then
-                currentPlatform.Parent = nil
-            end
-        end
-    end)
-end
-
-ToggleWaterGodMode(true)
-
-
-
-
-
-
 -- เปิดเผ่า v3
 
 
@@ -1180,7 +1118,7 @@ local function SetAutoRaceV4(state)
         if not _G.AutoRaceV4Running then return end
         
         local currentTime = tick()
-        if currentTime - lastCheck < 0.5 then return end -- เช็คทุกๆ 0.5 วินาที ไม่ให้ส่งถี่เกินไป
+        if currentTime - lastCheck < 0.1 then return end -- เช็คทุกๆ 0.5 วินาที ไม่ให้ส่งถี่เกินไป
         lastCheck = currentTime
         
         pcall(function()
@@ -1211,8 +1149,7 @@ end
 
 
 
-
--- ESP with SafeZone Integration (Fixed & Optimized)
+-- ESP with SafeZone Integration (Modern & Optimized UI)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -1224,28 +1161,27 @@ local ESPConfig = {
     ShowLevel = true,
     ShowBounty = true,
     ShowHealth = true,
-    ShowPvP = true,
-    ShowCombat = true,
-    ShowSafeZone = true,
+    ShowStatus = true,
     ShowAllTeams = false,
     Pirates = true,
     Marines = true,
 }
 
+-- โทนสีใหม่สไตล์ Modern Dark / Neon Accent (สบายตาและดูพรีเมียมขึ้น)
 local COLORS = {
-    Pirates = Color3.fromRGB(255, 75, 75),
-    Marines = Color3.fromRGB(80, 170, 255),
-    Neutral = Color3.fromRGB(200, 200, 200),
+Pirates = Color3.fromRGB(255, 45, 45),       -- แดงสดเข้มข้น
+    Marines = Color3.fromRGB(0, 150, 255),      -- ฟ้าไฮไลต์คมชัด
+    Neutral = Color3.fromRGB(220, 220, 220),   -- ขาวเทาสว่าง
     White = Color3.fromRGB(255, 255, 255),
-    HP = Color3.fromRGB(0, 255, 128),
-    HPBG = Color3.fromRGB(15, 15, 20),
-    Level = Color3.fromRGB(255, 215, 0),
-    Bounty = Color3.fromRGB(255, 105, 180),
-    PvPOn = Color3.fromRGB(120, 255, 0),
-    PvPOff = Color3.fromRGB(255, 50, 120),
-    Combat = Color3.fromRGB(255, 230, 0),
-    SafeZoneOn = Color3.fromRGB(0, 200, 255),
-    SafeZoneOff = Color3.fromRGB(255, 120, 0),
+    HP = Color3.fromRGB(0, 255, 100),         -- เขียวสดใส
+    HPBG = Color3.fromRGB(10, 10, 15),          -- พื้นหลังดำสนิท
+    Level = Color3.fromRGB(255, 200, 0),       -- เหลืองทองสว่าง
+    Bounty = Color3.fromRGB(255, 80, 180),     -- ชมพูนีออน
+    PvPOn = Color3.fromRGB(50, 255, 50),        -- เขียวเรืองแสง
+    PvPOff = Color3.fromRGB(255, 50, 80),      -- แดงเข้มตัดกันชัดเจน
+    Combat = Color3.fromRGB(255, 220, 0),      -- เหลืองทองคำ
+    SafeZoneOn = Color3.fromRGB(0, 220, 255),   -- ฟ้าไซเบอร์สว่าง
+    SafeZoneOff = Color3.fromRGB(255, 120, 0),  -- ส้มประกาย
 }
 
 local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") 
@@ -1269,8 +1205,7 @@ local function isInSafeZoneRadius(character)
                 radius = math.max(zonePart.Size.X, zonePart.Size.Z) / 2
             end
             
-            local distance = (charPos - zonePos).Magnitude
-            if distance <= radius then
+            if (charPos - zonePos).Magnitude <= radius then
                 return true
             end
         end
@@ -1282,8 +1217,7 @@ end
 local function GetTeamInfo(player)
     if ESPConfig.ShowAllTeams then
         local team = player.Team
-        local teamName = team and team.Name or "Player"
-        return teamName, COLORS.White, true
+        return team and team.Name or "Player", COLORS.White, true
     end
 
     local team = player.Team
@@ -1300,15 +1234,9 @@ end
 
 local function GetLevel(player)
     local data = player:FindFirstChild("Data")
-    if data then
-        local level = data:FindFirstChild("Level")
-        if level then return level.Value end
-    end
+    if data and data:FindFirstChild("Level") then return data.Level.Value end
     local leaderstats = player:FindFirstChild("leaderstats")
-    if leaderstats then
-        local level = leaderstats:FindFirstChild("Level")
-        if level then return level.Value end
-    end
+    if leaderstats and leaderstats:FindFirstChild("Level") then return leaderstats.Level.Value end
     return "?"
 end
 
@@ -1371,7 +1299,7 @@ local function UpdateAllESPVisibilities()
                 local hpBg   = container:FindFirstChild("HPBG")
 
                 if nameLbl then nameLbl.Visible = ESPConfig.ShowName end
-                if pvpLbl then pvpLbl.Visible = (ESPConfig.ShowPvP or ESPConfig.ShowCombat or ESPConfig.ShowSafeZone) end
+                if pvpLbl then pvpLbl.Visible = ESPConfig.ShowStatus end
                 if lvlLbl then lvlLbl.Visible = ESPConfig.ShowLevel end
                 if bntLbl then bntLbl.Visible = ESPConfig.ShowBounty end
                 if hpBg then hpBg.Visible = ESPConfig.ShowHealth end
@@ -1408,8 +1336,8 @@ local function CreateESP(player)
         local gui = Instance.new("BillboardGui")
         gui.Name = "PlayerESP"
         gui.Adornee = head
-        gui.Size = UDim2.fromOffset(240, 110)
-        gui.StudsOffset = Vector3.new(0, 3.2, 0)
+        gui.Size = UDim2.fromOffset(260, 115)
+        gui.StudsOffset = Vector3.new(0, 3.4, 0)
         gui.AlwaysOnTop = true
         gui.Enabled = teamEnabled
         gui.Parent = head
@@ -1420,17 +1348,17 @@ local function CreateESP(player)
         container.BackgroundTransparency = 1
         container.Parent = gui
 
+        -- ปรับฟอนต์และสไตล์ตัวหนังสือให้คมชัดและดูแพงขึ้น
         local nameLabel = Instance.new("TextLabel")
         nameLabel.Name = "NameLabel"
         nameLabel.BackgroundTransparency = 1
         nameLabel.Size = UDim2.new(1, 0, 0, 20)
-        nameLabel.Position = UDim2.new(0, 0, 0, 0)
         nameLabel.Visible = ESPConfig.ShowName
         nameLabel.RichText = true
-        nameLabel.TextSize = 14
-        nameLabel.Font = Enum.Font.GothamBold
-        nameLabel.TextStrokeTransparency = 0.1
-        nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        nameLabel.TextSize = 13
+        nameLabel.Font = Enum.Font.FredokaOne -- หรือใช้ Font.GothamBold ตามความชอบ
+        nameLabel.TextStrokeTransparency = 0.3
+        nameLabel.TextStrokeColor3 = Color3.fromRGB(10, 10, 15)
         nameLabel.Parent = container
 
         local pvpLabel = Instance.new("TextLabel")
@@ -1438,12 +1366,12 @@ local function CreateESP(player)
         pvpLabel.BackgroundTransparency = 1
         pvpLabel.Size = UDim2.new(1, 0, 0, 16)
         pvpLabel.Position = UDim2.new(0, 0, 0, 22)
-        pvpLabel.Visible = (ESPConfig.ShowPvP or ESPConfig.ShowCombat or ESPConfig.ShowSafeZone)
+        pvpLabel.Visible = ESPConfig.ShowStatus
         pvpLabel.RichText = true
-        pvpLabel.TextSize = 12
-        pvpLabel.Font = Enum.Font.GothamSemibold
-        pvpLabel.TextStrokeTransparency = 0.2
-        pvpLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        pvpLabel.TextSize = 11
+        pvpLabel.Font = Enum.Font.GothamMedium
+        pvpLabel.TextStrokeTransparency = 0.4
+        pvpLabel.TextStrokeColor3 = Color3.fromRGB(10, 10, 15)
         pvpLabel.Parent = container
 
         local levelLabel = Instance.new("TextLabel")
@@ -1452,12 +1380,12 @@ local function CreateESP(player)
         levelLabel.Size = UDim2.new(1, 0, 0, 16)
         levelLabel.Position = UDim2.new(0, 0, 0, 40)
         levelLabel.Visible = ESPConfig.ShowLevel
-        levelLabel.Text = "⭐ Level: " .. tostring(GetLevel(player))
+        levelLabel.Text = "⚡ LVL: " .. tostring(GetLevel(player))
         levelLabel.TextColor3 = COLORS.Level
-        levelLabel.TextSize = 12
+        levelLabel.TextSize = 11
         levelLabel.Font = Enum.Font.GothamBold
-        levelLabel.TextStrokeTransparency = 0.2
-        levelLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        levelLabel.TextStrokeTransparency = 0.4
+        levelLabel.TextStrokeColor3 = Color3.fromRGB(10, 10, 15)
         levelLabel.Parent = container
 
         local bountyLabel = Instance.new("TextLabel")
@@ -1466,18 +1394,19 @@ local function CreateESP(player)
         bountyLabel.Size = UDim2.new(1, 0, 0, 16)
         bountyLabel.Position = UDim2.new(0, 0, 0, 58)
         bountyLabel.Visible = ESPConfig.ShowBounty
-        bountyLabel.Text = "🔥 Bounty: " .. FormatNumber(GetBounty(player))
+        bountyLabel.Text = "💎 BOUNTY: " .. FormatNumber(GetBounty(player))
         bountyLabel.TextColor3 = COLORS.Bounty
-        bountyLabel.TextSize = 12
+        bountyLabel.TextSize = 11
         bountyLabel.Font = Enum.Font.GothamBold
-        bountyLabel.TextStrokeTransparency = 0.2
-        bountyLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        bountyLabel.TextStrokeTransparency = 0.4
+        bountyLabel.TextStrokeColor3 = Color3.fromRGB(10, 10, 15)
         bountyLabel.Parent = container
 
+        -- หลอดเลือดดีไซน์ใหม่ โค้งมน มินิมอล มีขอบเรืองแสงจางๆ
         local hpBG = Instance.new("Frame")
         hpBG.Name = "HPBG"
-        hpBG.Size = UDim2.new(0.7, 0, 0, 7)
-        hpBG.Position = UDim2.new(0.15, 0, 0, 80)
+        hpBG.Size = UDim2.new(0.75, 0, 0, 6)
+        hpBG.Position = UDim2.new(0.125, 0, 0, 80)
         hpBG.Visible = ESPConfig.ShowHealth
         hpBG.BackgroundColor3 = COLORS.HPBG
         hpBG.BorderSizePixel = 0
@@ -1488,9 +1417,9 @@ local function CreateESP(player)
         hpCornerBG.Parent = hpBG
 
         local hpStroke = Instance.new("UIStroke")
-        hpStroke.Thickness = 1.2
+        hpStroke.Thickness = 1
         hpStroke.Color = Color3.fromRGB(255, 255, 255)
-        hpStroke.Transparency = 0.6
+        hpStroke.Transparency = 0.8
         hpStroke.Parent = hpBG
 
         local hp = Instance.new("Frame")
@@ -1517,7 +1446,7 @@ local function CreateESP(player)
             if ESPConfig.ShowDistance and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
                 local myHead = LocalPlayer.Character.Head
                 local distance = math.floor((myHead.Position - head.Position).Magnitude)
-                distStr = string.format(" <font color=\"rgb(160,160,175)\">[%dm]</font>", distance)
+                distStr = string.format(" <font color=\"rgb(150,150,165)\">[%dm]</font>", distance)
             end
 
             nameLabel.Text = string.format("<font color=\"rgb(%d,%d,%d)\">[%s]</font> <font color=\"rgb(255,255,255)\">%s</font>%s", 
@@ -1531,18 +1460,11 @@ local function CreateESP(player)
 
             local pvpText, pvpColor, safeText, safeColor, combatText, combatColor = GetDetailedStatus(player)
             
-            local parts = {}
-            if ESPConfig.ShowPvP then
-                table.insert(parts, string.format("PvP:<font color=\"rgb(%d,%d,%d)\">%s</font>", math.floor(pvpColor.R*255), math.floor(pvpColor.G*255), math.floor(pvpColor.B*255), pvpText))
-            end
-            if ESPConfig.ShowSafeZone then
-                table.insert(parts, string.format("<font color=\"rgb(%d,%d,%d)\">%s</font>", math.floor(safeColor.R*255), math.floor(safeColor.G*255), math.floor(safeColor.B*255), safeText))
-            end
-            if ESPConfig.ShowCombat then
-                table.insert(parts, string.format("<font color=\"rgb(%d,%d,%d)\">%s</font>", math.floor(combatColor.R*255), math.floor(combatColor.G*255), math.floor(combatColor.B*255), combatText))
-            end
-
-            pvpLabel.Text = "⚡ " .. table.concat(parts, " | ")
+            pvpLabel.Text = string.format("⚡ PvP:<font color=\"rgb(%d,%d,%d)\">%s</font> | <font color=\"rgb(%d,%d,%d)\">%s</font> | <font color=\"rgb(%d,%d,%d)\">%s</font>", 
+                math.floor(pvpColor.R*255), math.floor(pvpColor.G*255), math.floor(pvpColor.B*255), pvpText,
+                math.floor(safeColor.R*255), math.floor(safeColor.G*255), math.floor(safeColor.B*255), safeText,
+                math.floor(combatColor.R*255), math.floor(combatColor.G*255), math.floor(combatColor.B*255), combatText
+            )
         end
 
         UpdateDynamicInfo()
@@ -1558,7 +1480,7 @@ local function CreateESP(player)
             if bVal then
                 connectionBounty = bVal.Changed:Connect(function(newValue)
                     if bountyLabel and bountyLabel.Parent then
-                        bountyLabel.Text = "🔥 Bounty: " .. FormatNumber(newValue)
+                        bountyLabel.Text = "💎 BOUNTY: " .. FormatNumber(newValue)
                     end
                 end)
             end
@@ -1578,9 +1500,7 @@ local function CreateESP(player)
 
     connectionCharacterAdded = player.CharacterAdded:Connect(Setup)
 
-    player.Destroying:Connect(function()
-        Cleanup()
-    end)
+    player.Destroying:Connect(Cleanup)
 end
 
 RunService.RenderStepped:Connect(function()
@@ -1764,28 +1684,43 @@ end
 
 -- ฟังก์ชันตรวจสอบเป้าหมาย (รวมการเช็ค Safe Zone แล้ว)
 local function ShouldIgnoreTarget(targetCharacter)
+    if not targetCharacter then return true end
+
+    local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health <= 0 then return true end
+
+    -- เช็คว่าเป็นมอนสเตอร์ NPC หรือไม่
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    local isEnemyNPC = enemiesFolder and targetCharacter:IsDescendantOf(enemiesFolder)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
-    if not targetPlayer or targetPlayer == LocalPlayer then return true end
+
+    -- กรองตาม TargetMode ที่ผู้เล่นเลือกจาก UI ซ้ำอีกรอบเพื่อความปลอดภัย
+    local mode = getgenv().TargetMode or "Both"
+    if mode == "Players Only" and isEnemyNPC then return true end
+    if mode == "Enemies Only" and targetPlayer then return true end
+
+    -- ถ้าเป็นมอนสเตอร์ NPC และผ่านโหมดมาแล้ว ให้ยิง/ล็อกได้เลย
+    if isEnemyNPC then
+        return false 
+    end
+
+    -- เงื่อนไขเช็คผู้เล่นตามปกติ (SafeZone, PvP, Team)
+    if not targetPlayer then return true end
+    if targetPlayer == LocalPlayer then return true end
     
     local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled")
     if pvpDisabled == true then 
         return true 
     end
     
+    if isPlayerInSafeZone(targetPlayer, targetCharacter) then
+        return true
+    end
+    
     if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
         if targetPlayer.Team and targetPlayer.Team == LocalPlayer.Team then 
             return true 
         end
-    end
-    
-    local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
-    if not humanoid or humanoid.Health <= 0 then
-        return true
-    end
-    
-    -- ส่งค่าทั้ง targetPlayer และ targetCharacter เข้าไปตรวจสอบ
-    if isInAnySafeZone(targetPlayer, targetCharacter) then
-        return true
     end
     
     return false
@@ -1931,7 +1866,6 @@ end)
 
 
 -- โจมตี
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -1948,7 +1882,6 @@ local function fireFruitM1(targetRoot)
     local character = player.Character
     if not character then return end
     
-    -- ค้นหา Tool หรือ Object ผลไม้ปีศาจที่ตัวละครถืออยู่ หรือมีอยู่ใน Character
     for _, item in ipairs(character:GetChildren()) do
         if item:IsA("Tool") or item.Name:find("Dragon") or item:FindFirstChild("RemoteEvent") then
             local remoteEvent = item:FindFirstChild("RemoteEvent")
@@ -1963,7 +1896,7 @@ local function fireFruitM1(targetRoot)
             if leftClickRemote then
                 pcall(function()
                     local args = {
-                        targetRoot.Position, -- ใช้ตำแหน่งเป้าหมายหรือทิศทางที่ต้องการ
+                        targetRoot.Position,
                         1
                     }
                     leftClickRemote:FireServer(unpack(args))
@@ -1993,7 +1926,6 @@ local function SetFastAttack(state)
             if not character or not character:FindFirstChild("HumanoidRootPart") then return end
             local rootPart = character.HumanoidRootPart
             
-            -- ฟังก์ชันช่วยส่งรีโมทโจมตีเป้าหมาย (รวมการตีปกติและผลไม้)
             local function attackTarget(targetRoot)
                 if targetRoot then
                     local argsHit = {
@@ -2009,7 +1941,6 @@ local function SetFastAttack(state)
                     }
                     registerAttack:FireServer(unpack(argsAttack))
                     
-                    -- เพิ่มการโจมตี M1 ของผลไม้ปีศาจ
                     fireFruitM1(targetRoot)
                 end
             end
@@ -2023,24 +1954,35 @@ local function SetFastAttack(state)
                     
                     if enemyRoot and humanoid and humanoid.Health > 0 then
                         local distance = (rootPart.Position - enemyRoot.Position).Magnitude
-                        if distance <= 60 then
+                        if distance <= 65 then -- ขยายระยะให้กว้างขึ้นเล็กน้อย
                             attackTarget(enemyRoot)
                         end
                     end
                 end
             end
             
-            -- 2. ตีผู้เล่นคนอื่นในเซิร์ฟเวอร์
+            -- 2. ตีผู้เล่นคนอื่นในเซิร์ฟเวอร์ (ปรับปรุงใหม่ให้โจมต่อง่ายขึ้น)
             for _, otherPlayer in ipairs(Players:GetPlayers()) do
                 if otherPlayer ~= player then
+                    -- ข้ามถ้าอยู่ทีมเดียวกัน (กรณีเปิดระบบ Team)
+-- แก้ไขโดยการเปลี่ยนเงื่อนไขเป็นคนละทีมค่อยทำต่อ (ไม่ต้องใช้ continue)
+if not (player.Team and otherPlayer.Team and player.Team == otherPlayer.Team) then
+    -- โค้ดโจมตีผู้เล่นจะทำงานต่อตรงนี้
+    local targetChar = otherPlayer.Character
+    -- ...
+end
+                    
                     local targetChar = otherPlayer.Character
-                    if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                        local targetRoot = targetChar.HumanoidRootPart
+                    if targetChar then
+                        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart") or targetChar:FindFirstChild("Head")
                         local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
                         
-                        if humanoid and humanoid.Health > 0 then
+                        -- ตรวจสอบว่าผู้เล่นไม่ได้อยู่ในสถานะตายหรืออมตะเบื้องต้น
+                        if targetRoot and humanoid and humanoid.Health > 0 then
                             local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                            if distance <= 60 then
+                            
+                            -- เพิ่มระยะโจมตีผู้เล่นเป็น 65 หน่วยเพื่อให้ล็อกเป้าและตีโดนได้ง่ายขึ้น
+                            if distance <= 65 then
                                 attackTarget(targetRoot)
                             end
                         end
@@ -2053,9 +1995,6 @@ local function SetFastAttack(state)
         task.wait()
     end)
 end
-
-
-
 
 
 
@@ -2267,7 +2206,7 @@ local AimSection = CombatTab:Section({ Title = "Visual & Settings" })
 
 CombatTab:Toggle({
     Title = "CamLock (PC/Mobile)",
-    Desc = "Lock onto targets instantly with smooth camera movement across PC and mobile.",
+    Desc = "Lock onto targets instantly.",
     Flag = "camlock_toggle",
     Value = getgenv().CamlockEnabled,
     Callback = function(Value)
@@ -2278,9 +2217,11 @@ CombatTab:Toggle({
     end,
 })
 
+
+
 CombatTab:Toggle({
     Title = "Silent Aim",
-    Desc = "Hit your shots effortlessly without needing precise crosshair placement.",
+    Desc = "Hit shots without precise crosshairs.",
     Flag = "silent_aim_toggle",
     Value = getgenv().SilentAimEnabled,
     Callback = function(Value)
@@ -2292,9 +2233,10 @@ CombatTab:Toggle({
     end,
 })
 
+
 CombatTab:Toggle({
     Title = "Show FOV Circle",
-    Desc = "Display a customizable FOV circle boundary on your screen.",
+    Desc = "Display FOV circle boundary.",
     Flag = "show_fov_toggle",
     Value = getgenv().ShowFOV,
     Callback = function(Value)
@@ -2305,7 +2247,7 @@ CombatTab:Toggle({
 
 CombatTab:Toggle({
     Title = "Show Red Snapline",
-    Desc = "Render a dynamic red line connecting directly to your active target.",
+    Desc = "Render line to active target.",
     Flag = "show_snapline_toggle",
     Value = getgenv().ShowTracer,
     Callback = function(Value)
@@ -2318,9 +2260,23 @@ CombatTab:Toggle({
 
 local AimConfigSection = CombatTab:Section({ Title = "Aim Configurations" })
 
+getgenv().TargetMode = "Players Only" 
+
+CombatTab:Dropdown({
+    Title = "Target Type",
+    Desc = "Choose targets.",
+    Flag = "target_type_dropdown",
+    Values = {"Players Only", "Enemies Only" },
+    Value = "Players Only",
+    Callback = function(selected)
+        local mode = type(selected) == "table" and selected[1] or selected
+        getgenv().TargetMode = mode
+    end,
+})
+
 CombatTab:Dropdown({
     Title = "FOV Position",
-    Desc = "Choose whether the FOV center follows your mouse/touch or stays locked to the screen center.",
+    Desc = "Choose FOV center source.",
     Flag = "fov_position_dropdown",
     Values = { "Mouse/Touch", "Middle" },
     Value = getgenv().FOVPositionMode,
@@ -2332,32 +2288,36 @@ CombatTab:Dropdown({
 
 CombatTab:Dropdown({
     Title = "Silent Aim Mode",
-    Desc = "Switch targeting parameters between custom FOV radius, 180° sweep, or full 360° coverage.",
+    Desc = "Switch targeting parameters.",
     Flag = "silent_aim_mode_dropdown",
     Values = { "FOV", "180°", "360°" },
     Value = "FOV",
     Callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
+        
+        if getgenv().SilentAimMode == "FOV" and mode ~= "FOV" then
+            savedFOVRadius = getgenv().FOVRadius
+        end
+
         getgenv().SilentAimMode = mode
         
-        if mode == "180°" then
-            getgenv().FOVRadius = 180
-        elseif mode == "360°" then
+        if mode == "360°" then
             getgenv().FOVRadius = 9999 
-        else
-            -- ใชค่าจาก Slider ปกติ
+        elseif mode == "FOV" then
+            getgenv().FOVRadius = savedFOVRadius
         end
     end,
 })
 
+
 CombatTab:Slider({
     Title = "FOV Size",
-    Desc = "Scale the FOV radius to broaden or narrow your detection zone.",
+    Desc = "Scale FOV radius.",
     Flag = "fov_size_slider",
     Increment = 1,
     Value = {
         Min = 50,
-        Max = 500,
+        Max = 1000,
         Default = getgenv().FOVRadius
     },
     Callback = function(Value)
@@ -2367,12 +2327,12 @@ CombatTab:Slider({
 
 CombatTab:Slider({
     Title = "Max Distance",
-    Desc = "Set the absolute maximum distance threshold for target acquisition.",
+    Desc = "Set max distance threshold.",
     Flag = "max_distance_slider",
     Increment = 1,
     Value = {
         Min = 50,
-        Max = 1200,
+        Max = 1000,
         Default = getgenv().MaxDistance
     },
     Callback = function(Value)
@@ -2380,13 +2340,11 @@ CombatTab:Slider({
     end,
 })
 
-
-
-
 local HitboxSection = CombatTab:Section({ Title = "Hitbox Expander" })
+
 CombatTab:Toggle({
     Title = "Expand Hitboxes",
-    Desc = "Enlarge player hitboxes for easier and more reliable hits.",
+    Desc = "Enlarge player hitboxes.",
     Flag = "HitboxToggle",
     Value = getgenv().HitboxEnabled,
     Callback = function(state)
@@ -2403,7 +2361,7 @@ CombatTab:Toggle({
 
 CombatTab:Toggle({
     Title = "Show Hitbox Visual",
-    Desc = "Render a visible outline around the expanded hitbox area.",
+    Desc = "Render hitbox outlines.",
     Flag = "HitboxVisualToggle",
     Value = getgenv().HitboxShowBox,
     Callback = function(state)
@@ -2426,11 +2384,11 @@ CombatTab:Toggle({
 
 CombatTab:Slider({
     Title = "Hitbox Scale",
-    Desc = "Adjust the size multiplier for the target hitboxes.",
+    Desc = "Adjust hitbox size multiplier.",
     Flag = "HitboxSizeSlider",
     Value = {
         Min = 10,
-        Max = 300,
+        Max = 100,
         Default = getgenv().HitboxSize
     },
     Increment = 1,
@@ -2469,7 +2427,7 @@ GeneralTab:Toggle({
                             CheckAndEnableBuso() 
                         end
                     end)
-                    task.wait() 
+                    task.wait(1) 
                 end
             end)
         end
@@ -2477,10 +2435,68 @@ GeneralTab:Toggle({
 })
 
 
+
+
+
+
+
+
+
+
+
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CommE = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
+
+local autoKenEnabled = false
+
+GeneralTab:Toggle({
+    Title = "Auto Ken",
+    Desc = "Automatically toggles the Ken feature when enabled or disabled",
+    Flag = "AutoKenCheck",
+    Value = false,
+    Callback = function(state)
+        autoKenEnabled = state
+        pcall(function()
+            CommE:FireServer(unpack({"Ken", state}))
+        end)
+    end,
+})
+
+task.spawn(function()
+    while true do
+        task.wait(1.5)
+        if autoKenEnabled then
+            pcall(function()
+                CommE:FireServer(unpack({"Ken", true}))
+            end)
+        end
+    end
+end)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 local CharacterAbilities = GeneralTab:Section({ Title = "Character & Abilities" })
 GeneralTab:Toggle({
     Title = "Auto Race V4",
-    Desc = "Automatically triggers and upgrades Race V4 ability when the gauge is full.",
+    Desc = "Auto Race V4 activate & upgrade.",
     Flag = "AutoRaceV4_Toggle",
     Value = false,
     Callback = function(state)
@@ -2490,17 +2506,16 @@ GeneralTab:Toggle({
 
 GeneralTab:Toggle({
     Title = "Auto Race V3",
-    Desc = "Automatically activates your Race V3 ability as soon as it becomes ready.",
+    Desc = "Instant Race V3 activation.",
     Flag = "AutoRaceAbility",
     Value = false,
     Callback = function(state)
         SetAutoRaceAbility(state)
     end,
 })
-
 GeneralTab:Toggle({
-    Title = "Walking on Water (Full Map)",
-    Desc = "Generates an invisible ice platform beneath you to walk across any water body seamlessly.",
+    Title = "Walking on Water (Optimized Fix)",
+    Desc = "Walk on water firmly without lagging.",
     Flag = "IceWalk",
     Value = false,
     Callback = function(state)
@@ -2509,58 +2524,88 @@ GeneralTab:Toggle({
         local Workspace = game:GetService("Workspace")
         local player = Players.LocalPlayer
 
-        _G.IcePlatform = _G.IcePlatform or nil
-        _G.IceConnection = _G.IceConnection or nil
-        _G.IceWalkRunning = state
-
-        local function getOrCreatePlatform()
-            if not _G.IcePlatform or not _G.IcePlatform.Parent then
-                _G.IcePlatform = Instance.new("Part")
-                _G.IcePlatform.Size = Vector3.new(5000, 1, 5000) 
-                _G.IcePlatform.Anchored = true
-                _G.IcePlatform.CanCollide = true
-                _G.IcePlatform.Transparency = 1 
-                _G.IcePlatform.Material = Enum.Material.Ice
-                _G.IcePlatform.Parent = Workspace
-            end
-            return _G.IcePlatform
-        end
+        _G.GiantFloor = _G.GiantFloor or nil
+        _G.FloorConnection = _G.FloorConnection or nil
+        _G.FloorRunning = state
 
         if not state then
-            if _G.IceConnection then
-                _G.IceConnection:Disconnect()
-                _G.IceConnection = nil
+            if _G.FloorConnection then
+                _G.FloorConnection:Disconnect()
+                _G.FloorConnection = nil
             end
-            if _G.IcePlatform then
-                _G.IcePlatform:Destroy()
-                _G.IcePlatform = nil
+            if _G.GiantFloor then
+                _G.GiantFloor:Destroy()
+                _G.GiantFloor = nil
+            end
+            local char = player.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
             end
             return
         end
+
+        local function getOrCreateFloor()
+            if not _G.GiantFloor or not _G.GiantFloor.Parent then
+                local part = Instance.new("Part")
+                part.Size = Vector3.new(300, 1, 300) -- ลดขนาดลงจาก 1000 เหลือ 300 เพื่อลดภาระฟิสิกส์
+                part.Anchored = true
+                part.CanCollide = true
+                part.Transparency = 1 
+                part.Material = Enum.Material.SmoothPlastic
+                part.Parent = Workspace
+                _G.GiantFloor = part
+            end
+            return _G.GiantFloor
+        end
+
+        local floorPart = getOrCreateFloor()
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
         
-        local platform = getOrCreatePlatform()
-        
-        _G.IceConnection = RunService.Heartbeat:Connect(function()
-            if not _G.IceWalkRunning then return end
+        local lastUpdate = 0
+        _G.FloorConnection = RunService.Heartbeat:Connect(function(dt)
+            if not _G.FloorRunning then return end
             
+            -- ควบคุมให้เช็คแค่ทุกๆ 0.1 วินาที แทนที่จะรันทุกๆ เฟรม (แก้แลค)
+            lastUpdate = lastUpdate + dt
+            if lastUpdate < 0.1 then return end
+            lastUpdate = 0
+
             local character = player.Character
-            if not character or not character:FindFirstChild("HumanoidRootPart") then
-                if platform.Parent then platform.Parent = nil end
-                return
+            if not character or not character:FindFirstChild("HumanoidRootPart") then 
+                if floorPart.Parent then floorPart.Parent = nil end
+                return 
+            end
+            
+            if floorPart.Parent ~= Workspace then
+                floorPart.Parent = Workspace
             end
             
             local rootPart = character.HumanoidRootPart
-            if platform.Parent ~= Workspace then
-                platform.Parent = Workspace
+            local hum = character:FindFirstChildOfClass("Humanoid")
+            
+            raycastParams.FilterDescendantsInstances = {character}
+            local seaLevel = 3
+            
+            local rayResult = Workspace:Raycast(rootPart.Position + Vector3.new(0, 10, 0), Vector3.new(0, -50, 0), raycastParams)
+            if rayResult and rayResult.Material == Enum.Material.Water then
+                seaLevel = rayResult.Position.Y
             end
             
-            local waterLevel = 0 
+            floorPart.Position = Vector3.new(rootPart.Position.X, seaLevel - 1.5, rootPart.Position.Z)
             
-            if rootPart.Position.Y <= waterLevel + 50 then
-                platform.Position = Vector3.new(rootPart.Position.X, waterLevel, rootPart.Position.Z)
-            else
-                if platform.Parent == Workspace then
-                    platform.Parent = nil
+            if rootPart.Position.Y < (seaLevel + 4) then
+                rootPart.CFrame = CFrame.new(rootPart.Position.X, seaLevel + 4, rootPart.Position.Z) * (rootPart.CFrame - rootPart.CFrame.Position)
+                rootPart.AssemblyLinearVelocity = Vector3.new(rootPart.AssemblyLinearVelocity.X, math.max(rootPart.AssemblyLinearVelocity.Y, 0), rootPart.AssemblyLinearVelocity.Z)
+            end
+            
+            if hum then
+                hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                if hum:GetState() == Enum.HumanoidStateType.Swimming or hum:GetState() == Enum.HumanoidStateType.Freefall then
+                    hum:ChangeState(Enum.HumanoidStateType.Running)
                 end
             end
         end)
@@ -2571,187 +2616,132 @@ GeneralTab:Toggle({
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
--- ==========================================
--- SETUP: สร้างหมวดหมู่ (Section) และตัวแปรหลัก
--- ==========================================
-local ServerManagement = Server:Section({ Title = "Server Management" })
-
-local InputJobId = ""
-local SpamJoinActive = false
-
--- Predeclare necessary services
-local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
+-- 1. SERVER TIME & PLAYER STATS SECTION
+local MyParagraph = Server:Paragraph({
+    Title = "Server & Player Diagnostics",
+    Desc = "Initializing real-time telemetry..."
+})
 
--- ==========================================
--- 1. INPUT: Target Server Job ID Input
--- ==========================================
+task.spawn(function()
+    while true do
+        pcall(function()
+            local serverTime = Workspace:GetServerTimeNow()
+            local formattedTime = os.date("%H:%M:%S", serverTime)
+            local playerCount = #Players:GetPlayers()
+            local maxPlayers = Players.MaxPlayers
+            local fps = math.round(1 / task.wait())
+            
+            MyParagraph:SetDesc(string.format(
+                "Time: %s | Players: %d/%d | FPS: ~%d", 
+                formattedTime, playerCount, maxPlayers, fps
+            ))
+        end)
+        task.wait(1)
+    end
+end)
+
+-- 2. SERVER MANAGEMENT & UTILITIES SECTION
+local ServerManagement = Server:Section({ Title = "Server Utilities" })
+
+local InputJobId = ""
+
 Server:Input({
-    Title = "Server Job ID",
-    Desc = "Enter the Job ID of the server you want to join",
-    Placeholder = "Enter target Job ID...",
+    Title = "Target Server Job ID",
+    Desc = "Input specific Job ID to target",
+    Placeholder = "Paste Job ID here...",
     Value = "",
     Callback = function(text)
         InputJobId = text
     end,
 })
 
-
--- ==========================================
--- 2. TOGGLE: Spam Join Server Function
--- ==========================================
-Server:Toggle({
-    Title = "Spam Join Server",
-    Desc = "Continuously attempt to join the target server",
-    Value = false,
-    Callback = function(Value)
-        SpamJoinActive = Value
-        
-        -- Check if Job ID is entered before starting spam
-        if SpamJoinActive then
-            if InputJobId == "" or InputJobId == nil then
-                WindUI:Notify({
-                    Title = "Error",
-                    Content = "Please enter a valid Job ID first!",
-                    Icon = "alert-circle",
-                    Duration = 3,
-                })
-                SpamJoinActive = false
-                return
-            end
-            
-            WindUI:Notify({
-                Title = "Spam Join Started",
-                Content = "Attempting to join the target server...",
-                Icon = "play",
-                Duration = 3,
-            })
-            
-            -- Run in background with task.spawn to prevent UI freezing
-            task.spawn(function()
-                while SpamJoinActive do
-                    pcall(function()
-                        if InputJobId ~= "" then
-                            TeleportService:TeleportToPlaceInstance(game.PlaceId, InputJobId, LocalPlayer)
-                        end
-                    end)
-                    task.wait(3) -- Retry every 3 seconds
-                end
-            end)
-        end
-    end,
-})
-
-
--- ==========================================
--- 3. BUTTON: Single Join Target Server
--- ==========================================
 Server:Button({
-    Title = "Join Server",
-    Desc = "Teleport to the target server once",
+    Title = "Join Target Server",
+    Desc = "Execute a single teleport to the inputted Job ID",
     Callback = function()
-        if InputJobId == "" or InputJobId == nil then
-            WindUI:Notify({
-                Title = "Error",
-                Content = "Please enter a Job ID first!",
-                Icon = "alert-circle",
-                Duration = 3,
-            })
+        if InputJobId == "" then
+            WindUI:Notify({ Title = "Error", Content = "Job ID field is empty!", Icon = "alert-circle", Duration = 3 })
             return
         end
         
-        WindUI:Notify({
-            Title = "Connecting",
-            Content = "Attempting to join the server...",
-            Icon = "loader",
-            Duration = 3,
-        })
-        
-        local success, err = pcall(function()
+        WindUI:Notify({ Title = "Connecting", Content = "Teleporting to instance...", Icon = "loader", Duration = 3 })
+        local success = pcall(function()
             TeleportService:TeleportToPlaceInstance(game.PlaceId, InputJobId, LocalPlayer)
         end)
         
-        -- Notify when teleport fails (e.g., server full)
         if not success then
-            WindUI:Notify({
-                Title = "Teleport Failed (Error 773)",
-                Content = "Server is full, shut down, or is a private server without access.",
-                Icon = "x-circle",
-                Duration = 4,
-            })
+            WindUI:Notify({ Title = "Teleport Failed", Content = "Server might be full, closed, or invalid.", Icon = "x-circle", Duration = 4 })
         end
     end,
 })
 
-
--- ==========================================
--- 4. BUTTON: Copy Current Server Job ID
--- ==========================================
 Server:Button({
-    Title = "Copy server code",
-    Desc = "Copy your current server's Job ID to clipboard",
+    Title = "Copy Current Job ID",
+    Desc = "Save your current session's Job ID to clipboard",
     Callback = function()
         pcall(function()
             local currentJobId = game.JobId
-            
-            -- Support multiple clipboard functions based on executor
             if setclipboard then
                 setclipboard(currentJobId)
             elseif toclipboard then
                 toclipboard(currentJobId)
             end
-            
-            WindUI:Notify({
-                Title = "Success",
-                Content = "Copied current Job ID to clipboard!",
-                Icon = "check-circle",
-                Duration = 3,
-            })
+            WindUI:Notify({ Title = "Success", Content = "Job ID copied to clipboard!", Icon = "check-circle", Duration = 3 })
         end)
     end,
 })
 
-local Rejoin = Server:Section({ Title = "Rejoin Server" })
--- ==========================================
--- 5. BUTTON: Rejoin Server
--- ==========================================
 Server:Button({
-    Title = "Rejoin Server",
-    Desc = "Reconnect to the same server",
+    Title = "Rejoin Current Server",
+    Desc = "Instantly reconnects to your exact session",
     Callback = function()
-        WindUI:Notify({
-            Title = "Rejoining",
-            Content = "Rejoining the current server...",
-            Icon = "refresh-cw",
-            Duration = 3,
-        })
-        
+        WindUI:Notify({ Title = "Rejoining", Content = "Reloading session...", Icon = "refresh-cw", Duration = 3 })
         pcall(function()
             TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
         end)
     end,
 })
 
-
-
-
-
-
+Server:Button({
+    Title = "Server Hop (Random)",
+    Desc = "Finds and teleports you to a different public server",
+    Callback = function()
+        WindUI:Notify({ Title = "Server Hopping", Content = "Searching for an alternative server...", Icon = "globe", Duration = 3 })
+        
+        local success = pcall(function()
+            local servers = {}
+            local cursor = ""
+            
+            repeat
+                local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
+                local response = HttpService:JSONDecode(game:HttpGet(url))
+                cursor = response.nextPageCursor
+                for _, server in ipairs(response.data) do
+                    if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                        table.insert(servers, server.id)
+                    end
+                end
+            until cursor == nil or #servers > 0
+            
+            if #servers > 0 then
+                local randomServerId = servers[math.random(1, #servers)]
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServerId, LocalPlayer)
+            else
+                WindUI:Notify({ Title = "Hop Failed", Content = "No available servers found right now.", Icon = "alert-triangle", Duration = 4 })
+            end
+        end)
+        
+        if not success then
+            WindUI:Notify({ Title = "Error", Content = "Failed to fetch server list (HTTP Error).", Icon = "x-circle", Duration = 4 })
+        end
+    end,
+})
 
 
 
@@ -2825,12 +2815,11 @@ GeneralTab:Slider({
     end,
 })
 
-
 local ESPSection = Visuals:Section({ Title = "Fruit Settings" })
 
 Visuals:Toggle({
     Title = "Fruit ESP",
-    Desc = "Displays the locations of all spawned fruits across the map",
+    Desc = "Shows spawned fruits on the map.",
     Flag = "FruitESP_Toggle",
     Value = false,
     Callback = function(state)
@@ -2853,7 +2842,7 @@ local ESPSection = Visuals:Section({ Title = "ESP Settings" })
 
 Visuals:Toggle({
     Title = "Show Name",
-    Desc = "Display player usernames above their characters",
+    Desc = "Displays player usernames.",
     Flag = "ESP_Name",
     Value = true,
     Callback = function(state)
@@ -2864,7 +2853,7 @@ Visuals:Toggle({
 
 Visuals:Toggle({
     Title = "Show Distance",
-    Desc = "Show how far away players are from you",
+    Desc = "Shows distance to players.",
     Flag = "ESP_Distance",
     Value = true,
     Callback = function(state)
@@ -2874,7 +2863,7 @@ Visuals:Toggle({
 
 Visuals:Toggle({
     Title = "Show Level",
-    Desc = "Display target player levels",
+    Desc = "Displays player levels.",
     Flag = "ESP_Level",
     Value = true,
     Callback = function(state)
@@ -2885,7 +2874,7 @@ Visuals:Toggle({
 
 Visuals:Toggle({
     Title = "Show Bounty",
-    Desc = "Display current bounty or honor values",
+    Desc = "Shows current bounty or honor.",
     Flag = "ESP_Bounty",
     Value = true,
     Callback = function(state)
@@ -2895,30 +2884,8 @@ Visuals:Toggle({
 })
 
 Visuals:Toggle({
-    Title = "Show PvP Status",
-    Desc = "Highlight players with active PvP enabled",
-    Flag = "ESP_PvP",
-    Value = true,
-    Callback = function(state)
-        ESPConfig.ShowPvP = state
-        UpdateAllESPVisibilities()
-    end,
-})
-
-Visuals:Toggle({
-    Title = "Show Combat Status",
-    Desc = "Track when players enter combat mode",
-    Flag = "ESP_Combat",
-    Value = true,
-    Callback = function(state)
-        ESPConfig.ShowCombat = state
-        UpdateAllESPVisibilities()
-    end,
-})
-
-Visuals:Toggle({
     Title = "Show Health",
-    Desc = "Render live health bars and percentages",
+    Desc = "Renders health bars and percentages.",
     Flag = "ESP_HP",
     Value = true,
     Callback = function(state)
@@ -2927,19 +2894,16 @@ Visuals:Toggle({
     end,
 })
 
-
-
 Visuals:Toggle({
-    Title = "Show SafeZone Status",
-    Desc = "Display SafeZone and Normal zone indicators",
-    Flag = "ESP_SafeZone",
+    Title = "Show Player Status",
+    Desc = "Displays PvP, SafeZone, and combat status.",
+    Flag = "ESP_Status",
     Value = true,
     Callback = function(state)
-        ESPConfig.ShowSafeZone = state
+        ESPConfig.ShowStatus = state
         UpdateAllESPVisibilities()
     end,
 })
-
 
 
 
@@ -3023,10 +2987,9 @@ GeneralTab:Toggle({
 
 
 local UtilitySection = GeneralTab:Section({ Title = "Elite Target Tracker" })
-
 FollowToggle = GeneralTab:Toggle({
     Title = "Elite Pursuit Mode",
-    Desc = "Automatically track and follow your hardcore target",
+    Desc = "Tracks and follows your target.",
     Flag = "FollowToggle",
     Value = false,
     Callback = function(state)
@@ -3037,7 +3000,7 @@ FollowToggle = GeneralTab:Toggle({
 
 local Keybind = GeneralTab:Keybind({
     Title = "Target Lock Key",
-    Desc = "Keybind to trigger pursuit features",
+    Desc = "Keybind for pursuit features.",
     Flag = "UIKeybind",
     Value = "E",
     Callback = function(key)
@@ -3053,7 +3016,7 @@ local Keybind = GeneralTab:Keybind({
 
 local Slider = GeneralTab:Slider({
     Title = "Pursuit Radius",
-    Desc = "Maximum distance to maintain from target",
+    Desc = "Maximum distance from target.",
     Flag = "VolumeSlider",
     Increment = 1,
     Value = {
@@ -3065,6 +3028,7 @@ local Slider = GeneralTab:Slider({
         FollowDistance = value
     end,
 })
+
 
 local HideShowUI = Config:Section({ Title = "Hide / Show UI" })
 
@@ -3079,8 +3043,52 @@ local UIKeybind = Config:Keybind({
 })
 
 
+local Keybind = Config:Keybind({
+    Title = "Keybind SilentAim",
+    Desc = "On/Off",
+    Flag = "KeybindSilentAim", 
+    Value = "V", -- default key
+    Callback = function(key)
+        -- Use 'key' (or convert it to a boolean/state if needed)
+        -- Assuming you want to toggle based on keypress or use a separate state:
+        getgenv().SilentAimEnabled = not getgenv().SilentAimEnabled
+        
+        if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
+            getgenv().CurrentTarget = nil
+            if Snapline then Snapline.Visible = false end
+        end
+    end,
+})
 
 
+
+
+local antiAfkConnection
+
+Config:Toggle({
+    Title = "Anti-AFK",
+    Flag = "AntiAFK_Toggle",
+    Value = false,
+    Callback = function(Value)
+        pcall(function()
+            if Value then
+                local vu = game:GetService("VirtualUser")
+                antiAfkConnection = LocalPlayer.Idled:Connect(function()
+                    vu:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+                    task.wait(1)
+                    vu:Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+                end)
+                WindUI:Notify({ Title = "Anti-AFK Active", Content = "You will no longer be idle-kicked.", Icon = "shield", Duration = 3 })
+            else
+                if antiAfkConnection then
+                    antiAfkConnection:Disconnect()
+                    antiAfkConnection = nil
+                end
+                WindUI:Notify({ Title = "Anti-AFK Inactive", Content = "Anti-AFK has been disabled.", Icon = "shield-off", Duration = 3 })
+            end
+        end)
+    end,
+})
 
 
 
@@ -3102,7 +3110,7 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local container = Instance.new("Frame")
-container.Size = UDim2.new(0, 120, 0, 96) -- ปรับความกว้างจาก 160 เป็น 120
+container.Size = UDim2.new(0, 120, 0, 144) -- ปรับความสูงจาก 96 เป็น 144 เพื่อให้พอดีกับ 3 ปุ่ม
 container.Position = UDim2.new(0, 20, 0, 20)
 container.BackgroundTransparency = 1
 container.Parent = screenGui
@@ -3114,7 +3122,7 @@ UIListLayout.Padding = UDim.new(0, 10)
 
 local function createButton(text, accentColor, order, callback)
     local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 120, 0, 38) -- ปรับความกว้างจาก 160 เป็น 120
+    button.Size = UDim2.new(0, 120, 0, 38)
     button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
     button.BackgroundTransparency = 0.15
     button.BorderSizePixel = 0
@@ -3148,7 +3156,7 @@ local function createButton(text, accentColor, order, callback)
     textLabel.BackgroundTransparency = 1
     textLabel.Text = text
     textLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
-    textLabel.TextSize = 12 -- ปรับขนาดตัวอักษรลงนิดหน่อยเพื่อให้พอดีกับปุ่มที่แคบลง
+    textLabel.TextSize = 12
     textLabel.Font = Enum.Font.GothamBold
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.Parent = button
@@ -3207,4 +3215,200 @@ createButton("Teleport Player", Color3.fromRGB(0, 229, 255), 2, function(state)
         currentTarget = nil
         getgenv().CurrentTarget = nil
     end
+end)
+
+
+
+
+
+
+
+
+
+
+
+
+
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local HttpService = game:GetService("HttpService")
+
+-- รายการตัวเลือก
+local WeaponList = {
+    "None",
+    "Melee",
+    "Blox Fruit",
+    "Sword",
+    "Gun"
+}
+
+local SkillActionList = {
+    "None",
+    "Z",
+    "X",
+    "C",
+    "V",
+    "F",
+    "Click (M1)",
+    "Jump"
+}
+
+-- เพิ่มค่า Wait หลังจากใช้สกิล เพื่อให้แอนิเมชันหรือคูลดาวน์ทำงานทันก่อนไปบล็อกถัดไป
+local MacroSettings = {
+    Block1 = { Weapon = "Sword", Skill = "X", Hold = 0, Wait = 0.5, Delay = 0.1 },
+    Block2 = { Weapon = "Melee / Fighting Style", Skill = "Z", Hold = 0, Wait = 0.5, Delay = 0.1 },
+    Block3 = { Weapon = "Blox Fruit", Skill = "C", Hold = 0, Wait = 0.5, Delay = 0.1 },
+    Block4 = { Weapon = "Gun", Skill = "V", Hold = 0, Wait = 0.5, Delay = 0.1 }
+}
+
+-- ตัวแปรสถานะ
+local isRunning = false
+local macroEnabled = true
+
+-- ฟังก์ชันจำลองการกดปุ่ม
+local function PressKey(keyName, holdDuration)
+    local keyCode = Enum.KeyCode[keyName]
+    if not keyCode then return end
+
+    VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+    task.wait(holdDuration > 0 and holdDuration or 0.05)
+    VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+end
+
+-- ฟังก์ชันเปลี่ยนอาวุธ
+local function EquipWeapon(weaponType)
+    if weaponType == "None" then return end
+    
+    local keyToPress = nil
+    if weaponType == "Melee / Fighting Style" then
+        keyToPress = Enum.KeyCode.One
+    elseif weaponType == "Blox Fruit" then
+        keyToPress = Enum.KeyCode.Two
+    elseif weaponType == "Sword" then
+        keyToPress = Enum.KeyCode.Three
+    elseif weaponType == "Gun" then
+        keyToPress = Enum.KeyCode.Four
+    end
+
+    if keyToPress then
+        VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
+        task.wait(0.05)
+        VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
+    end
+end
+
+
+-- ฟังก์ชันประมวลผลสกิลและการกระทำ
+local function ExecuteAction(skill, holdDuration)
+    if skill == "Jump" then
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+        task.wait(holdDuration > 0 and holdDuration or 0.05)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+    elseif skill == "Click (M1)" then
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+        task.wait(holdDuration > 0 and holdDuration or 0.05)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    elseif skill ~= "None" then
+        PressKey(skill, holdDuration)
+    end
+end
+
+-- ฟังก์ชันรันคอมโบหลัก
+local function RunComboMacro()
+    if not macroEnabled then return end
+    if isRunning then return end
+    isRunning = true
+    
+    
+    for i = 1, 4 do
+        local block = MacroSettings["Block" .. i]
+        if block then
+            -- 1. หยิบอาวุธ
+            EquipWeapon(block.Weapon)
+            task.wait(0.15) -- เพิ่มเวลาสลับอาวุธเล็กน้อยกันบัคไม่ถืออาวุธ
+            
+            -- 2. กดใช้สกิล
+            ExecuteAction(block.Skill, block.Hold)
+            
+            -- 3. เวลารอให้สกิลรัน / แอนิเมชันแสดงผลจบ (จุดแก้ปัญหาค้าง/กดทับ)
+            if block.Wait and block.Wait > 0 then
+                task.wait(block.Wait)
+            end
+            
+            -- 4. ดีเลย์ปิดท้ายบล็อก
+            if block.Delay and block.Delay > 0 then
+                task.wait(block.Delay)
+            end
+        end
+    end
+    
+    isRunning = false
+end
+
+-- สร้าง UI สำหรับแต่ละ Block (เพิ่มช่องตั้งค่า Wait Time)
+for i = 1, 4 do
+    local blockKey = "Block" .. i
+    local section = Macro:Section({ Title = "Block " .. i })
+
+    Macro:Dropdown({
+        Title = "Weapon",
+        Desc = "Select weapon type",
+        Values = WeaponList,
+        Value = MacroSettings[blockKey].Weapon,
+        Flag = "block" .. i .. "_weapon",
+        Callback = function(selected) MacroSettings[blockKey].Weapon = selected end
+    })
+
+    Macro:Dropdown({
+        Title = "Skill / Action",
+        Desc = "Select skill to use",
+        Values = SkillActionList,
+        Value = MacroSettings[blockKey].Skill,
+        Flag = "block" .. i .. "_skill",
+        Callback = function(selected) MacroSettings[blockKey].Skill = selected end
+    })
+
+    Macro:Input({
+        Title = "Hold Duration",
+        Desc = "Time to hold key/click (seconds)",
+        Value = tostring(MacroSettings[blockKey].Hold),
+        Flag = "block" .. i .. "_hold",
+        Callback = function(val) MacroSettings[blockKey].Hold = tonumber(val) or 0 end
+    })
+
+    -- ช่องตั้งเวลารอหลังกดสกิล (ตัวแก้ปัญหาหลัก)
+    Macro:Input({
+        Title = "Skill Wait Time",
+        Desc = "Wait time for skill animation (seconds)",
+        Value = tostring(MacroSettings[blockKey].Wait),
+        Flag = "block" .. i .. "_wait",
+        Callback = function(val) MacroSettings[blockKey].Wait = tonumber(val) or 0.5 end
+    })
+
+    Macro:Input({
+        Title = "Delay",
+        Desc = "Delay after action (seconds)",
+        Value = tostring(MacroSettings[blockKey].Delay),
+        Flag = "block" .. i .. "_delay",
+        Callback = function(val) MacroSettings[blockKey].Delay = tonumber(val) or 0.1 end
+    })
+end
+
+-- [ Keybind Control ]
+local SectionControl = Macro:Section({ Title = "Controls" })
+
+Macro:Keybind({
+    Title = "Run Combo Macro",
+    Value = "V",
+    Flag = "RunComboMacro_Keybind",
+    Callback = function(key)
+        RunComboMacro()
+    end
+})
+
+createButton("Macro Combo", Color3.fromRGB(0, 255, 128), 3, function(state)
+    getgenv().MacroEnabled = state
+    if state then
+        RunComboMacro()
+    else
+end
 end)
