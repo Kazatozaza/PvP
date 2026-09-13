@@ -20,147 +20,155 @@ if not success or not WindUI then
     return
 end
 
-
 pcall(function()
   WindUI:AddTheme({
-    Name = "Dark", -- theme name
-    Primary = Color3.fromHex("#888888"), -- Icon
+    Name = "Darker-Soft",
+    Primary = Color3.fromHex("#3b82f6"),
     
     White = Color3.new(1,1,1),
     Black = Color3.new(0,0,0),
     
-    Dialog = Color3.fromHex("#121212"), -- Accent
+    Dialog = Color3.fromHex("#1e1e24"),
     
-    Background = Color3.fromHex("#09090b"), -- Accent
+    Background = Color3.fromHex("#111115"),
     BackgroundTransparency = 0,
-    Hover = Color3.fromHex("#FFFFFF"), -- Text
+    Hover = Color3.fromHex("#FFFFFF"),
 
-    PanelBackground = Color3.fromHex("#121212"), -- White
+    PanelBackground = Color3.fromHex("#18181f"),
     PanelBackgroundTransparency = .95,
     
-    WindowBackground = Color3.fromHex("#09090b"), -- Background
+    WindowBackground = Color3.fromHex("#111115"),
     
-    WindowShadow = Color3.new(0,0,0), -- Black
+    WindowShadow = Color3.new(0,0,0),
     
-    WindowTopbarTitle = Color3.fromHex("#FFFFFF"), -- Text
-    WindowTopbarAuthor = Color3.fromHex("#71717a"), -- Text
-    WindowTopbarIcon = Color3.fromHex("#71717a"), -- Icon
-    WindowTopbarButtonIcon = Color3.fromHex("#71717a"), -- Icon
+    WindowTopbarTitle = Color3.fromHex("#FFFFFF"),
+    WindowTopbarAuthor = Color3.fromHex("#FFFFFF"),
+    WindowTopbarIcon = Color3.fromHex("#FFFFFF"),
+    WindowTopbarButtonIcon = Color3.fromHex("#FFFFFF"), -- ไอคอนปุ่ม Topbar เป็นสีขาว
     
-    WindowSearchBarBackground = Color3.fromHex("#121212"), -- Background
+    WindowSearchBarBackground = Color3.fromHex("#18181f"),
     
-    TabBackground = Color3.fromHex("#121212"), -- Hover
-    TabBackgroundHover = Color3.fromHex("#18181b"), -- Hover
-    TabBackgroundHoverTransparency = .5,
-    TabBackgroundActive = Color3.fromHex("#27272a"), -- Hover
-    TabBackgroundActiveTransparency = 0,
-    TabText = Color3.fromHex("#a1a1aa"), -- Text
-    TabTextTransparency = 0.2,
+    -- ส่วนของ Tab / ตัวเลือก
+    TabBackground = Color3.fromHex("#18181f"),
+    TabBackgroundHover = Color3.fromHex("#ffffff"),
+    TabBackgroundHoverTransparency = 0.85,
+    TabBackgroundActive = Color3.fromHex("#ffffff"),
+    TabBackgroundActiveTransparency = 0.9,
+    TabText = Color3.fromHex("#A1A1AA"),
+    TabTextTransparency = 0,
     TabTextTransparencyActive = 0,
-    TabTitle = Color3.fromHex("#FFFFFF"), -- Text
-    TabIcon = Color3.fromHex("#71717a"), -- Icon
-    TabIconTransparency = 0.2,
+    TabTitle = Color3.fromHex("#FFFFFF"),
+    TabIcon = Color3.fromHex("#A1A1AA"),
+    TabIconTransparency = 0,
     TabIconTransparencyActive = 0,
     TabBorderTransparency = 1,
-    TabBorderTransparencyActive = 0.9,
-    TabBorder = Color3.fromHex("#27272a"), -- White
+    TabBorderTransparencyActive = 0.7,
+    TabBorder = Color3.fromHex("#FFFFFF"),
 
-    ElementBackground = Color3.fromHex("#121212"), -- Text
+
+    ElementBackground = Color3.fromHex("#18181f"),
     ElementBackgroundTransparency = .5,
-    ElementBackgroundHover = WindUI.Creator:AddColor("ElementBackground", "#18181b", 1),
-    ElementTitle = Color3.fromHex("#F4F4F5"), -- Text
-    ElementDesc = Color3.fromHex("#71717a"), -- Text
-    ElementIcon = Color3.fromHex("#71717a"), -- Icon
+    ElementBackgroundHover = WindUI.Creator:AddColor("ElementBackground", "#272730", 1),
+    ElementTitle = Color3.fromHex("#FFFFFF"),
+    ElementDesc = Color3.fromHex("#cbd5e1"),
+    ElementIcon = Color3.fromHex("#FFFFFF"),
     
-    PopupBackground = Color3.fromHex("#121212"), -- Background
+    PopupBackground = Color3.fromHex("#18181f"),
     PopupBackgroundTransparency = "BackgroundTransparency",
-    PopupTitle = Color3.fromHex("#FFFFFF"), -- Text
-    PopupContent = Color3.fromHex("#a1a1aa"), -- Text
-    PopupIcon = Color3.fromHex("#71717a"), -- Icon
+    PopupTitle = Color3.fromHex("#FFFFFF"),
+    PopupContent = Color3.fromHex("#cbd5e1"),
+    PopupIcon = Color3.fromHex("#FFFFFF"),
     
-    DialogBackground = Color3.fromHex("#121212"), -- Background
+    DialogBackground = Color3.fromHex("#18181f"),
     DialogBackgroundTransparency = "BackgroundTransparency",
-    DialogTitle = Color3.fromHex("#FFFFFF"), -- Text
-    DialogContent = Color3.fromHex("#a1a1aa"), -- Text
-    DialogIcon = Color3.fromHex("#71717a"), -- Icon
+    DialogTitle = Color3.fromHex("#FFFFFF"),
+    DialogContent = Color3.fromHex("#cbd5e1"),
+    DialogIcon = Color3.fromHex("#FFFFFF"),
     
-    Toggle = Color3.fromHex("#27272a"), -- Button
-    ToggleBar = Color3.fromHex("#FFFFFF"), -- White
+    Toggle = Color3.fromHex("#272730"),
+    ToggleBar = Color3.fromHex("#FFFFFF"),
     
-    Checkbox = Color3.fromHex("#FFFFFF"), -- Primary
-    CheckboxIcon = Color3.fromHex("#000000"), -- White
-    CheckboxBorder = Color3.fromHex("#3f3f46"), -- White
+    Checkbox = Color3.fromHex("#FFFFFF"),
+    CheckboxIcon = Color3.fromHex("#FFFFFF"),
+    CheckboxBorder = Color3.fromHex("#52525b"),
     CheckboxBorderTransparency = 0,
     
-    SliderIcon = Color3.fromHex("#71717a"), -- Icon
+    SliderIcon = Color3.fromHex("#FFFFFF"),
 
-    Slider = Color3.fromHex("#FFFFFF"), -- Primary
-    SliderThumb = Color3.fromHex("#FFFFFF"), -- White
-    SliderIconFrom = Color3.fromHex("#71717a"), -- SliderIcon
-    SliderIconTo = Color3.fromHex("#71717a"), -- SliderIcon
+    Slider = Color3.fromHex("#FFFFFF"),
+    SliderThumb = Color3.fromHex("#FFFFFF"),
+    SliderIconFrom = Color3.fromHex("#FFFFFF"),
+    SliderIconTo = Color3.fromHex("#FFFFFF"),
     
-    Tooltip = Color3.fromHex("#18181b"),
-    TooltipText = Color3.fromHex("#FFFFFF"), -- White
-    TooltipSecondary = Color3.fromHex("#71717a"), -- Primary
-    TooltipSecondaryText = Color3.fromHex("#FFFFFF"), -- White
+    Tooltip = Color3.fromHex("#272730"),
+    TooltipText = Color3.fromHex("#FFFFFF"),
+    TooltipSecondary = Color3.fromHex("#94a3b8"),
+    TooltipSecondaryText = Color3.fromHex("#FFFFFF"),
 
-    TabSectionIcon = Color3.fromHex("#71717a"), -- Icon
+    TabSectionIcon = Color3.fromHex("#FFFFFF"),
 
-    SectionIcon = Color3.fromHex("#71717a"), -- Icon
+    SectionIcon = Color3.fromHex("#FFFFFF"),
     
-    SectionExpandIcon = Color3.fromHex("#71717a"), -- White
+    SectionExpandIcon = Color3.fromHex("#FFFFFF"),
     SectionExpandIconTransparency = 0,
-    SectionBox = Color3.fromHex("#121212"), -- White
+    SectionBox = Color3.fromHex("#18181f"),
     SectionBoxTransparency = .5,
-    SectionBoxBorder = Color3.fromHex("#27272a"), -- White
+    SectionBoxBorder = Color3.fromHex("#3f3f46"),
     SectionBoxBorderTransparency = 0,
-    SectionBoxBackground = Color3.fromHex("#121212"), -- White
+    SectionBoxBackground = Color3.fromHex("#18181f"),
     SectionBoxBackgroundTransparency = .5,
     
-    SearchBarBorder = Color3.fromHex("#27272a"), -- White
+    SearchBarBorder = Color3.fromHex("#3f3f46"),
     SearchBarBorderTransparency = 0,
     
-    Notification = Color3.fromHex("#121212"), -- Background
-    NotificationTitle = Color3.fromHex("#FFFFFF"), -- Text
+    Notification = Color3.fromHex("#18181f"),
+    NotificationTitle = Color3.fromHex("#FFFFFF"),
     NotificationTitleTransparency = 0,
-    NotificationContent = Color3.fromHex("#a1a1aa"), -- Text
+    NotificationContent = Color3.fromHex("#cbd5e1"),
     NotificationContentTransparency = 0,
-    NotificationDuration = Color3.fromHex("#FFFFFF"), -- White
+    NotificationDuration = Color3.fromHex("#FFFFFF"),
     NotificationDurationTransparency = .9,
-    NotificationBorder = Color3.fromHex("#27272a"), -- White
+    NotificationBorder = Color3.fromHex("#3f3f46"),
     NotificationBorderTransparency = 0,
     
-    DropdownTabBorder = Color3.fromHex("#27272a"), -- White
+    DropdownTabBorder = Color3.fromHex("#3f3f46"),
 
-    LabelBackground = Color3.fromHex("#121212"), -- White
+    LabelBackground = Color3.fromHex("#18181f"),
     LabelBackgroundTransparency = .5,
-})
-end)
 
+    -- เพิ่มค่าปรับแต่งสีปุ่ม (Button) ให้เป็นสีขาว
+    Button = Color3.fromHex("#272730"),
+    ButtonText = Color3.fromHex("#FFFFFF"),
+    ButtonIcon = Color3.fromHex("#FFFFFF"),
+    ButtonBackground = Color3.fromHex("#272730"),
+    ButtonBackgroundHover = Color3.fromHex("#32323d"),
+  })
+end)
 
 
 local windowSuccess, Window = pcall(function()
     return WindUI:CreateWindow({
     Title = "Project Destiny [v3.0]",
+    Icon =  "rbxassetid://97596339693490",
     Author = "System Online • Access Granted",
     Folder = "Destiny Hub",
-    Size = UDim2.fromOffset(600, 470), -- window size
+    Size = UDim2.fromOffset(620, 515), -- window size
     Transparent = true, -- window transparency
-    Theme = "Dark", -- library theme
+    Theme = "Darker-Soft", -- library theme
     Resizable = true, -- the ability to rezize window
     SideBarWidth = 200, -- sidebar (tabs) width
     HideSearchBar = true, -- hide search bar
-    ScrollBarEnabled = true, -- scrollbars that are located to the right of the scroll frame
     })
 end)
 
+
+WindUI:SetNotificationLower(true)
 
 if windowSuccess and Window then
     getgenv().DestinyHubWindow = Window
 else
     warn("Destiny Hub: ไม่สามารถสร้างหน้าต่าง UI ได้")
 end
-
 
 
 Window:Section({
@@ -197,7 +205,7 @@ local Visuals = Window:Tab({
 
 local Macro = Window:Tab({
     Title = "Macro",
-    Icon = "rbxassetid://6023426951" 
+    Icon = "mouse-pointer" 
 })
 
 
@@ -219,27 +227,99 @@ local Config = Window:Tab({
 
 GeneralTab:Select()
 
+-- Minimalist Monochrome Status Tags with Lucide String Icons
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
 
-
-
--- ปุ่มสำหรับกดเข้า Discord (คัดลอกลิงก์เชิญอัตโนมัติ)
-Home:Button({
-    Title = "Discord",
-    Desc = "Join our community server",
-    Callback = function()
-        setclipboard("https://discord.gg/dp7QyMwavp")
-    end
+-- FPS Counter Setup
+local FPSTag = Window:Tag({
+    Title = "FPS: --",
+    Icon = "gauge",
+    Color = Color3.fromRGB(240, 240, 240),
 })
 
+local frameCount, lastUpdate = 0, os.clock()
 
-Home:Button({
-    Title = "YouTube",
-    Desc = "Watch tutorials and updates",
-    Callback = function()
-
+RunService.RenderStepped:Connect(function()
+frameCount = frameCount + 1
+    local now = os.clock()
+    local elapsed = now - lastUpdate
+    
+    if elapsed >= 0.5 then
+        local fps = math.floor(frameCount / elapsed)
+        FPSTag:SetTitle(string.format("FPS: %d", fps))
+        
+        frameCount = 0
+        lastUpdate = now
     end
+end)
+
+-- Ping Counter Setup
+local PingTag = Window:Tag({
+    Title = "Ping: --ms",
+    Icon = "wifi",
+    Color = Color3.fromRGB(180, 180, 180),
 })
 
+task.spawn(function()
+    local dataPing = Stats.Network.ServerStatsItem:FindFirstChild("Data Ping")
+    
+    while true do
+        local success, ping = pcall(function()
+            if dataPing then
+                return math.floor(dataPing:GetValue())
+            end
+            return math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
+        
+        if success and ping then
+            PingTag:SetTitle(string.format("Ping: %dms", ping))
+        end
+        
+        task.wait(1)
+    end
+end)
+
+
+-- ตรวจสอบฟังก์ชันพื้นฐานเพื่อความปลอดภัย
+local executorName = (identifyexecutor and identifyexecutor()) or (getexecutorname and getexecutorname()) or "Unknown Executor"
+local safeClipboard = setclipboard or toclipboard or (syn and syn.write_clipboard)
+
+-- ตัวแปรสถานะระบบ
+local isOnline = true 
+local isMaintenance = false 
+
+local statusText = "● ONLINE [STABLE]"
+if isMaintenance then
+    statusText = "▲ MAINTENANCE [UPDATING]"
+elseif not isOnline then
+    statusText = "■ OFFLINE [DOWN]"
+end
+
+-- สร้าง Paragraph แบบจัดเรียงเท่ากันและล้ำสมัย
+Home:Paragraph({
+    Title = "",
+    Desc = string.format(
+        statusText,
+        executorName
+    ),
+    ImageSize = 28,
+    Thumbnail = "rbxassetid://130312549112790", 
+    ThumbnailSize = 78,
+    Buttons = {
+        {
+            Title = "Copy Official Website",
+            Icon = "link",
+            Callback = function()
+                if safeClipboard then
+                    safeClipboard("https://astonishing-biscotti-c152f5.netlify.app/")
+                else
+                    warn("⚠️ [Cybernetic Hub] ตัวรันไม่รองรับฟังก์ชันคัดลอกอัตโนมัติ")
+                end
+            end
+        }
+    }
+})
 
 local AimSection = Home:Section({ Title = "-----------------------------------------" })
 
@@ -319,7 +399,7 @@ Config:Button({
 
 -- โหลดค่าอัตโนมัติเมื่อเปิดสคริปต์
 task.spawn(function()
-    task.wait(1)
+    task.wait()
     pcall(function()
         MyConfig:Load()
     end)
@@ -329,7 +409,7 @@ end)
 
 
 
-getgenv().FOVRadius = getgenv().FOVRadius or 120
+getgenv().FOVRadius = getgenv().FOVRadius or 300
 getgenv().MaxDistance = getgenv().MaxDistance or 1000
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
@@ -341,10 +421,6 @@ getgenv().LockedPartName = "Head"
 getgenv().PredictionEnabled = getgenv().PredictionEnabled ~= false and true
 getgenv().PredictionFactor = getgenv().PredictionFactor or 0.135
 getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
-
--- โค้ดสี
-local FOVThemeColor = Color3.fromRGB(96, 205, 255)   -- สีวงกลม FOV (ฟ้า)
-local SnaplineThemeColor = Color3.fromRGB(255, 60, 60) -- สีเส้นล็อกเป้า (แดง)
 
 ---------------------------------------------------------------------------------------
 
@@ -406,7 +482,6 @@ Snapline.Color = Color3.fromRGB(255, 255, 255)
 Snapline.Transparency = 1              
 Snapline.From = Vector2.new(0, 0)         
 Snapline.To = Vector2.new(0, 0)            
-
 
 ---------------------------------------------------------------------------------------
 
@@ -637,24 +712,25 @@ local function GetPredictedPosition(targetPart)
     return basePos
 end
 
--- ค้นหาเป้าหมายที่อยู่ใน FOV
--- ค้นหาเป้าหมายที่อยู่ใน FOV (รองรับการกรอง TargetMode ทั้ง Players และ Enemies)
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
-    local ShortestDistance = (getgenv().FOVRadius >= 99999) and 99999 or getgenv().FOVRadius
+    -- ป้องกันค่า getgenv().FOVRadius เป็น nil
+    local fovRadius = getgenv().FOVRadius or 100
+    local ShortestDistance = (fovRadius >= 99999) and 99999 or fovRadius
 
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
 
-    -- เปลี่ยนมาใช้ GetAllValidTargets เพื่อให้กรองตามโหมดที่เลือก (Players / Enemies / Both)
     for _, char in ipairs(GetAllValidTargets()) do
         local targetPart = char:FindFirstChild(getgenv().LockedPartName) or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
         local humanoid = char:FindFirstChildOfClass("Humanoid")
 
         if targetPart and humanoid and humanoid.Health > 0 then
             if not ShouldIgnoreTarget(char) then
+                local maxDistance = getgenv().MaxDistance or 500
                 local worldDistance = myHRP and (targetPart.Position - myHRP.Position).Magnitude or 0
-                if worldDistance <= getgenv().MaxDistance then
+                
+                if worldDistance <= maxDistance then
                     local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
 
                     if onScreen then
@@ -677,9 +753,6 @@ end
 
 
 
-
-
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
@@ -688,9 +761,52 @@ local Camera = workspace.CurrentCamera
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
+-- Cache global functions for speed
+local type = type
+local typeof = typeof
+local unpack = unpack
+local pairs = pairs
+
+local allowedRemotes = {
+    shoot = true, fire = true, attack = true, 
+    combat = true, ability = true, skill = true, gun = true
+}
+
+local blockedRemotes = {
+    equip = true, tool = true, inventory = true, 
+    backpack = true, loadout = true, anim = true, sound = true
+}
+
+-- Memoization cache to avoid repeated string scanning on the same remote
+local remoteCache = {}
+
+local function isAllowedRemote(self)
+    local name = self.Name
+    local cached = remoteCache[name]
+    if cached ~= nil then
+        return cached
+    end
+
+    local lowerName = name:lower()
+    for blockWord in pairs(blockedRemotes) do
+        if lowerName:find(blockWord, 1, true) then
+            remoteCache[name] = false
+            return false
+        end
+    end
+
+    for keyword in pairs(allowedRemotes) do
+        if lowerName:find(keyword, 1, true) then
+            remoteCache[name] = true
+            return true
+        end
+    end
+
+    remoteCache[name] = false
+    return false
+end
+
 task.spawn(function()
-    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    
     local success, Mouse = pcall(function()
         return LocalPlayer:GetMouse()
     end)
@@ -704,8 +820,8 @@ task.spawn(function()
         return nil
     end
 
-    local oldIndex, oldNamecall
-    
+    -- Combined / Optimized __index Hook
+    local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and self == Mouse then
             local r = getRoot()
@@ -722,89 +838,89 @@ task.spawn(function()
         return oldIndex(self, idx)
     end))
 
+    -- Combined / Optimized __namecall Hook
+    local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
-        if getgenv().CurrentTarget and (method == "ScreenPointToRay" or method == "ViewportPointToRay") then
-            if getgenv().SilentAimEnabled or UserInputService.TouchEnabled then
-                local r = getRoot()
-                if r then 
-                    return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
+        local target = getgenv().CurrentTarget
+        local enabled = getgenv().SilentAimEnabled
+
+        if target then
+            -- Handle Raycast / Viewport overrides
+            if enabled or UserInputService.TouchEnabled then
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                    local r = getRoot()
+                    if r then 
+                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
+                    end
+                end
+            end
+
+            -- Handle Remote FireServer / InvokeServer overrides
+            if enabled and (method == "FireServer" or method == "InvokeServer") then
+                if isAllowedRemote(self) then
+                    local targetPos = GetPredictedPosition(target)
+                    if targetPos then
+                        local args = { ... }
+                        for i = 1, #args do
+                            local arg = args[i]
+                            local argType = typeof(arg)
+                            if argType == "Vector3" then
+                                args[i] = targetPos
+                            elseif argType == "CFrame" then
+                                args[i] = arg - arg.Position + targetPos
+                            end
+                        end
+                        return oldNamecall(self, unpack(args))
+                    end
                 end
             end
         end
+
         return oldNamecall(self, ...)
     end))
 end)
 
 
+local currentUiColor = Color3.fromRGB(255, 255, 255)
+local displayedUiColor = currentUiColor
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 
--- ใช้ชุดข้อมูลแบบ Dictionary เพื่อให้การค้นหา (Lookup) เร็วขึ้นแบบ O(1) แทนการใช้ ipairs วนลูป
-local allowedRemotes = {
-    shoot = true, fire = true, attack = true, 
-    combat = true, ability = true, skill = true, gun = true
-}
+local HideShowUI = Config:Section({ Title = "Settings" })
 
-local blockedRemotes = {
-    equip = true, tool = true, inventory = true, 
-    backpack = true, loadout = true, anim = true, sound = true
-}
-
-local function isAllowedRemote(self)
-    local name = self.Name:lower()
-    
-    -- เช็คคำที่ห้ามก่อนเพื่อความเร็ว
-    for blockWord in pairs(blockedRemotes) do
-        if name:find(blockWord, 1, true) then
-            return false
-        end
-    end
-    
-    -- เช็คคำที่อนุญาต
-    for keyword in pairs(allowedRemotes) do
-        if name:find(keyword, 1, true) then
-            return true
-        end
-    end
-    
-    return false
-end
-
-pcall(function()
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
+local Keybind = Config:Keybind({
+    Title = "Keybind SilentAim",
+    Desc = "ปุ่มลัดสำหรับเปิด/ปิดระบบ Silent Aim",
+    Flag = "KeybindSilentAim", 
+    Value = "", -- default key
+    Callback = function(key)
+        getgenv().SilentAimEnabled = not getgenv().SilentAimEnabled
         
-        if getgenv().SilentAimEnabled and getgenv().CurrentTarget and (method == "FireServer" or method == "InvokeServer") then
-            if isAllowedRemote(self) then
-                local targetPos = GetPredictedPosition(getgenv().CurrentTarget)
-                if targetPos then
-                    local args = { ... }
-                    for i = 1, #args do
-                        local arg = args[i]
-                        local argType = typeof(arg)
-                        if argType == "Vector3" then
-                            args[i] = targetPos
-                        elseif argType == "CFrame" then
-                            args[i] = arg - arg.Position + targetPos
-                        end
-                    end
-                    return oldNamecall(self, unpack(args))
-                end
+        if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
+            getgenv().CurrentTarget = nil
+            if Snapline then 
+                Snapline.Visible = false 
             end
         end
+    end,
+})
 
-        return oldNamecall(self, ...)
-    end)
-end)
+local Colorpicker = Config:Colorpicker({
+    Title = "MaxDistance Color",
+    Desc = "เปลี่ยนสี reticle สำหรับระยะสูงสุด",
+    Flag = "UI_AccentColor",
+    Default = currentUiColor,
+    Callback = function(color)
+        currentUiColor = color
+        displayedUiColor = color
+    end
+})
 
 
-
-
--- อัปเดตส่วน RenderStepped ค้นหาเป้าหมายตามโหมด (ปรับปรุงความเสถียร)
 RunService.RenderStepped:Connect(function(dt)
+    -- Smooth Color Transition (ปรับความเร็วในการเปลี่ยนสี ยิ่งตัวเลขมากยิ่งเปลี่ยนเร็ว แนะนำ 15-25)
+    displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
+
     -- ตรวจสอบตัวละครหลักและกล้องอย่างปลอดภัย
     local character = LocalPlayer.Character
     local camera = Workspace.CurrentCamera
@@ -825,7 +941,7 @@ RunService.RenderStepped:Connect(function(dt)
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
 
-    -- จัดการการแสดงผล UI ของ FOV
+    -- จัดการการแสดงผล UI ของ FOV และอัปเดตสีแบบสมูทตลอดเวลา
     if FOVUI then
         if mode == "360°" or mode == "180°" then
             FOVUI.Visible = false
@@ -835,6 +951,13 @@ RunService.RenderStepped:Connect(function(dt)
                 FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
                 local size = (getgenv().FOVRadius or 100) * 2
                 FOVUI.Size = UDim2.new(0, size, 0, size)
+                
+                pcall(function()
+                    FOVUI.Color = displayedUiColor
+                end)
+                pcall(function()
+                    FOVUI.BackgroundColor3 = displayedUiColor
+                end)
             end
         end
     end
@@ -890,7 +1013,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     getgenv().CurrentTarget = bestTarget
 
-    -- ระบบ Camlock (ล็อกมุมกล้องไปยังเป้าหมาย)
+    -- ระบบ Camlock
     if getgenv().CamlockEnabled and getgenv().CurrentTarget then
         local success, targetPos = pcall(function()
             return GetPredictedPosition(getgenv().CurrentTarget)
@@ -925,6 +1048,10 @@ RunService.RenderStepped:Connect(function(dt)
 
                 Snapline.From = startPos
                 Snapline.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+                
+                -- อัปเดตสีของเส้น Snapline ให้ค่อยๆ เกลี่ยเปลี่ยนสีอย่างสมูท
+                Snapline.Color = displayedUiColor
+                
                 Snapline.Visible = true
             else
                 Snapline.Visible = false
@@ -936,6 +1063,8 @@ RunService.RenderStepped:Connect(function(dt)
         if Snapline then Snapline.Visible = false end
     end
 end)
+
+
 
 
 
@@ -1517,13 +1646,6 @@ end
 
 Players.PlayerAdded:Connect(CreateESP)
 
-
-
-
-
-
-
-
 -- หนี
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -1865,143 +1987,6 @@ end)
 
 
 
--- โจมตี
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
-
-local netModule = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
-local registerHit = netModule:WaitForChild("RE/RegisterHit")
-local registerAttack = netModule:WaitForChild("RE/RegisterAttack")
-
-local fastAttackConnection = nil
-
--- ฟังก์ชันสำหรับส่งรีโมท M1 ผลไม้ปีศาจ
-local function fireFruitM1(targetRoot)
-    local character = player.Character
-    if not character then return end
-    
-    for _, item in ipairs(character:GetChildren()) do
-        if item:IsA("Tool") or item.Name:find("Dragon") or item:FindFirstChild("RemoteEvent") then
-            local remoteEvent = item:FindFirstChild("RemoteEvent")
-            local leftClickRemote = item:FindFirstChild("LeftClickRemote")
-            
-            if remoteEvent then
-                pcall(function()
-                    remoteEvent:FireServer(false)
-                end)
-            end
-            
-            if leftClickRemote then
-                pcall(function()
-                    local args = {
-                        targetRoot.Position,
-                        1
-                    }
-                    leftClickRemote:FireServer(unpack(args))
-                end)
-            end
-        end
-    end
-end
-
--- ฟังก์ชันหลักสำหรับเปิด-ปิดระบบโจมตีออร์โต้
-local function SetFastAttack(state)
-    _G.FastAttackRunning = state
-    
-    if not state then
-        if fastAttackConnection then
-            fastAttackConnection:Disconnect()
-            fastAttackConnection = nil
-        end
-        return
-    end
-    
-    fastAttackConnection = RunService.Heartbeat:Connect(function()
-        if not _G.FastAttackRunning then return end
-        
-        pcall(function()
-            local character = player.Character
-            if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-            local rootPart = character.HumanoidRootPart
-            
-            local function attackTarget(targetRoot)
-                if targetRoot then
-                    local argsHit = {
-                        targetRoot,
-                        {},
-                        [4] = "211ee8ef"
-                    }
-                    registerHit:FireServer(unpack(argsHit))
-                    
-                    local argsAttack = {
-                        0.4000000059604645,
-                        1
-                    }
-                    registerAttack:FireServer(unpack(argsAttack))
-                    
-                    fireFruitM1(targetRoot)
-                end
-            end
-            
-            -- 1. ตีมอนสเตอร์ใน Workspace.Enemies
-            local enemiesFolder = workspace:FindFirstChild("Enemies")
-            if enemiesFolder then
-                for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-                    local enemyRoot = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
-                    local humanoid = enemy:FindFirstChildOfClass("Humanoid")
-                    
-                    if enemyRoot and humanoid and humanoid.Health > 0 then
-                        local distance = (rootPart.Position - enemyRoot.Position).Magnitude
-                        if distance <= 65 then -- ขยายระยะให้กว้างขึ้นเล็กน้อย
-                            attackTarget(enemyRoot)
-                        end
-                    end
-                end
-            end
-            
-            -- 2. ตีผู้เล่นคนอื่นในเซิร์ฟเวอร์ (ปรับปรุงใหม่ให้โจมต่อง่ายขึ้น)
-            for _, otherPlayer in ipairs(Players:GetPlayers()) do
-                if otherPlayer ~= player then
-                    -- ข้ามถ้าอยู่ทีมเดียวกัน (กรณีเปิดระบบ Team)
--- แก้ไขโดยการเปลี่ยนเงื่อนไขเป็นคนละทีมค่อยทำต่อ (ไม่ต้องใช้ continue)
-if not (player.Team and otherPlayer.Team and player.Team == otherPlayer.Team) then
-    -- โค้ดโจมตีผู้เล่นจะทำงานต่อตรงนี้
-    local targetChar = otherPlayer.Character
-    -- ...
-end
-                    
-                    local targetChar = otherPlayer.Character
-                    if targetChar then
-                        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart") or targetChar:FindFirstChild("Head")
-                        local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
-                        
-                        -- ตรวจสอบว่าผู้เล่นไม่ได้อยู่ในสถานะตายหรืออมตะเบื้องต้น
-                        if targetRoot and humanoid and humanoid.Health > 0 then
-                            local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                            
-                            -- เพิ่มระยะโจมตีผู้เล่นเป็น 65 หน่วยเพื่อให้ล็อกเป้าและตีโดนได้ง่ายขึ้น
-                            if distance <= 65 then
-                                attackTarget(targetRoot)
-                            end
-                        end
-                    end
-                end
-            end
-            
-        end)
-        
-        task.wait()
-    end)
-end
-
-
-
-
-
-
-
 
 
 
@@ -2094,106 +2079,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
-
-
-
-
---หาผลปีศาจ
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
-
-_G.FruitESPRunning = false
-
-local function SetupFruitESP(obj)
-    if not obj then return end
-    
-    task.defer(function()
-        if not obj.Parent then return end
-        
-        -- ป้องกันไม่ให้จับพวก NPC หรือ Model ของผู้เล่น
-        if obj:IsDescendantOf(Workspace:FindFirstChild("Characters")) or obj:IsDescendantOf(Workspace:FindFirstChild("NPCs")) then
-            return
-        end
-
-        local targetPart = obj:IsA("Model") and obj.PrimaryPart or obj
-        if not targetPart and obj:IsA("Model") then
-            targetPart = obj:FindFirstChildWhichIsA("BasePart")
-        end
-
-        if not targetPart then return end
-
-        -- สร้าง Highlight (ถ้ายังไม่มี และเปิด ESP อยู่)
-        if _G.FruitESPRunning and not obj:FindFirstChild("FruitESP_Highlight") then
-            local highlight = Instance.new("Highlight")
-            highlight.Name = "FruitESP_Highlight"
-            highlight.FillColor = Color3.fromRGB(255, 170, 0)
-            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-            highlight.Parent = obj
-        end
-
-        local billboard = obj:FindFirstChild("FruitESP_Billboard")
-        if not billboard and _G.FruitESPRunning then
-            billboard = Instance.new("BillboardGui")
-            billboard.Name = "FruitESP_Billboard"
-            billboard.Size = UDim2.new(0, 120, 0, 50)
-            billboard.StudsOffset = Vector3.new(0, 3, 0)
-            billboard.AlwaysOnTop = true
-            
-            local textLabel = Instance.new("TextLabel")
-            textLabel.Name = "DistanceText"
-            textLabel.Size = UDim2.new(1, 0, 1, 0)
-            textLabel.BackgroundTransparency = 1
-            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            textLabel.TextStrokeTransparency = 0
-            textLabel.TextSize = 13
-            textLabel.Font = Enum.Font.SourceSansBold
-            textLabel.Parent = billboard
-            
-            billboard.Parent = obj
-        end
-
-        local textLabel = billboard and billboard:FindFirstChild("DistanceText")
-
-        task.spawn(function()
-            while _G.FruitESPRunning and obj.Parent and targetPart and textLabel do
-                local char = LocalPlayer.Character
-                local rootPart = char and char:FindFirstChild("HumanoidRootPart")
-                if rootPart then
-                    local distance = math.floor((targetPart.Position - rootPart.Position).Magnitude)
-                    textLabel.Text = "🍎 " .. obj.Name .. "\n[" .. distance .. "m]"
-                end
-                task.wait(0.2) 
-            end
-        end)
-    end)
-end
-
-local function RefreshFruitESP()
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if (obj:IsA("Model") or obj:IsA("Part")) and string.find(obj.Name, "Fruit") then
-            SetupFruitESP(obj)
-        end
-    end
-end
-
-
-Workspace.DescendantAdded:Connect(function(obj)
-    if _G.FruitESPRunning and (obj:IsA("Model") or obj:IsA("Part")) and string.find(obj.Name, "Fruit") then
-        SetupFruitESP(obj)
-    end
-end)
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2296,7 +2181,6 @@ CombatTab:Dropdown({
         local mode = type(selected) == "table" and selected[1] or selected
         
         if getgenv().SilentAimMode == "FOV" and mode ~= "FOV" then
-            savedFOVRadius = getgenv().FOVRadius
         end
 
         getgenv().SilentAimMode = mode
@@ -2399,17 +2283,7 @@ CombatTab:Slider({
 
 
 
-local CombatBuffsSection = GeneralTab:Section({ Title = "Combat Attack" })
-
-local FastAttackToggle = GeneralTab:Toggle({
-    Title = "Fast Attack",
-    Desc = "Combat/Fruit/Sword",
-    Flag = "FastAttack",
-    Value = false,
-    Callback = function(state)
-        SetFastAttack(state)
-    end,
-})
+local CombatBuffsSection = GeneralTab:Section({ Title = "Combat" })
 
 GeneralTab:Toggle({
     Title = "Auto Buso",
@@ -2433,14 +2307,6 @@ GeneralTab:Toggle({
         end
     end,
 })
-
-
-
-
-
-
-
-
 
 
 
@@ -2616,37 +2482,7 @@ GeneralTab:Toggle({
 
 
 
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
-local LocalPlayer = Players.LocalPlayer
 
--- 1. SERVER TIME & PLAYER STATS SECTION
-local MyParagraph = Server:Paragraph({
-    Title = "Server & Player Diagnostics",
-    Desc = "Initializing real-time telemetry..."
-})
-
-task.spawn(function()
-    while true do
-        pcall(function()
-            local serverTime = Workspace:GetServerTimeNow()
-            local formattedTime = os.date("%H:%M:%S", serverTime)
-            local playerCount = #Players:GetPlayers()
-            local maxPlayers = Players.MaxPlayers
-            local fps = math.round(1 / task.wait())
-            
-            MyParagraph:SetDesc(string.format(
-                "Time: %s | Players: %d/%d | FPS: ~%d", 
-                formattedTime, playerCount, maxPlayers, fps
-            ))
-        end)
-        task.wait(1)
-    end
-end)
-
--- 2. SERVER MANAGEMENT & UTILITIES SECTION
 local ServerManagement = Server:Section({ Title = "Server Utilities" })
 
 local InputJobId = ""
@@ -2814,29 +2650,6 @@ GeneralTab:Slider({
         DashPercentage = value
     end,
 })
-
-local ESPSection = Visuals:Section({ Title = "Fruit Settings" })
-
-Visuals:Toggle({
-    Title = "Fruit ESP",
-    Desc = "Shows spawned fruits on the map.",
-    Flag = "FruitESP_Toggle",
-    Value = false,
-    Callback = function(state)
-        _G.FruitESPRunning = state
-        if state then
-            RefreshFruitESP()
-        else
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                local hl = obj:FindFirstChild("FruitESP_Highlight")
-                if hl then hl:Destroy() end
-                local bb = obj:FindFirstChild("FruitESP_Billboard")
-                if bb then bb:Destroy() end
-            end
-        end
-    end,
-})
-
 
 local ESPSection = Visuals:Section({ Title = "ESP Settings" })
 
@@ -3029,7 +2842,6 @@ local Slider = GeneralTab:Slider({
     end,
 })
 
-
 local HideShowUI = Config:Section({ Title = "Hide / Show UI" })
 
 local UIKeybind = Config:Keybind({
@@ -3043,30 +2855,13 @@ local UIKeybind = Config:Keybind({
 })
 
 
-local Keybind = Config:Keybind({
-    Title = "Keybind SilentAim",
-    Desc = "On/Off",
-    Flag = "KeybindSilentAim", 
-    Value = "V", -- default key
-    Callback = function(key)
-        -- Use 'key' (or convert it to a boolean/state if needed)
-        -- Assuming you want to toggle based on keypress or use a separate state:
-        getgenv().SilentAimEnabled = not getgenv().SilentAimEnabled
-        
-        if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
-            getgenv().CurrentTarget = nil
-            if Snapline then Snapline.Visible = false end
-        end
-    end,
-})
-
-
 
 
 local antiAfkConnection
 
 Config:Toggle({
     Title = "Anti-AFK",
+    Desc = "",
     Flag = "AntiAFK_Toggle",
     Value = false,
     Callback = function(Value)
@@ -3074,26 +2869,33 @@ Config:Toggle({
             if Value then
                 local vu = game:GetService("VirtualUser")
                 antiAfkConnection = LocalPlayer.Idled:Connect(function()
-                    vu:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+                    vu:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
                     task.wait(1)
-                    vu:Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+                    vu:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
                 end)
-                WindUI:Notify({ Title = "Anti-AFK Active", Content = "You will no longer be idle-kicked.", Icon = "shield", Duration = 3 })
+                
+                WindUI:Notify({ 
+                    Title = "Anti-AFK Active", 
+                    Content = "You will no longer be idle-kicked.", 
+                    Icon = "shield", 
+                    Duration = 3 
+                })
             else
                 if antiAfkConnection then
                     antiAfkConnection:Disconnect()
                     antiAfkConnection = nil
                 end
-                WindUI:Notify({ Title = "Anti-AFK Inactive", Content = "Anti-AFK has been disabled.", Icon = "shield-off", Duration = 3 })
+                
+                WindUI:Notify({ 
+                    Title = "Anti-AFK Inactive", 
+                    Content = "Anti-AFK has been disabled.", 
+                    Icon = "shield-off", 
+                    Duration = 3 
+                })
             end
         end)
     end,
 })
-
-
-
-
-
 
 
 
@@ -3110,7 +2912,7 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local container = Instance.new("Frame")
-container.Size = UDim2.new(0, 120, 0, 144) -- ปรับความสูงจาก 96 เป็น 144 เพื่อให้พอดีกับ 3 ปุ่ม
+container.Size = UDim2.new(0, 120, 0, 144) 
 container.Position = UDim2.new(0, 20, 0, 20)
 container.BackgroundTransparency = 1
 container.Parent = screenGui
@@ -3231,6 +3033,8 @@ end)
 
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 -- รายการตัวเลือก
 local WeaponList = {
@@ -3252,34 +3056,32 @@ local SkillActionList = {
     "Jump"
 }
 
--- เพิ่มค่า Wait หลังจากใช้สกิล เพื่อให้แอนิเมชันหรือคูลดาวน์ทำงานทันก่อนไปบล็อกถัดไป
 local MacroSettings = {
-    Block1 = { Weapon = "Sword", Skill = "X", Hold = 0, Wait = 0.5, Delay = 0.1 },
-    Block2 = { Weapon = "Melee / Fighting Style", Skill = "Z", Hold = 0, Wait = 0.5, Delay = 0.1 },
-    Block3 = { Weapon = "Blox Fruit", Skill = "C", Hold = 0, Wait = 0.5, Delay = 0.1 },
-    Block4 = { Weapon = "Gun", Skill = "V", Hold = 0, Wait = 0.5, Delay = 0.1 }
+    Block1 = { Weapon = "Sword", Skill = "X", Hold = 0, Wait = 0.4, Delay = 0.05 },
+    Block2 = { Weapon = "Melee / Fighting Style", Skill = "Z", Hold = 0, Wait = 0.4, Delay = 0.05 },
+    Block3 = { Weapon = "Blox Fruit", Skill = "C", Hold = 0, Wait = 0.4, Delay = 0.05 },
+    Block4 = { Weapon = "Gun", Skill = "V", Hold = 0, Wait = 0.4, Delay = 0.05 }
 }
 
 -- ตัวแปรสถานะ
 local isRunning = false
 local macroEnabled = true
 
--- ฟังก์ชันจำลองการกดปุ่ม
+-- ฟังก์ชันจำลองการกดปุ่ม (ปรับให้เสถียรขึ้นบนมือถือด้วย task.defer / task.wait สั้นลง)
 local function PressKey(keyName, holdDuration)
     local keyCode = Enum.KeyCode[keyName]
     if not keyCode then return end
 
     VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-    task.wait(holdDuration > 0 and holdDuration or 0.05)
+    task.wait(holdDuration > 0 and holdDuration or 0.03)
     VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
 end
 
--- ฟังก์ชันเปลี่ยนอาวุธ
 local function EquipWeapon(weaponType)
     if weaponType == "None" then return end
     
     local keyToPress = nil
-    if weaponType == "Melee / Fighting Style" then
+    if weaponType == "Melee" or weaponType == "Melee / Fighting Style" then
         keyToPress = Enum.KeyCode.One
     elseif weaponType == "Blox Fruit" then
         keyToPress = Enum.KeyCode.Two
@@ -3290,61 +3092,59 @@ local function EquipWeapon(weaponType)
     end
 
     if keyToPress then
+        -- ลดเวลาดีเลย์สลับอาวุธให้เหมาะกับมือถือที่มีเฟรมเรตจำกัด
         VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
         task.wait(0.05)
         VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
     end
 end
 
-
 -- ฟังก์ชันประมวลผลสกิลและการกระทำ
 local function ExecuteAction(skill, holdDuration)
     if skill == "Jump" then
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        task.wait(holdDuration > 0 and holdDuration or 0.05)
+        task.wait(holdDuration > 0 and holdDuration or 0.03)
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
     elseif skill == "Click (M1)" then
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-        task.wait(holdDuration > 0 and holdDuration or 0.05)
+        task.wait(holdDuration > 0 and holdDuration or 0.03)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     elseif skill ~= "None" then
         PressKey(skill, holdDuration)
     end
 end
 
--- ฟังก์ชันรันคอมโบหลัก
+-- ฟังก์ชันรันคอมโบหลัก (ครอบด้วย coroutine ป้องกันเกมกระตุกและเพิ่มความเร็วในการตอบสนอง)
 local function RunComboMacro()
     if not macroEnabled then return end
     if isRunning then return end
-    isRunning = true
     
-    
-    for i = 1, 4 do
-        local block = MacroSettings["Block" .. i]
-        if block then
-            -- 1. หยิบอาวุธ
-            EquipWeapon(block.Weapon)
-            task.wait(0.15) -- เพิ่มเวลาสลับอาวุธเล็กน้อยกันบัคไม่ถืออาวุธ
-            
-            -- 2. กดใช้สกิล
-            ExecuteAction(block.Skill, block.Hold)
-            
-            -- 3. เวลารอให้สกิลรัน / แอนิเมชันแสดงผลจบ (จุดแก้ปัญหาค้าง/กดทับ)
-            if block.Wait and block.Wait > 0 then
-                task.wait(block.Wait)
-            end
-            
-            -- 4. ดีเลย์ปิดท้ายบล็อก
-            if block.Delay and block.Delay > 0 then
-                task.wait(block.Delay)
+    task.spawn(function()
+        isRunning = true
+        
+        for i = 1, 4 do
+            local block = MacroSettings["Block" .. i]
+            if block then
+                EquipWeapon(block.Weapon)
+                task.wait(0.08) -- ลดเวลาหน่วงลงเพื่อความลื่นไหลบนมือถือ
+                
+                ExecuteAction(block.Skill, block.Hold)
+                
+                if block.Wait and block.Wait > 0 then
+                    task.wait(block.Wait)
+                end
+                
+                if block.Delay and block.Delay > 0 then
+                    task.wait(block.Delay)
+                end
             end
         end
-    end
-    
-    isRunning = false
+        
+        isRunning = false
+    end)
 end
 
--- สร้าง UI สำหรับแต่ละ Block (เพิ่มช่องตั้งค่า Wait Time)
+-- สร้าง UI สำหรับแต่ละ Block
 for i = 1, 4 do
     local blockKey = "Block" .. i
     local section = Macro:Section({ Title = "Block " .. i })
@@ -3375,13 +3175,12 @@ for i = 1, 4 do
         Callback = function(val) MacroSettings[blockKey].Hold = tonumber(val) or 0 end
     })
 
-    -- ช่องตั้งเวลารอหลังกดสกิล (ตัวแก้ปัญหาหลัก)
     Macro:Input({
         Title = "Skill Wait Time",
         Desc = "Wait time for skill animation (seconds)",
         Value = tostring(MacroSettings[blockKey].Wait),
         Flag = "block" .. i .. "_wait",
-        Callback = function(val) MacroSettings[blockKey].Wait = tonumber(val) or 0.5 end
+        Callback = function(val) MacroSettings[blockKey].Wait = tonumber(val) or 0.4 end
     })
 
     Macro:Input({
@@ -3389,7 +3188,7 @@ for i = 1, 4 do
         Desc = "Delay after action (seconds)",
         Value = tostring(MacroSettings[blockKey].Delay),
         Flag = "block" .. i .. "_delay",
-        Callback = function(val) MacroSettings[blockKey].Delay = tonumber(val) or 0.1 end
+        Callback = function(val) MacroSettings[blockKey].Delay = tonumber(val) or 0.05 end
     })
 end
 
@@ -3398,17 +3197,91 @@ local SectionControl = Macro:Section({ Title = "Controls" })
 
 Macro:Keybind({
     Title = "Run Combo Macro",
-    Value = "V",
+    Value = "",
     Flag = "RunComboMacro_Keybind",
     Callback = function(key)
         RunComboMacro()
     end
 })
 
-createButton("Macro Combo", Color3.fromRGB(0, 255, 128), 3, function(state)
-    getgenv().MacroEnabled = state
-    if state then
-        RunComboMacro()
-    else
-end
+
+
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name, screenGui.ResetOnSpawn = "DraggableMacroGui", false
+
+local button = Instance.new("TextButton", screenGui)
+-- เปลี่ยนตำแหน่งมาไว้ที่มุมซ้ายบน (ห่างจากขอบซ้าย 15 พิกเซล, ขอบบน 130 พิกเซล เพื่อไม่ให้ทับปุ่มเมนู Roblox)
+button.Size, button.Position = UDim2.new(0, 120, 0, 38), UDim2.new(0, 15, 0, 130)
+button.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+button.BorderSizePixel, button.Text, button.AutoButtonColor = 0, "", false
+
+Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+
+local uiGradient = Instance.new("UIGradient", button)
+uiGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 42)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 24))
+})
+uiGradient.Rotation = 45
+
+local uiStroke = Instance.new("UIStroke", button)
+uiStroke.Color = Color3.fromRGB(60, 60, 70)
+uiStroke.Thickness = 1.2
+uiStroke.Transparency = 0.3
+
+local textLabel = Instance.new("TextLabel", button)
+textLabel.Size, textLabel.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
+textLabel.Font = Enum.Font.GothamSemibold
+textLabel.Text = "Macro"
+textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+textLabel.TextSize = 12
+
+-- ฟังก์ชันกดปุ่มเพื่อรันมาโครทันที (รวมถึงเอฟเฟกต์แอนิเมชันตอนกด)
+button.MouseButton1Click:Connect(function()
+    -- เอฟเฟกต์เปลี่ยนสีกะพริบตอบสนองการกด
+    uiGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(16, 185, 129)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 150, 105))
+    })
+    uiStroke.Color = Color3.fromRGB(52, 211, 153)
+    
+    -- สั่งรันคอมโบมาโคร
+    if RunComboMacro then 
+        RunComboMacro() 
+    end
+    
+    -- คืนค่าสีเดิมหลังกดเสร็จเล็กน้อย
+    task.delay(0.2, function()
+        uiGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 42)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 24))
+        })
+        uiStroke.Color = Color3.fromRGB(60, 60, 70)
+    end)
+end)
+
+-- ระบบรองรับการลากขยับปุ่ม (Draggable) บนมือถือและ PC เหมือนเดิม
+local dragInfo = {}
+button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragInfo = {active = true, start = input.Position, pos = button.Position}
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragInfo.active and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragInfo.start
+        button.Position = UDim2.new(dragInfo.pos.X.Scale, dragInfo.pos.X.Offset + delta.X, dragInfo.pos.Y.Scale, dragInfo.pos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragInfo.active = false
+    end
 end)
