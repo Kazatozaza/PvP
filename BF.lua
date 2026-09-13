@@ -885,38 +885,6 @@ end)
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
-
-local HideShowUI = Config:Section({ Title = "Settings" })
-
-local Keybind = Config:Keybind({
-    Title = "Keybind SilentAim",
-    Desc = "ปุ่มลัดสำหรับเปิด/ปิดระบบ Silent Aim",
-    Flag = "KeybindSilentAim", 
-    Value = "", -- default key
-    Callback = function(key)
-        getgenv().SilentAimEnabled = not getgenv().SilentAimEnabled
-        
-        if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
-            getgenv().CurrentTarget = nil
-            if Snapline then 
-                Snapline.Visible = false 
-            end
-        end
-    end,
-})
-
-local Colorpicker = Config:Colorpicker({
-    Title = "MaxDistance Color",
-    Desc = "เปลี่ยนสี reticle สำหรับระยะสูงสุด",
-    Flag = "UI_AccentColor",
-    Default = currentUiColor,
-    Callback = function(color)
-        currentUiColor = color
-        displayedUiColor = color
-    end
-})
-
-
 RunService.RenderStepped:Connect(function(dt)
     -- Smooth Color Transition (ปรับความเร็วในการเปลี่ยนสี ยิ่งตัวเลขมากยิ่งเปลี่ยนเร็ว แนะนำ 15-25)
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
@@ -935,6 +903,7 @@ RunService.RenderStepped:Connect(function(dt)
     local myRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
     if not myRoot then
         getgenv().CurrentTarget = nil
+        if Snapline then Snapline.Visible = false end
         return
     end
 
@@ -1023,15 +992,17 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ระบบแสดงเส้น Tracer / Snapline
+    -- ระบบแสดงเส้น Tracer / Snapline (แก้ไขและรวมโค้ดสมบูรณ์)
     if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
-        if targetPart:IsA("Model") then
-            targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart
+        
+        if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
+            targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
         end
 
-        if targetPart then
-            local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(targetPart.Position)
+        if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Model")) then
+            local partPos = targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
+            local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
 
             if targetScreenPos.Z > 0 then
                 local startPos
@@ -1048,10 +1019,13 @@ RunService.RenderStepped:Connect(function(dt)
 
                 Snapline.From = startPos
                 Snapline.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
-                
-                -- อัปเดตสีของเส้น Snapline ให้ค่อยๆ เกลี่ยเปลี่ยนสีอย่างสมูท
                 Snapline.Color = displayedUiColor
                 
+                pcall(function()
+                    Snapline.Thickness = getgenv().TracerThickness or 1
+                    Snapline.Transparency = getgenv().TracerTransparency or 1
+                end)
+
                 Snapline.Visible = true
             else
                 Snapline.Visible = false
@@ -1060,14 +1034,32 @@ RunService.RenderStepped:Connect(function(dt)
             Snapline.Visible = false
         end
     else
-        if Snapline then Snapline.Visible = false end
+        if Snapline then 
+            Snapline.Visible = false 
+        end
     end
 end)
 
 
 
+local HideShowUI = Config:Section({ Title = "Settings" })
 
-
+local Keybind = Config:Keybind({
+    Title = "Keybind SilentAim",
+    Desc = "ปุ่มลัดสำหรับเปิด/ปิดระบบ Silent Aim",
+    Flag = "KeybindSilentAim", 
+    Value = "", -- default key
+    Callback = function(key)
+        getgenv().SilentAimEnabled = not getgenv().SilentAimEnabled
+        
+        if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
+            getgenv().CurrentTarget = nil
+            if Snapline then 
+                Snapline.Visible = false 
+            end
+        end
+    end,
+})
 
 
 
@@ -3067,7 +3059,6 @@ local MacroSettings = {
 local isRunning = false
 local macroEnabled = true
 
--- ฟังก์ชันจำลองการกดปุ่ม (ปรับให้เสถียรขึ้นบนมือถือด้วย task.defer / task.wait สั้นลง)
 local function PressKey(keyName, holdDuration)
     local keyCode = Enum.KeyCode[keyName]
     if not keyCode then return end
@@ -3099,7 +3090,6 @@ local function EquipWeapon(weaponType)
     end
 end
 
--- ฟังก์ชันประมวลผลสกิลและการกระทำ
 local function ExecuteAction(skill, holdDuration)
     if skill == "Jump" then
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
@@ -3210,12 +3200,12 @@ Macro:Keybind({
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local screenGui = Instance.new("ScreenGui", playerGui)
 screenGui.Name, screenGui.ResetOnSpawn = "DraggableMacroGui", false
 
 local button = Instance.new("TextButton", screenGui)
--- เปลี่ยนตำแหน่งมาไว้ที่มุมซ้ายบน (ห่างจากขอบซ้าย 15 พิกเซล, ขอบบน 130 พิกเซล เพื่อไม่ให้ทับปุ่มเมนู Roblox)
 button.Size, button.Position = UDim2.new(0, 120, 0, 38), UDim2.new(0, 15, 0, 130)
 button.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 button.BorderSizePixel, button.Text, button.AutoButtonColor = 0, "", false
@@ -3241,21 +3231,17 @@ textLabel.Text = "Macro"
 textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 textLabel.TextSize = 12
 
--- ฟังก์ชันกดปุ่มเพื่อรันมาโครทันที (รวมถึงเอฟเฟกต์แอนิเมชันตอนกด)
 button.MouseButton1Click:Connect(function()
-    -- เอฟเฟกต์เปลี่ยนสีกะพริบตอบสนองการกด
     uiGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(16, 185, 129)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 150, 105))
     })
     uiStroke.Color = Color3.fromRGB(52, 211, 153)
     
-    -- สั่งรันคอมโบมาโคร
     if RunComboMacro then 
         RunComboMacro() 
     end
     
-    -- คืนค่าสีเดิมหลังกดเสร็จเล็กน้อย
     task.delay(0.2, function()
         uiGradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 42)),
@@ -3265,23 +3251,39 @@ button.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ระบบรองรับการลากขยับปุ่ม (Draggable) บนมือถือและ PC เหมือนเดิม
-local dragInfo = {}
+-- ระบบลากพร้อมจำกัดไม่ให้หลุดขอบจอ
+local dragging, dragStart, startPos
+
 button.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragInfo = {active = true, start = input.Position, pos = button.Position}
+        dragging = true
+        dragStart = input.Position
+        startPos = button.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragInfo.active and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragInfo.start
-        button.Position = UDim2.new(dragInfo.pos.X.Scale, dragInfo.pos.X.Offset + delta.X, dragInfo.pos.Y.Scale, dragInfo.pos.Y.Offset + delta.Y)
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragInfo.active = false
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        
+        -- คำนวณตำแหน่งใหม่แบบ Offset
+        local newX = startPos.X.Offset + delta.X
+        local newY = startPos.Y.Offset + delta.Y
+        
+        -- ดึงขนาดหน้าจอและขนาดปุ่มปัจจุบัน
+        local screenSize = screenGui.AbsoluteSize
+        local btnSize = button.AbsoluteSize
+        
+        -- จำกัดขอบเขต (Clamping) ไม่ให้เกินจอ
+        local clampedX = math.clamp(newX, 0, screenSize.X - btnSize.X)
+        local clampedY = math.clamp(newY, 0, screenSize.Y - btnSize.Y)
+        
+        button.Position = UDim2.new(0, clampedX, 0, clampedY)
     end
 end)
