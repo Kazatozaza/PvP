@@ -812,13 +812,17 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-    local function getRoot()
-        local target = getgenv().CurrentTarget
-        if target and target.Parent then
-            return target.Parent:FindFirstChild("HumanoidRootPart")
-        end
-        return nil
+local function getRoot()
+    local target = getgenv().CurrentTarget
+    if target and target.Parent then
+        local character = target.Parent
+        -- ค้นหาชิ้นส่วนส่วนลำตัวรองรับทั้ง R6 และ R15
+        return character:FindFirstChild("HumanoidRootPart") 
+            or character:FindFirstChild("UpperTorso") 
+            or character:FindFirstChild("Torso")
     end
+    return nil
+end
 
     -- Combined / Optimized __index Hook
     local oldIndex
@@ -880,6 +884,13 @@ task.spawn(function()
         return oldNamecall(self, ...)
     end))
 end)
+
+
+
+
+
+
+
 
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
