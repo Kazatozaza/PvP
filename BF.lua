@@ -2413,6 +2413,17 @@ CombatTab:Slider({
 
 local CombatBuffsSection = GeneralTab:Section({ Title = "Combat" })
 
+
+local FastAttackToggle = GeneralTab:Toggle({
+    Title = "Fast Attack",
+    Desc = "Combat/Fruit/Sword",
+    Flag = "FastAttack",
+    Value = false,
+    Callback = function(state)
+        SetFastAttack(state)
+    end,
+})
+
 GeneralTab:Toggle({
     Title = "Auto Buso",
     Desc = "Automatically enables Buso Haki",
