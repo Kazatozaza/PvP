@@ -1078,7 +1078,6 @@ local Keybind = Config:Keybind({
 
 
 
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -1110,22 +1109,23 @@ local function SetFastAttack(state)
             if not character or not character:FindFirstChild("HumanoidRootPart") then return end
             local rootPart = character.HumanoidRootPart
             
-            -- ฟังก์ชันช่วยส่งรีโมทโจมตีเป้าหมาย
+            -- ฟังก์ชันช่วยส่งรีโมทโจมตีเป้าหมาย (พร้อมระบบป้องกันค่า nil)
             local function attackTarget(targetRoot)
-                if targetRoot then
-                    local argsHit = {
-                        targetRoot,
-                        {},
-                        [4] = "211ee8ef"
-                    }
-                    registerHit:FireServer(unpack(argsHit))
-                    
-                    local argsAttack = {
-                        0.4000000059604645,
-                        1
-                    }
-                    registerAttack:FireServer(unpack(argsAttack))
-                end
+                if not targetRoot or not registerHit or not registerAttack then return end
+                
+                local argsHit = {
+                    targetRoot,
+                    {},
+                    nil,
+                    "211ee8ef" -- ตรวจสอบแฮชให้ตรงกับเวอร์ชันปัจจุบันของเกม
+                }
+                registerHit:FireServer(unpack(argsHit))
+                
+                local argsAttack = {
+                    0.4000000059604645,
+                    1
+                }
+                registerAttack:FireServer(unpack(argsAttack))
             end
             
             -- 1. ตีมอนสเตอร์ใน Workspace.Enemies
