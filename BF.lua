@@ -485,6 +485,53 @@ Snapline.From = Vector2.new(0, 0)          -- จุดเริ่มต้น
 Snapline.To = Vector2.new(0, 0)            -- จุดปลาย
 
 
+-- บริการพื้นฐานของ Roblox
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+
+-- ✅ ฟังก์ชันอัปเดตตำแหน่งเส้น
+function SetSnapline(startPos, endPos)
+    Snapline.From = startPos
+    Snapline.To = endPos
+    Snapline.Visible = true
+end
+
+-- ✅ ฟังก์ชันซ่อนเส้น
+function HideSnapline()
+    Snapline.Visible = false
+end
+
+-- ✅ เพิ่มเติมสำหรับมือถือ: ดึงตำแหน่งกึ่งกลางหน้าจออัตโนมัติ (สำหรับลากเส้นจากกลางจอไปหาเป้าหมาย)
+function GetScreenCenter()
+    local viewportSize = Camera.ViewportSize
+    return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+end
+
+-- ✅ ตัวอย่างการใช้งานร่วมกับ RenderStepped (รองรับทั้งมือถือและคอม)
+game:GetService("RunService").RenderStepped:Connect(function()
+    -- ตัวอย่าง: ลากเส้นจากกลางจอ (เหมาะกับมือถือ) ไปที่ตำแหน่งเมาส์หรือนิ้วสัมผัส
+    -- หรือถ้าทำ Aimbot ให้เปลี่ยน endPos เป็น Vector2 ของเป้าหมาย (Player Head)
+    
+    local startPoint = GetScreenCenter() -- จุดเริ่มต้น (กลางจอ)
+    
+    -- รองรับการแตะหน้าจอจิ้มค้างบนมือถือ หรือใช้ MousePosition บน PC
+    local touchLocations = UserInputService:GetTouchPositions()
+    local endPoint
+    
+    if #touchLocations > 0 then
+        -- ถ้าจื้อมือถืออยู่ ให้เส้นพุ่งไปที่นิ้วที่สัมผัส
+        endPoint = Vector2.new(touchLocations[1].Position.X, touchLocations[1].Position.Y)
+    else
+        -- ถ้าไม่มีการสัมผัส ให้ซ่อนเส้นหรือใช้ตำแหน่งอื่น
+        -- endPoint = Vector2.new(Mouse.X, Mouse.Y)
+    end
+    
+    if endPoint then
+        SetSnapline(startPoint, endPoint)
+    else
+        HideSnapline()
+    end
+end)
 
 ---------------------------------------------------------------------------------------
 
