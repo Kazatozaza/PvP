@@ -1078,6 +1078,98 @@ local Keybind = Config:Keybind({
 
 
 
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+
+local netModule = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
+local registerHit = netModule:WaitForChild("RE/RegisterHit")
+local registerAttack = netModule:WaitForChild("RE/RegisterAttack")
+
+local fastAttackConnection = nil
+
+-- ฟังก์ชันหลักสำหรับเปิด-ปิดระบบโจมตีออร์โต้
+local function SetFastAttack(state)
+    _G.FastAttackRunning = state
+    
+    if not state then
+        if fastAttackConnection then
+            fastAttackConnection:Disconnect()
+            fastAttackConnection = nil
+        end
+        return
+    end
+    
+    fastAttackConnection = RunService.Heartbeat:Connect(function()
+        if not _G.FastAttackRunning then return end
+        
+        pcall(function()
+            local character = player.Character
+            if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+            local rootPart = character.HumanoidRootPart
+            
+            -- ฟังก์ชันช่วยส่งรีโมทโจมตีเป้าหมาย
+            local function attackTarget(targetRoot)
+                if targetRoot then
+                    local argsHit = {
+                        targetRoot,
+                        {},
+                        [4] = "211ee8ef"
+                    }
+                    registerHit:FireServer(unpack(argsHit))
+                    
+                    local argsAttack = {
+                        0.4000000059604645,
+                        1
+                    }
+                    registerAttack:FireServer(unpack(argsAttack))
+                end
+            end
+            
+            -- 1. ตีมอนสเตอร์ใน Workspace.Enemies
+            local enemiesFolder = workspace:FindFirstChild("Enemies")
+            if enemiesFolder then
+                for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+                    local enemyRoot = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
+                    local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+                    
+                    if enemyRoot and humanoid and humanoid.Health > 0 then
+                        local distance = (rootPart.Position - enemyRoot.Position).Magnitude
+                        if distance <= 60 then
+                            attackTarget(enemyRoot)
+                        end
+                    end
+                end
+            end
+            
+            -- 2. ตีผู้เล่นคนอื่นในเซิร์ฟเวอร์
+            for _, otherPlayer in ipairs(Players:GetPlayers()) do
+                if otherPlayer ~= player then
+                    local targetChar = otherPlayer.Character
+                    if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                        local targetRoot = targetChar.HumanoidRootPart
+                        local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
+                        
+                        if humanoid and humanoid.Health > 0 then
+                            local distance = (rootPart.Position - targetRoot.Position).Magnitude
+                            if distance <= 60 then
+                                attackTarget(targetRoot)
+                            end
+                        end
+                    end
+                end
+            end
+            
+        end)
+        
+        task.wait()
+    end)
+end
+
+
+
+
 
 
 
