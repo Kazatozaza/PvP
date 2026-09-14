@@ -903,6 +903,136 @@ local Keybind = Config:Keybind({
 
 
 
+-- โจมตี
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+
+local netModule = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
+local registerHit = netModule:WaitForChild("RE/RegisterHit")
+local registerAttack = netModule:WaitForChild("RE/RegisterAttack")
+
+local fastAttackConnection = nil
+
+-- ฟังก์ชันสำหรับส่งรีโมท M1 ผลไม้ปีศาจ
+local function fireFruitM1(targetRoot)
+    local character = player.Character
+    if not character then return end
+    
+    for _, item in ipairs(character:GetChildren()) do
+        if item:IsA("Tool") or item.Name:find("Dragon") or item:FindFirstChild("RemoteEvent") then
+            local remoteEvent = item:FindFirstChild("RemoteEvent")
+            local leftClickRemote = item:FindFirstChild("LeftClickRemote")
+            
+            if remoteEvent then
+                pcall(function()
+                    remoteEvent:FireServer(false)
+                end)
+            end
+            
+            if leftClickRemote then
+                pcall(function()
+                    local args = {
+                        targetRoot.Position,
+                        1
+                    }
+                    leftClickRemote:FireServer(unpack(args))
+                end)
+            end
+        end
+    end
+end
+
+-- ฟังก์ชันหลักสำหรับเปิด-ปิดระบบโจมตีออร์โต้
+local function SetFastAttack(state)
+    _G.FastAttackRunning = state
+    
+    if not state then
+        if fastAttackConnection then
+            fastAttackConnection:Disconnect()
+            fastAttackConnection = nil
+        end
+        return
+    end
+    
+    fastAttackConnection = RunService.Heartbeat:Connect(function()
+        if not _G.FastAttackRunning then return end
+        
+        pcall(function()
+            local character = player.Character
+            if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+            local rootPart = character.HumanoidRootPart
+            
+            local function attackTarget(targetRoot)
+                if targetRoot then
+                    local argsHit = {
+                        targetRoot,
+                        {},
+                        [4] = "211ee8ef"
+                    }
+                    registerHit:FireServer(unpack(argsHit))
+                    
+                    local argsAttack = {
+                        0.4000000059604645,
+                        1
+                    }
+                    registerAttack:FireServer(unpack(argsAttack))
+                    
+                    fireFruitM1(targetRoot)
+                end
+            end
+            
+            -- 1. ตีมอนสเตอร์ใน Workspace.Enemies
+            local enemiesFolder = workspace:FindFirstChild("Enemies")
+            if enemiesFolder then
+                for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+                    local enemyRoot = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
+                    local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+                    
+                    if enemyRoot and humanoid and humanoid.Health > 0 then
+                        local distance = (rootPart.Position - enemyRoot.Position).Magnitude
+                        if distance <= 65 then -- ขยายระยะให้กว้างขึ้นเล็กน้อย
+                            attackTarget(enemyRoot)
+                        end
+                    end
+                end
+            end
+            
+            -- 2. ตีผู้เล่นคนอื่นในเซิร์ฟเวอร์ (ปรับปรุงใหม่ให้โจมต่อง่ายขึ้น)
+            for _, otherPlayer in ipairs(Players:GetPlayers()) do
+                if otherPlayer ~= player then
+                    -- ข้ามถ้าอยู่ทีมเดียวกัน (กรณีเปิดระบบ Team)
+-- แก้ไขโดยการเปลี่ยนเงื่อนไขเป็นคนละทีมค่อยทำต่อ (ไม่ต้องใช้ continue)
+if not (player.Team and otherPlayer.Team and player.Team == otherPlayer.Team) then
+    -- โค้ดโจมตีผู้เล่นจะทำงานต่อตรงนี้
+    local targetChar = otherPlayer.Character
+    -- ...
+end
+                    
+                    local targetChar = otherPlayer.Character
+                    if targetChar then
+                        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart") or targetChar:FindFirstChild("Head")
+                        local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
+                        
+                        -- ตรวจสอบว่าผู้เล่นไม่ได้อยู่ในสถานะตายหรืออมตะเบื้องต้น
+                        if targetRoot and humanoid and humanoid.Health > 0 then
+                            local distance = (rootPart.Position - targetRoot.Position).Magnitude
+                            
+                            -- เพิ่มระยะโจมตีผู้เล่นเป็น 65 หน่วยเพื่อให้ล็อกเป้าและตีโดนได้ง่ายขึ้น
+                            if distance <= 65 then
+                                attackTarget(targetRoot)
+                            end
+                        end
+                    end
+                end
+            end
+            
+        end)
+        
+        task.wait()
+    end)
+end
 
 
 
