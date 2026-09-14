@@ -936,13 +936,11 @@ end)
 
 
 
-
-
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
 RunService.RenderStepped:Connect(function(dt)
-    -- Smooth Color Transition (ปรับความเร็วในการเปลี่ยนสี ยิ่งตัวเลขมากยิ่งเปลี่ยนเร็ว แนะนำ 15-25)
+    -- Smooth Color Transition
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
     -- ตรวจสอบตัวละครหลักและกล้องอย่างปลอดภัย
@@ -1048,53 +1046,75 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ระบบแสดงเส้น Tracer / Snapline (แก้ไขและรวมโค้ดสมบูรณ์)
-    if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
-        local targetPart = getgenv().CurrentTarget
-        
-        if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
-            targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
+    -- ระบบแสดงเส้น Tracer / Snapline (แก้ไขและรวมโค้ดสมบูรณ์สำหรับ Delta)
+    if getgenv().CurrentTarget and getgenv().ShowTracer then
+        if not Snapline and typeof(Drawing) == "table" then
+            pcall(function()
+                Snapline = Drawing.new("Line")
+                Snapline.Visible = false
+            end)
         end
 
-        if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Model")) then
-            local partPos = targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
-            local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
+        if Snapline then
+            local targetPart = getgenv().CurrentTarget
+            
+            if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
+                targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
+            end
 
-            if targetScreenPos.Z > 0 then
-                local startPos
-                local originType = getgenv().TracerOrigin or "Center" 
-                
-                if originType == "Center" then
-                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-                elseif originType == "Bottom" then
-                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-                else
-                    local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
-                    startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
-                end
-
-                Snapline.From = startPos
-                Snapline.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
-                Snapline.Color = displayedUiColor
-                
-                pcall(function()
-                    Snapline.Thickness = getgenv().TracerThickness or 1
-                    Snapline.Transparency = getgenv().TracerTransparency or 1
+            if targetPart and targetPart.Parent then
+                local successPos, partPos = pcall(function()
+                    return targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
                 end)
 
-                Snapline.Visible = true
+                if successPos and partPos then
+                    local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
+
+                    if targetScreenPos.Z > 0 then
+                        local startPos
+                        local originType = getgenv().TracerOrigin or "Center" 
+                        
+                        if originType == "Center" then
+                            startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                        elseif originType == "Bottom" then
+                            startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+                        else
+                            local successMyPos, myScreenPos = pcall(function()
+                                return camera:WorldToViewportPoint(myRoot.Position)
+                            end)
+                            if successMyPos and myScreenPos then
+                                startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
+                            else
+                                startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                            end
+                        end
+
+                        pcall(function()
+                            Snapline.From = startPos
+                            Snapline.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+                            Snapline.Color = displayedUiColor
+                            Snapline.Thickness = getgenv().TracerThickness or 1
+                            Snapline.Transparency = getgenv().TracerTransparency or 1
+                            Snapline.Visible = true
+                        end)
+                    else
+                        Snapline.Visible = false
+                    end
+                else
+                    Snapline.Visible = false
+                end
             else
                 Snapline.Visible = false
             end
-        else
-            Snapline.Visible = false
         end
     else
         if Snapline then 
-            Snapline.Visible = false 
+            pcall(function()
+                Snapline.Visible = false 
+            end)
         end
     end
-end)
+end))
 
 
 
