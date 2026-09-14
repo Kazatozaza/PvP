@@ -472,13 +472,14 @@ DotCorner.CornerRadius = UDim.new(1, 0)
 DotCorner.Parent = CenterDot
 
 
-local Snapline = Drawing.new("Line")
+local Snapline = Instance.new("Frame")
+Snapline.Name = "Line"
+Snapline.Size = UDim2.new(0, 2, 0, 0) -- ความหนาเริ่มต้น
+Snapline.Position = UDim2.new(0, 0, 0, 0)
+Snapline.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Snapline.BorderSizePixel = 0
 Snapline.Visible = false
-Snapline.Thickness = 1.5         
-Snapline.Color = Color3.fromRGB(255, 255, 255) 
-Snapline.Transparency = 1              
-Snapline.From = Vector2.new(0, 0)         
-Snapline.To = Vector2.new(0, 0)            
+Snapline.Parent = ScreenGui
 
 ---------------------------------------------------------------------------------------
 
