@@ -475,18 +475,14 @@ DotCorner.CornerRadius = UDim.new(1, 0)
 DotCorner.Parent = CenterDot
 
 
--- ตรวจสอบว่า Executor รองรับ Drawing Library หรือไม่
-if not Drawing or not Drawing.new then
-    warn("Executor นี้ไม่รองรับ Drawing Library!")
-    return
+local Drawing = Drawing
+local Snapline = Drawing and Drawing.new("Line") or nil
+if Snapline then
+    Snapline.Visible = false
+    Snapline.Thickness = 1.5
+    Snapline.Color = Color3.fromRGB(255, 255, 255)
+    Snapline.Transparency = 1
 end
-
--- สร้างเส้น Snapline สำหรับมือถือ (Delta)
-local Snapline = Drawing.new("Line")
-Snapline.Visible = false
-Snapline.Thickness = 1.5
-Snapline.Color = Color3.fromRGB(255, 255, 255)
-Snapline.Transparency = 1
 
 -- ดึงข้อมูล Services และ Players เบื้องต้น
 local Players = game:GetService("Players")
@@ -494,39 +490,48 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- ฟังก์ชันหาตำแหน่งกึ่งกลางหน้าจอด้านล่าง (เหมาะสำหรับมือถือ)
-local function GetScreenCenter()
+-- ฟังก์ชันหาตำแหน่งเริ่มต้นของเส้น (ปรับให้เลือกได้ตามต้องการ)
+local function GetStartPos()
     local viewportSize = Camera.ViewportSize
-    -- เริ่มต้นจากกึ่งกลางด้านล่างจอ (Vector2.new(X, Y))
+    -- ค่าเริ่มต้น: กึ่งกลางด้านล่างจอ (เหมาะสำหรับมือถือ)
     return Vector2.new(viewportSize.X / 2, viewportSize.Y) 
 end
 
--- ฟังก์ชันหลักในการอัปเดตเส้น Line ทุกๆ เฟรม
+-- ฟังก์ชันอัปเดตเส้น Tracer ให้วิ่งไปหาเป้าหมายจริง
 local function UpdateSnapline()
-    -- ตัวอย่าง: กำหนดให้เส้นเริ่มจากกลางจอด้านล่าง ไปยังตำแหน่ง (100, 100) บนจอ
-    -- คุณสามารถเปลี่ยนจุด Vector2.new(100, 100) นี้ให้เป็นตำแหน่งของตัวละครเป้าหมาย (RootPart to Screen) ได้
-    Snapline.From = GetScreenCenter()
-    Snapline.To = Vector2.new(100, 100) 
+    if not Snapline then return end
     
-    -- เปิดใช้งานเส้น
-    Snapline.Visible = true
+    local target = getgenv().CurrentTarget
+    if target and (target:IsA("BasePart") or target:IsA("Model")) then
+        local success, partPos = pcall(function()
+            return target:IsA("BasePart") and target.Position or target:GetPivot().Position
+        end)
+
+        if success and partPos then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(partPos)
+            if screenPos.Z > 0 then
+                Snapline.From = GetStartPos()
+                Snapline.To = Vector2.new(screenPos.X, screenPos.Y)
+                Snapline.Visible = (getgenv().ShowTracer == nil or getgenv().ShowTracer == true)
+                return
+            end
+        end
+    end
+    
+    Snapline.Visible = false
 end
 
 -- รัน Loop อัปเดตภาพ
-local Connection
-Connection = RunService.RenderStepped:Connect(function()
+local Connection = RunService.RenderStepped:Connect(function()
     pcall(function()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             UpdateSnapline()
         else
-            Snapline.Visible = false
+            if Snapline then Snapline.Visible = false end
         end
     end)
 end)
-
--- หากต้องการปิดการทำงานและลบเส้นทิ้ง ให้ใช้คำสั่ง:
--- Connection:Disconnect()
--- Snapline:Remove() 
+    
 
 ---------------------------------------------------------------------------------------
 
