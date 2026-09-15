@@ -986,7 +986,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- จุดที่แก้ไข: คำนวณการแสดงผล Snapline แบบ UI Frame ให้แสดงผลเส้นตรงได้-- ✨ ระบบแสดงเส้น Tracer / Snapline ปรับจุดเริ่มต้นให้อยู่กลางตัว/หัวพอดี
+-- ✨ แก้ไขให้เส้น Tracer ลากออกจากตัวละครของเราเสมอ (หากตั้งค่าไว้) หรือบังคับให้ตกลงที่กึ่งกลางหน้าจอถ้าหาตำแหน่งตัวละครไม่เจอ
     if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
         
@@ -1002,13 +1002,20 @@ RunService.RenderStepped:Connect(function(dt)
                 local startPos
                 local originType = getgenv().TracerOrigin or "Character"
                 
+                -- เช็คตำแหน่งเริ่มต้นของเส้น
                 if originType == "Bottom" then
                     startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
                 elseif originType == "Center" then
                     startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
                 else
+                    -- บังคับดึงตำแหน่งตัวละครของเราบนจอ เพื่อให้เส้นพุ่งออกจากตัวเราจริงๆ
                     local myScreenPos, myOnScreen = camera:WorldToViewportPoint(myRoot.Position)
-                    startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
+                    if myOnScreen then
+                        startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
+                    else
+                        -- ถ้าตัวละครอยู่หลังกล้องหรือนอกจอ ให้ใช้จุดกึ่งกลางจอแทนเพื่อไม่ให้เส้นบั๊ก
+                        startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                    end
                 end
 
                 local endPos = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
