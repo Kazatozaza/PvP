@@ -472,14 +472,11 @@ DotCorner.CornerRadius = UDim.new(1, 0)
 DotCorner.Parent = CenterDot
 
 
-local Snapline = Instance.new("Frame")
-Snapline.Name = "Line"
-Snapline.AnchorPoint = Vector2.new(0, 0.5)
-Snapline.Size = UDim2.new(0, 0, 0, 2)
-Snapline.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-Snapline.BorderSizePixel = 0
-Snapline.Visible = false
-Snapline.Parent = ScreenGui
+local TracerLine = Drawing.new("Line")
+TracerLine.Visible = false
+TracerLine.Thickness = 1.5
+TracerLine.Color = Color3.fromRGB(255, 255, 255)
+TracerLine.Transparency = 0.7
 
 ---------------------------------------------------------------------------------------
 
@@ -900,7 +897,7 @@ RunService.RenderStepped:Connect(function(dt)
     
     if not character or not camera then
         if FOVUI then FOVUI.Visible = false end
-        if Snapline then Snapline.Visible = false end
+        TracerLine.Visible = false
         getgenv().CurrentTarget = nil
         return
     end
@@ -908,7 +905,7 @@ RunService.RenderStepped:Connect(function(dt)
     local myRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
     if not myRoot then
         getgenv().CurrentTarget = nil
-        if Snapline then Snapline.Visible = false end
+        TracerLine.Visible = false
         return
     end
 
@@ -932,7 +929,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
-        if Snapline then Snapline.Visible = false end
+        TracerLine.Visible = false
         return
     end
 
@@ -985,46 +982,48 @@ RunService.RenderStepped:Connect(function(dt)
             camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
         end
     end
--- ✨ บังคับลากเส้นจากตัวละครของเราไปหาเป้าหมาย 100% เหมือนของ PC
-    if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
+
+    -- ✨ วาดเส้น Tracer ด้วย Drawing API (นิ่ง ไม่ยืด ไม่ขยายตามการซูมจอ)
+    if getgenv().CurrentTarget and getgenv().ShowTracer then
         local targetPart = getgenv().CurrentTarget
         
         if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
             targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
         end
 
-        if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Model")) and myRoot then
+        if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Model")) then
             local partPos = targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
             
-            -- คำนวณตำแหน่งตัวเราและเป้าหมายบนจอแบบตรงไปตรงมา
-            local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
-            local targetScreenPos = camera:WorldToViewportPoint(partPos)
+            -- กำหนดจุดเริ่มต้นจากหัวหรือลำตัวของเรา
+            local headPart = character:FindFirstChild("Head")
+            local startWorldPos = headPart and headPart.Position or (myRoot.Position + Vector3.new(0, 2, 0))
+            
+            local myScreenPos, myOnScreen = camera:WorldToViewportPoint(startWorldPos)
+            local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
 
-            if targetScreenPos.Z > 0 and myScreenPos.Z > 0 then
-                local startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
-                local endPos = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+            if myOnScreen and targetOnScreen and myScreenPos.Z > 0 and targetScreenPos.Z > 0 then
+                TracerLine.From = Vector2.new(myScreenPos.X, myScreenPos.Y)
+                TracerLine.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+                TracerLine.Thickness = getgenv().TracerThickness or 1.5
+                TracerLine.Transparency = 1 - (getgenv().TracerTransparency or 0.3)
                 
-                local distance = (endPos - startPos).Magnitude
-                local centerPos = (startPos + endPos) / 2
-                local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
-
-                Snapline.AnchorPoint = Vector2.new(0.5, 0.5)
-                Snapline.Position = UDim2.new(0, centerPos.X, 0, centerPos.Y)
-                Snapline.Size = UDim2.new(0, distance, 0, getgenv().TracerThickness or 1.5)
-                Snapline.Rotation = math.deg(angle)
-                Snapline.BackgroundColor3 = displayedUiColor
-                Snapline.BackgroundTransparency = getgenv().TracerTransparency or 0.3
-                Snapline.Visible = true
+                pcall(function()
+                    TracerLine.Color = displayedUiColor
+                end)
+                
+                TracerLine.Visible = true
             else
-                Snapline.Visible = false
+                TracerLine.Visible = false
             end
         else
-            Snapline.Visible = false
+            TracerLine.Visible = false
         end
     else
-        if Snapline then Snapline.Visible = false end
+        TracerLine.Visible = false
     end
 end)
+
+
 
 
 local HideShowUI = Config:Section({ Title = "Settings" })
