@@ -1000,7 +1000,7 @@ RunService.RenderStepped:Connect(function(dt)
 
             if targetScreenPos.Z > 0 and myRoot then
                 -- ปรับความสูงตรง Vector3.new(0, 2, 0) เพื่อขยับจุดเริ่มต้นขึ้น (ถ้ายังต่ำไปให้เพิ่มเลข 2 เป็น 2.5 หรือ 3)
-                local myChestPos = myRoot.Position + Vector3.new(0, 2, 0)
+                local myChestPos = myRoot.Position + Vector3.new(0, 4, 0)
                 local myScreenPos = camera:WorldToViewportPoint(myChestPos)
                 local startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
 
