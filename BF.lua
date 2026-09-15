@@ -986,8 +986,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- จุดที่แก้ไข: คำนวณการแสดงผล Snapline แบบ UI Frame ให้แสดงผลเส้นตรงได้อย่างถูกต้อง
-    -- ✨ ระบบแสดงเส้น Tracer / Snapline แบบแก้ไขให้พุ่งจากตัวเราไปหาศัตรู
+    -- จุดที่แก้ไข: คำนวณการแสดงผล Snapline แบบ UI Frame ให้แสดงผลเส้นตรงได้-- ✨ ระบบแสดงเส้น Tracer / Snapline ปรับจุดเริ่มต้นให้อยู่กลางตัว/หัวพอดี
     if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
         
@@ -1000,8 +999,9 @@ RunService.RenderStepped:Connect(function(dt)
             local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
 
             if targetScreenPos.Z > 0 and myRoot then
-                -- บังคับจุดเริ่มต้น (StartPos) ให้ออกมาจากตำแหน่งตัวละครของเราบนจอเสมอ
-                local myScreenPos, myOnScreen = camera:WorldToViewportPoint(myRoot.Position)
+                -- ปรับความสูงตรง Vector3.new(0, 2, 0) เพื่อขยับจุดเริ่มต้นขึ้น (ถ้ายังต่ำไปให้เพิ่มเลข 2 เป็น 2.5 หรือ 3)
+                local myChestPos = myRoot.Position + Vector3.new(0, 2, 0)
+                local myScreenPos = camera:WorldToViewportPoint(myChestPos)
                 local startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
 
                 local endPos = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
