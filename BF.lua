@@ -985,7 +985,7 @@ RunService.RenderStepped:Connect(function(dt)
             camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
         end
     end
--- ✨ อัปเดตการวาดเส้น Tracer ให้ลากจากตัวละครของเราไปหาตัวละครเป้าหมายโดยตรง
+-- ✨ บังคับลากเส้นจากตัวละครของเราไปหาเป้าหมาย 100% เหมือนของ PC
     if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
         
@@ -993,32 +993,17 @@ RunService.RenderStepped:Connect(function(dt)
             targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
         end
 
-        if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Model")) then
+        if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Model")) and myRoot then
             local partPos = targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
-            local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
+            
+            -- คำนวณตำแหน่งตัวเราและเป้าหมายบนจอแบบตรงไปตรงมา
+            local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
+            local targetScreenPos = camera:WorldToViewportPoint(partPos)
 
-            if targetScreenPos.Z > 0 and myRoot then
-                local startPos
-                local originType = getgenv().TracerOrigin or "Character"
-                
-                if originType == "Bottom" then
-                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-                elseif originType == "Center" then
-                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-                else
-                    -- ลากจากตัวละครของเรา (ใช้ Head หรือ HumanoidRootPart เป็นจุดเริ่มต้น)
-                    local originPart = character:FindFirstChild("Head") or myRoot
-                    local myScreenPos, myOnScreen = camera:WorldToViewportPoint(originPart.Position)
-                    
-                    if myOnScreen and myScreenPos.Z > 0 then
-                        startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
-                    else
-                        -- กรณีตัวละครอยู่หลังกล้องหรือมุมมองบุคคลที่หนึ่ง ให้ใช้กลางจอแทนเพื่อความลื่นไหล
-                        startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-                    end
-                end
-
+            if targetScreenPos.Z > 0 and myScreenPos.Z > 0 then
+                local startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
                 local endPos = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+                
                 local distance = (endPos - startPos).Magnitude
                 local centerPos = (startPos + endPos) / 2
                 local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
