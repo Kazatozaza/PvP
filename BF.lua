@@ -987,6 +987,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 
     -- จุดที่แก้ไข: คำนวณการแสดงผล Snapline แบบ UI Frame ให้แสดงผลเส้นตรงได้อย่างถูกต้อง
+    -- ✨ ระบบแสดงเส้น Tracer / Snapline แบบแก้ไขให้พุ่งจากตัวเราไปหาศัตรู
     if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
         
@@ -998,24 +999,17 @@ RunService.RenderStepped:Connect(function(dt)
             local partPos = targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
             local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
 
-            if targetScreenPos.Z > 0 then
-                local startPos
-                local originType = getgenv().TracerOrigin or "Center" 
-                
-                if originType == "Center" then
-                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-                elseif originType == "Bottom" then
-                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-                else
-                    local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
-                    startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
-                end
+            if targetScreenPos.Z > 0 and myRoot then
+                -- บังคับจุดเริ่มต้น (StartPos) ให้ออกมาจากตำแหน่งตัวละครของเราบนจอเสมอ
+                local myScreenPos, myOnScreen = camera:WorldToViewportPoint(myRoot.Position)
+                local startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
 
                 local endPos = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
                 local distance = (endPos - startPos).Magnitude
                 local centerPos = (startPos + endPos) / 2
                 local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
 
+                Snapline.AnchorPoint = Vector2.new(0.5, 0.5)
                 Snapline.Position = UDim2.new(0, centerPos.X, 0, centerPos.Y)
                 Snapline.Size = UDim2.new(0, distance, 0, getgenv().TracerThickness or 1.5)
                 Snapline.Rotation = math.deg(angle)
