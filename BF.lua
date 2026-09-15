@@ -428,58 +428,32 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
+-- 🛠️ ตั้งค่า Drawing API สำหรับมือถือ (FOV, Center Dot & Tracer)
+local DrawingFOV = Drawing.new("Circle")
+DrawingFOV.Visible = false
+DrawingFOV.Filled = false
+DrawingFOV.Thickness = 1.5
+DrawingFOV.Color = Color3.fromRGB(255, 255, 255)
+DrawingFOV.Transparency = 0.7
+DrawingFOV.NumSides = 64
+
+local DrawingCenterDot = Drawing.new("Circle")
+DrawingCenterDot.Visible = false
+DrawingCenterDot.Filled = true
+DrawingCenterDot.Radius = 2
+DrawingCenterDot.Color = Color3.fromRGB(255, 255, 255)
+DrawingCenterDot.Transparency = 0.8
+
+local DrawingTracer = Drawing.new("Line")
+DrawingTracer.Visible = false
+DrawingTracer.Thickness = 1.5
+DrawingTracer.Color = Color3.fromRGB(255, 255, 255)
+DrawingTracer.Transparency = 0.7
+
+-- เคลียร์ UI เก่าทิ้ง (ถ้ามี)
 if LocalPlayer.PlayerGui:FindFirstChild("MobileAimbotGui") then
     LocalPlayer.PlayerGui.MobileAimbotGui:Destroy()
 end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MobileAimbotGui"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
--- กำหนดสี (เผื่อกรณีลืมประกาศตัวแปร FOVThemeColor ด้านบน)
-local FOVThemeColor = FOVThemeColor or Color3.fromRGB(255, 255, 255)
-
--- สร้างวงกลม FOV
-local FOVUI = Instance.new("Frame")
-FOVUI.Name = "FOVCircle"
-FOVUI.AnchorPoint = Vector2.new(0.5, 0.5)
-FOVUI.BackgroundTransparency = 1
-FOVUI.Visible = false -- เปลี่ยนเป็น true ให้เห็นได้เลย หรือจะปรับเป็น false ตามโค้ดเดิมก็ได้ครับ
-FOVUI.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(1, 0)
-UICorner.Parent = FOVUI
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Thickness = 1.5
-UIStroke.Color = FOVThemeColor
-UIStroke.Transparency = 0.3
-UIStroke.Parent = FOVUI
-
--- ✨ เพิ่มจุดตรงกลาง (Center Dot)
-local CenterDot = Instance.new("Frame")
-CenterDot.Name = "CenterDot"
-CenterDot.AnchorPoint = Vector2.new(0.5, 0.5)
-CenterDot.Position = UDim2.new(0.5, 0, 0.5, 0)
-CenterDot.BackgroundColor3 = FOVThemeColor
-CenterDot.BackgroundTransparency = 0.2
-CenterDot.Parent = FOVUI
-
-local DotCorner = Instance.new("UICorner")
-DotCorner.CornerRadius = UDim.new(1, 0)
-DotCorner.Parent = CenterDot
-
-
-local Snapline = Instance.new("Frame")
-Snapline.Name = "Line"
-Snapline.AnchorPoint = Vector2.new(0, 0.5)
-Snapline.Size = UDim2.new(0, 0, 0, 2)
-Snapline.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-Snapline.BorderSizePixel = 0
-Snapline.Visible = false
-Snapline.Parent = ScreenGui
 
 ---------------------------------------------------------------------------------------
 
