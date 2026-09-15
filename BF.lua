@@ -889,16 +889,12 @@ end)
 
 
 
-
-
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
 RunService.RenderStepped:Connect(function(dt)
-    -- Smooth Color Transition (ปรับความเร็วในการเปลี่ยนสี ยิ่งตัวเลขมากยิ่งเปลี่ยนเร็ว แนะนำ 15-25)
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
-    -- ตรวจสอบตัวละครหลักและกล้องอย่างปลอดภัย
     local character = LocalPlayer.Character
     local camera = Workspace.CurrentCamera
     
@@ -919,7 +915,6 @@ RunService.RenderStepped:Connect(function(dt)
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
 
-    -- จัดการการแสดงผล UI ของ FOV และอัปเดตสีแบบสมูทตลอดเวลา
     if FOVUI then
         if mode == "360°" or mode == "180°" then
             FOVUI.Visible = false
@@ -929,18 +924,12 @@ RunService.RenderStepped:Connect(function(dt)
                 FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
                 local size = (getgenv().FOVRadius or 100) * 2
                 FOVUI.Size = UDim2.new(0, size, 0, size)
-                
-                pcall(function()
-                    FOVUI.Color = displayedUiColor
-                end)
-                pcall(function()
-                    FOVUI.BackgroundColor3 = displayedUiColor
-                end)
+                pcall(function() FOVUI.Color = displayedUiColor end)
+                pcall(function() FOVUI.BackgroundColor3 = displayedUiColor end)
             end
         end
     end
 
-    -- ตรวจสอบสถานะการเปิดใช้งาน
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
         if Snapline then Snapline.Visible = false end
@@ -952,7 +941,6 @@ RunService.RenderStepped:Connect(function(dt)
     local maxDistance = getgenv().MaxDistance or 1000
     local validTargets = GetAllValidTargets()
 
-    -- ค้นหาเป้าหมายตามโหมดที่เลือก
     if mode == "360°" then
         for _, char in ipairs(validTargets) do
             if char and char ~= character and not ShouldIgnoreTarget(char) then
@@ -966,7 +954,6 @@ RunService.RenderStepped:Connect(function(dt)
                 end
             end
         end
-
     elseif mode == "180°" then
         local lookVector = camera.CFrame.LookVector
         for _, char in ipairs(validTargets) do
@@ -984,14 +971,12 @@ RunService.RenderStepped:Connect(function(dt)
                 end
             end
         end
-
     else
         bestTarget = GetTargetInFOV(refPos)
     end
 
     getgenv().CurrentTarget = bestTarget
 
-    -- ระบบ Camlock
     if getgenv().CamlockEnabled and getgenv().CurrentTarget then
         local success, targetPos = pcall(function()
             return GetPredictedPosition(getgenv().CurrentTarget)
@@ -1001,59 +986,52 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ระบบแสดงเส้น Tracer / Snapline (แก้ไขและรวมโค้ดสมบูรณ์)
-    -- ระบบแสดงเส้น Tracer / Snapline (แก้ไขสำหรับ Frame UI)
-	if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
-		local targetPart = getgenv().CurrentTarget
-		
-		if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
-			targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
-		end
+    -- จุดที่แก้ไข: คำนวณการแสดงผล Snapline แบบ UI Frame ให้แสดงผลเส้นตรงได้อย่างถูกต้อง
+    if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
+        local targetPart = getgenv().CurrentTarget
+        
+        if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
+            targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
+        end
 
-		if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Model")) then
-			local partPos = targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
-			local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
+        if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Model")) then
+            local partPos = targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
+            local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
 
-			if targetScreenPos.Z > 0 then
-				local startPos
-				local originType = getgenv().TracerOrigin or "Center" 
-				
-				if originType == "Center" then
-					startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-				elseif originType == "Bottom" then
-					startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-				else
-					local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
-					startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
-				end
+            if targetScreenPos.Z > 0 then
+                local startPos
+                local originType = getgenv().TracerOrigin or "Center" 
+                
+                if originType == "Center" then
+                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                elseif originType == "Bottom" then
+                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+                else
+                    local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
+                    startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
+                end
 
-				local endPos = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
-				
-				-- คำนวณความยาว มุม และกึ่งกลาง เพื่อแปลง Frame ให้เป็นเส้นตรง (Line)
-				local distance = (endPos - startPos).Magnitude
-				local centerPos = (startPos + endPos) / 2
-				local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
+                local endPos = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+                local distance = (endPos - startPos).Magnitude
+                local centerPos = (startPos + endPos) / 2
+                local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
 
-				local thickness = getgenv().TracerThickness or 1.5
-				Snapline.Size = UDim2.new(0, distance, 0, thickness)
-				Snapline.Position = UDim2.new(0, centerPos.X, 0, centerPos.Y)
-				Snapline.Rotation = math.deg(angle)
-				
-				Snapline.BackgroundColor3 = displayedUiColor
-				Snapline.BackgroundTransparency = getgenv().TracerTransparency or 0.3
-
-				Snapline.Visible = true
-			else
-				Snapline.Visible = false
-			end
-		else
-			Snapline.Visible = false
-		end
-	else
-		if Snapline then 
-			Snapline.Visible = false 
-		end
-	end
+                Snapline.Position = UDim2.new(0, centerPos.X, 0, centerPos.Y)
+                Snapline.Size = UDim2.new(0, distance, 0, getgenv().TracerThickness or 1.5)
+                Snapline.Rotation = math.deg(angle)
+                Snapline.BackgroundColor3 = displayedUiColor
+                Snapline.BackgroundTransparency = getgenv().TracerTransparency or 0.3
+                Snapline.Visible = true
+            else
+                Snapline.Visible = false
+            end
+        else
+            Snapline.Visible = false
+        end
+    else
+        if Snapline then Snapline.Visible = false end
+    end
+end)
 
 
 
