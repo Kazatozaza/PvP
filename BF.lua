@@ -474,8 +474,8 @@ DotCorner.Parent = CenterDot
 
 local Snapline = Instance.new("Frame")
 Snapline.Name = "Line"
-Snapline.Size = UDim2.new(0, 2, 0, 0) -- ความหนาเริ่มต้น
-Snapline.Position = UDim2.new(0, 0, 0, 0)
+Snapline.AnchorPoint = Vector2.new(0, 0.5)
+Snapline.Size = UDim2.new(0, 0, 0, 2)
 Snapline.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 Snapline.BorderSizePixel = 0
 Snapline.Visible = false
