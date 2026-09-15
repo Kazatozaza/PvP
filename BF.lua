@@ -899,8 +899,9 @@ RunService.RenderStepped:Connect(function(dt)
     local camera = Workspace.CurrentCamera
     
     if not character or not camera then
-        if FOVUI then FOVUI.Visible = false end
-        if Snapline then Snapline.Visible = false end
+        DrawingFOV.Visible = false
+        DrawingCenterDot.Visible = false
+        DrawingTracer.Visible = false
         getgenv().CurrentTarget = nil
         return
     end
@@ -908,31 +909,35 @@ RunService.RenderStepped:Connect(function(dt)
     local myRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
     if not myRoot then
         getgenv().CurrentTarget = nil
-        if Snapline then Snapline.Visible = false end
+        DrawingTracer.Visible = false
         return
     end
 
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
 
-    if FOVUI then
-        if mode == "360°" or mode == "180°" then
-            FOVUI.Visible = false
-        else
-            FOVUI.Visible = (getgenv().ShowFOV == true)
-            if FOVUI.Visible then
-                FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
-                local size = (getgenv().FOVRadius or 100) * 2
-                FOVUI.Size = UDim2.new(0, size, 0, size)
-                pcall(function() FOVUI.Color = displayedUiColor end)
-                pcall(function() FOVUI.BackgroundColor3 = displayedUiColor end)
-            end
+    -- จัดการแสดงผล FOV Circle
+    if mode == "360°" or mode == "180°" then
+        DrawingFOV.Visible = false
+        DrawingCenterDot.Visible = false
+    else
+        local showFOV = (getgenv().ShowFOV == true)
+        DrawingFOV.Visible = showFOV
+        DrawingCenterDot.Visible = showFOV
+
+        if showFOV then
+            DrawingFOV.Position = refPos
+            DrawingFOV.Radius = getgenv().FOVRadius or 100
+            DrawingFOV.Color = displayedUiColor
+            
+            DrawingCenterDot.Position = refPos
+            DrawingCenterDot.Color = displayedUiColor
         end
     end
 
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
-        if Snapline then Snapline.Visible = false end
+        DrawingTracer.Visible = false
         return
     end
 
@@ -941,6 +946,7 @@ RunService.RenderStepped:Connect(function(dt)
     local maxDistance = getgenv().MaxDistance or 1000
     local validTargets = GetAllValidTargets()
 
+    -- เลือกระบบหาเป้าหมาย (360, 180 หรือ FOV ปกติ)
     if mode == "360°" then
         for _, char in ipairs(validTargets) do
             if char and char ~= character and not ShouldIgnoreTarget(char) then
@@ -977,6 +983,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     getgenv().CurrentTarget = bestTarget
 
+    -- ระบบ Camlock ล็อคมุมกล้อง
     if getgenv().CamlockEnabled and getgenv().CurrentTarget then
         local success, targetPos = pcall(function()
             return GetPredictedPosition(getgenv().CurrentTarget)
@@ -986,8 +993,8 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
--- ✨ แก้ไขให้เส้น Tracer ลากออกจากตัวละครของเราเสมอ (หากตั้งค่าไว้) หรือบังคับให้ตกลงที่กึ่งกลางหน้าจอถ้าหาตำแหน่งตัวละครไม่เจอ
-    if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
+    -- ✨ อัปเดตเส้น Tracer ด้วย Drawing API
+    if getgenv().CurrentTarget and getgenv().ShowTracer then
         local targetPart = getgenv().CurrentTarget
         
         if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
@@ -1002,42 +1009,33 @@ RunService.RenderStepped:Connect(function(dt)
                 local startPos
                 local originType = getgenv().TracerOrigin or "Character"
                 
-                -- เช็คตำแหน่งเริ่มต้นของเส้น
                 if originType == "Bottom" then
                     startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
                 elseif originType == "Center" then
                     startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
                 else
-                    -- บังคับดึงตำแหน่งตัวละครของเราบนจอ เพื่อให้เส้นพุ่งออกจากตัวเราจริงๆ
                     local myScreenPos, myOnScreen = camera:WorldToViewportPoint(myRoot.Position)
                     if myOnScreen then
                         startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
                     else
-                        -- ถ้าตัวละครอยู่หลังกล้องหรือนอกจอ ให้ใช้จุดกึ่งกลางจอแทนเพื่อไม่ให้เส้นบั๊ก
                         startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
                     end
                 end
 
-                local endPos = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
-                local distance = (endPos - startPos).Magnitude
-                local centerPos = (startPos + endPos) / 2
-                local angle = math.atan2(endPos.Y - startPos.Y, endPos.X - startPos.X)
-
-                Snapline.AnchorPoint = Vector2.new(0.5, 0.5)
-                Snapline.Position = UDim2.new(0, centerPos.X, 0, centerPos.Y)
-                Snapline.Size = UDim2.new(0, distance, 0, getgenv().TracerThickness or 1.5)
-                Snapline.Rotation = math.deg(angle)
-                Snapline.BackgroundColor3 = displayedUiColor
-                Snapline.BackgroundTransparency = getgenv().TracerTransparency or 0.3
-                Snapline.Visible = true
+                DrawingTracer.From = startPos
+                DrawingTracer.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+                DrawingTracer.Color = displayedUiColor
+                DrawingTracer.Transparency = getgenv().TracerTransparency or 0.7
+                DrawingTracer.Thickness = getgenv().TracerThickness or 1.5
+                DrawingTracer.Visible = true
             else
-                Snapline.Visible = false
+                DrawingTracer.Visible = false
             end
         else
-            Snapline.Visible = false
+            DrawingTracer.Visible = false
         end
     else
-        if Snapline then Snapline.Visible = false end
+        DrawingTracer.Visible = false
     end
 end)
 
