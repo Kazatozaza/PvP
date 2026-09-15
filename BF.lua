@@ -985,8 +985,7 @@ RunService.RenderStepped:Connect(function(dt)
             camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
         end
     end
-
--- ✨ แก้ไขให้เส้น Tracer ลากออกจากตัวละครของเราเสมอ (หากตั้งค่าไว้) หรือบังคับให้ตกลงที่กึ่งกลางหน้าจอถ้าหาตำแหน่งตัวละครไม่เจอ
+-- ✨ อัปเดตการวาดเส้น Tracer ให้ลากจากตัวละครของเราไปหาตัวละครเป้าหมายโดยตรง
     if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
         
@@ -1002,18 +1001,19 @@ RunService.RenderStepped:Connect(function(dt)
                 local startPos
                 local originType = getgenv().TracerOrigin or "Character"
                 
-                -- เช็คตำแหน่งเริ่มต้นของเส้น
                 if originType == "Bottom" then
                     startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
                 elseif originType == "Center" then
                     startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
                 else
-                    -- บังคับดึงตำแหน่งตัวละครของเราบนจอ เพื่อให้เส้นพุ่งออกจากตัวเราจริงๆ
-                    local myScreenPos, myOnScreen = camera:WorldToViewportPoint(myRoot.Position)
-                    if myOnScreen then
+                    -- ลากจากตัวละครของเรา (ใช้ Head หรือ HumanoidRootPart เป็นจุดเริ่มต้น)
+                    local originPart = character:FindFirstChild("Head") or myRoot
+                    local myScreenPos, myOnScreen = camera:WorldToViewportPoint(originPart.Position)
+                    
+                    if myOnScreen and myScreenPos.Z > 0 then
                         startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
                     else
-                        -- ถ้าตัวละครอยู่หลังกล้องหรือนอกจอ ให้ใช้จุดกึ่งกลางจอแทนเพื่อไม่ให้เส้นบั๊ก
+                        -- กรณีตัวละครอยู่หลังกล้องหรือมุมมองบุคคลที่หนึ่ง ให้ใช้กลางจอแทนเพื่อความลื่นไหล
                         startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
                     end
                 end
