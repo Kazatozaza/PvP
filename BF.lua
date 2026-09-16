@@ -485,16 +485,23 @@ Snapline.To = Vector2.new(0, 0)
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
-UserInputService.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
-    end
-end)
+-- ใช้ pcall ครอบเพื่อกันแอปพิลเคชันหรือตัวรันฟ้อง Error หากฟังก์ชันบางตัวไม่รองรับ
+pcall(function()
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if input.Position then
+                LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+            end
+        end
+    end)
 
-UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
-    end
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            if input.Position then
+                LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+            end
+        end
+    end)
 end)
 
 ---------------------------------------------------------------------------------------
