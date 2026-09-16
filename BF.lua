@@ -2141,8 +2141,8 @@ CombatTab:Toggle({
     Value = getgenv().ShowTracer,
     Callback = function(Value)
         getgenv().ShowTracer = Value
-        if not Value and TracerLine then
-            TracerLine.Visible = false
+        if not Value and Snapline then
+            Snapline.Visible = false
         end
     end,
 })
