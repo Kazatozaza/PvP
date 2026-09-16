@@ -414,7 +414,7 @@ getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
 getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle" 
 getgenv().LockedPartName = "Head"
-getgenv().TracerOrigin = "Character"
+
 getgenv().PredictionEnabled = getgenv().PredictionEnabled ~= false and true
 getgenv().PredictionFactor = getgenv().PredictionFactor or 0.135
 getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
@@ -472,11 +472,13 @@ DotCorner.CornerRadius = UDim.new(1, 0)
 DotCorner.Parent = CenterDot
 
 
-local TracerLine = Drawing.new("Line")
-TracerLine.Visible = false
-TracerLine.Thickness = 1.5
-TracerLine.Color = Color3.fromRGB(255, 255, 255)
-TracerLine.Transparency = 0.7
+local Snapline = Drawing.new("Line")
+Snapline.Visible = false
+Snapline.Thickness = 1.5         
+Snapline.Color = Color3.fromRGB(255, 255, 255) 
+Snapline.Transparency = 1              
+Snapline.From = Vector2.new(0, 0)         
+Snapline.To = Vector2.new(0, 0)            
 
 ---------------------------------------------------------------------------------------
 
@@ -886,18 +888,22 @@ end)
 
 
 
+
+
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
 RunService.RenderStepped:Connect(function(dt)
+    -- Smooth Color Transition (ปรับความเร็วในการเปลี่ยนสี ยิ่งตัวเลขมากยิ่งเปลี่ยนเร็ว แนะนำ 15-25)
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
+    -- ตรวจสอบตัวละครหลักและกล้องอย่างปลอดภัย
     local character = LocalPlayer.Character
     local camera = Workspace.CurrentCamera
     
     if not character or not camera then
         if FOVUI then FOVUI.Visible = false end
-        TracerLine.Visible = false
+        if Snapline then Snapline.Visible = false end
         getgenv().CurrentTarget = nil
         return
     end
@@ -905,13 +911,14 @@ RunService.RenderStepped:Connect(function(dt)
     local myRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
     if not myRoot then
         getgenv().CurrentTarget = nil
-        TracerLine.Visible = false
+        if Snapline then Snapline.Visible = false end
         return
     end
 
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
 
+    -- จัดการการแสดงผล UI ของ FOV และอัปเดตสีแบบสมูทตลอดเวลา
     if FOVUI then
         if mode == "360°" or mode == "180°" then
             FOVUI.Visible = false
@@ -921,15 +928,21 @@ RunService.RenderStepped:Connect(function(dt)
                 FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
                 local size = (getgenv().FOVRadius or 100) * 2
                 FOVUI.Size = UDim2.new(0, size, 0, size)
-                pcall(function() FOVUI.Color = displayedUiColor end)
-                pcall(function() FOVUI.BackgroundColor3 = displayedUiColor end)
+                
+                pcall(function()
+                    FOVUI.Color = displayedUiColor
+                end)
+                pcall(function()
+                    FOVUI.BackgroundColor3 = displayedUiColor
+                end)
             end
         end
     end
 
+    -- ตรวจสอบสถานะการเปิดใช้งาน
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
-        TracerLine.Visible = false
+        if Snapline then Snapline.Visible = false end
         return
     end
 
@@ -938,6 +951,7 @@ RunService.RenderStepped:Connect(function(dt)
     local maxDistance = getgenv().MaxDistance or 1000
     local validTargets = GetAllValidTargets()
 
+    -- ค้นหาเป้าหมายตามโหมดที่เลือก
     if mode == "360°" then
         for _, char in ipairs(validTargets) do
             if char and char ~= character and not ShouldIgnoreTarget(char) then
@@ -951,6 +965,7 @@ RunService.RenderStepped:Connect(function(dt)
                 end
             end
         end
+
     elseif mode == "180°" then
         local lookVector = camera.CFrame.LookVector
         for _, char in ipairs(validTargets) do
@@ -968,12 +983,14 @@ RunService.RenderStepped:Connect(function(dt)
                 end
             end
         end
+
     else
         bestTarget = GetTargetInFOV(refPos)
     end
 
     getgenv().CurrentTarget = bestTarget
 
+    -- ระบบ Camlock
     if getgenv().CamlockEnabled and getgenv().CurrentTarget then
         local success, targetPos = pcall(function()
             return GetPredictedPosition(getgenv().CurrentTarget)
@@ -983,8 +1000,8 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ✨ วาดเส้น Tracer ด้วย Drawing API (นิ่ง ไม่ยืด ไม่ขยายตามการซูมจอ)
-    if getgenv().CurrentTarget and getgenv().ShowTracer then
+    -- ระบบแสดงเส้น Tracer / Snapline (แก้ไขและรวมโค้ดสมบูรณ์)
+    if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
         
         if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
@@ -993,37 +1010,43 @@ RunService.RenderStepped:Connect(function(dt)
 
         if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Model")) then
             local partPos = targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
-            
-            -- กำหนดจุดเริ่มต้นจากหัวหรือลำตัวของเรา
-            local headPart = character:FindFirstChild("Head")
-            local startWorldPos = headPart and headPart.Position or (myRoot.Position + Vector3.new(0, 2, 0))
-            
-            local myScreenPos, myOnScreen = camera:WorldToViewportPoint(startWorldPos)
             local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
 
-            if myOnScreen and targetOnScreen and myScreenPos.Z > 0 and targetScreenPos.Z > 0 then
-                TracerLine.From = Vector2.new(myScreenPos.X, myScreenPos.Y)
-                TracerLine.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
-                TracerLine.Thickness = getgenv().TracerThickness or 1.5
-                TracerLine.Transparency = 1 - (getgenv().TracerTransparency or 0.3)
+            if targetScreenPos.Z > 0 then
+                local startPos
+                local originType = getgenv().TracerOrigin or "Center" 
+                
+                if originType == "Center" then
+                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                elseif originType == "Bottom" then
+                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+                else
+                    local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
+                    startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
+                end
+
+                Snapline.From = startPos
+                Snapline.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+                Snapline.Color = displayedUiColor
                 
                 pcall(function()
-                    TracerLine.Color = displayedUiColor
+                    Snapline.Thickness = getgenv().TracerThickness or 1
+                    Snapline.Transparency = getgenv().TracerTransparency or 1
                 end)
-                
-                TracerLine.Visible = true
+
+                Snapline.Visible = true
             else
-                TracerLine.Visible = false
+                Snapline.Visible = false
             end
         else
-            TracerLine.Visible = false
+            Snapline.Visible = false
         end
     else
-        TracerLine.Visible = false
+        if Snapline then 
+            Snapline.Visible = false 
+        end
     end
 end)
-
-
 
 
 local HideShowUI = Config:Section({ Title = "Settings" })
