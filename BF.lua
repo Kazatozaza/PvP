@@ -416,7 +416,7 @@ getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
 getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle" 
-getgenv().LockedPartName = "Head"
+getgenv().LockedPartName = "HumanoidRootPart"
 
 getgenv().PredictionEnabled = getgenv().PredictionEnabled ~= false and true
 getgenv().PredictionFactor = getgenv().PredictionFactor or 0.135
@@ -2402,7 +2402,7 @@ CombatTab:Slider({
     Flag = "HitboxSizeSlider",
     Value = {
         Min = 10,
-        Max = 100,
+        Max = 50,
         Default = getgenv().HitboxSize
     },
     Increment = 1,
@@ -2417,7 +2417,7 @@ local CombatBuffsSection = GeneralTab:Section({ Title = "Combat" })
 
 local FastAttackToggle = GeneralTab:Toggle({
     Title = "Fast Attack",
-    Desc = "Combat/Fruit/Sword",
+    Desc = "Increases your attack speed automatically",
     Flag = "FastAttack",
     Value = false,
     Callback = function(state)
@@ -2479,22 +2479,6 @@ task.spawn(function()
         end
     end
 end)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3168,7 +3152,6 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local UserInputService = game:GetService("UserInputService")
 
 -- รายการตัวเลือกอาวุธและสกิล
 local WeaponList = {
@@ -3190,7 +3173,7 @@ local SkillActionList = {
     "Jump"
 }
 
--- ตั้งค่าบล็อกคอมโบ
+-- ตั้งค่าบล็อกคอมโบ (สามารถปรับเปลี่ยนอาวุธและสกิลได้ที่นี่)
 local MacroSettings = {
     Block1 = { Weapon = "Sword", Skill = "X", Hold = 0, Wait = 0.4, Delay = 0.05 },
     Block2 = { Weapon = "Melee", Skill = "Z", Hold = 0, Wait = 0.4, Delay = 0.05 },
@@ -3202,22 +3185,14 @@ local MacroSettings = {
 local isRunning = false
 local macroEnabled = true
 
--- ฟังก์ชันจำลองการกดปุ่ม (รองรับทั้ง PC และ Mobile ผ่าน VirtualInputManager)
+-- ฟังก์ชันจำลองการกดปุ่มคีย์บอร์ด
 local function PressKey(keyName, holdDuration)
     local keyCode = Enum.KeyCode[keyName]
     if not keyCode then return end
 
-    -- ตรวจสอบว่าใช้งานบนมือถือหรือคอม เพื่อปรับวิธีส่งค่าให้เหมาะสม
-    if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-        -- สำหรับมือถือ บางครั้งต้องจำลอง Touch หรือใช้ VirtualInputManager แบบเจาะจง
-        VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-        task.wait(holdDuration > 0 and holdDuration or 0.05)
-        VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
-    else
-        VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-        task.wait(holdDuration > 0 and holdDuration or 0.03)
-        VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
-    end
+    VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+    task.wait(holdDuration > 0 and holdDuration or 0.03)
+    VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
 end
 
 -- ฟังก์ชันเลือกอาวุธ (กดปุ่ม 1, 2, 3, 4)
@@ -3237,7 +3212,7 @@ local function EquipWeapon(weaponType)
 
     if keyToPress then
         VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
-        task.wait(0.06)
+        task.wait(0.05)
         VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
     end
 end
@@ -3245,74 +3220,18 @@ end
 -- ฟังก์ชันสั่งใช้งานสกิลหรือแอคชันต่างๆ
 local function ExecuteAction(skill, holdDuration)
     if skill == "Jump" then
-        if UserInputService.TouchEnabled then
-            -- จำลองการกระโดดบนมือถือ
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-            task.wait(holdDuration > 0 and holdDuration or 0.03)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-        else
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-            task.wait(holdDuration > 0 and holdDuration or 0.03)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-        end
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+        task.wait(holdDuration > 0 and holdDuration or 0.03)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
     elseif skill == "Click (M1)" then
-        if UserInputService.TouchEnabled then
-            -- จำลองการคลิกโจมตีบนมือถือ (กดหน้าจอ)
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-            task.wait(holdDuration > 0 and holdDuration or 0.03)
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-        else
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-            task.wait(holdDuration > 0 and holdDuration or 0.03)
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-        end
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+        task.wait(holdDuration > 0 and holdDuration or 0.03)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     elseif skill ~= "None" then
-        -- ตรวจสอบว่าเป็นมือถือหรือคอม
-        if UserInputService.TouchEnabled then
-            -- บนมือถือ: ค้นหาปุ่มสกิลบนหน้าจอ (PlayerGui) แล้วสั่งจำลองการทัชไปที่ปุ่มนั้นโดยตรง
-            local foundButton = false
-            for _, gui in ipairs(PlayerGui:GetDescendants()) do
-                if (gui:IsA("TextButton") or gui:IsA("ImageButton")) and (gui.Name:upper() == skill:upper() or gui.Text:upper() == skill:upper()) then
-                    -- จำลองการทัชลงบนปุ่มนั้นๆ บนมือถือ
-                    local absPos = gui.AbsolutePosition
-                    local absSize = gui.AbsoluteSize
-                    local centerX = absPos.X + (absSize.X / 2)
-                    local centerY = absPos.Y + (absSize.Y / 2)
-                    
-                    -- ส่งสัญญาณทัชหน้าจอตำแหน่งปุ่มสกิล
-                    VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
-                    task.wait(holdDuration > 0 and holdDuration or 0.05)
-                    VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
-                    
-                    foundButton = true
-                    break
-                end
-            end
-            
-            -- ถ้าหาปุ่มบนจอไม่พบ ให้ลองส่งคีย์บอร์ดเผื่อเคสที่ใช้ External Keyboard บนมือถือ
-            if not foundButton then
-                local keyCode = Enum.KeyCode[skill]
-                if keyCode then
-                    VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-                    task.wait(holdDuration > 0 and holdDuration or 0.05)
-                    VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
-                end
-            end
-        else
-            -- ระบบคอมพิวเตอร์ปกติ (PC)
-            local keyCode = Enum.KeyCode[skill]
-            if keyCode then
-                VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-                task.wait(holdDuration > 0 and holdDuration or 0.03)
-                VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
-            end
-        end
+        PressKey(skill, holdDuration)
     end
 end
 
-
-
--- ฟังก์ชันรันคอมโบหลัก (เก็บไว้ใน _G เพื่อให้ปุ่มเรียกใช้ได้ทันที)
 _G.RunComboMacro = function()
     if not macroEnabled then return end
     if isRunning then return end
@@ -3324,7 +3243,7 @@ _G.RunComboMacro = function()
             local block = MacroSettings["Block" .. i]
             if block then
                 EquipWeapon(block.Weapon)
-                task.wait(0.1) -- เพิ่มเวลาหน่วงเล็กรอนisมือถือเปลี่ยนอาวุธ
+                task.wait(0.08) -- หน่วงเวลาสลับอาวุธให้เสถียร
                 
                 ExecuteAction(block.Skill, block.Hold)
                 
@@ -3338,6 +3257,8 @@ _G.RunComboMacro = function()
             end
         end
         
+        -- ป้องกันไม่ให้การปล่อยปุ่มสุดท้ายไปทริกเกอร์ UI ของ WindUI
+        task.wait(0.1)
         isRunning = false
     end)
 end
@@ -3390,7 +3311,6 @@ for i = 1, 4 do
     })
 end
 
--- [ Keybind Control ]
 local SectionControl = Macro:Section({ Title = "Controls" })
 
 Macro:Keybind({
@@ -3402,7 +3322,15 @@ Macro:Keybind({
     end
 })
 
--- ปุ่มกดเรียกใช้งานผ่าน createButton ด้านนอก
+-- ตัวแปรป้องกันการกดปุ่มซ้อนบนมือถือ
+local lastClickTick = 0
+
+-- ปุ่มกดเรียกใช้งานผ่าน createButton ด้านนอก (รองรับมือถือ)
 createButton("Macro", Color3.fromRGB(0, 229, 255), false, function(state)
-    _G.RunComboMacro() 
+    -- ป้องกันการกดซ้อนติดกันเร็วเกินไป (Debounce 0.5 วินาที)
+    if tick() - lastClickTick < 0.5 then return end
+    lastClickTick = tick()
+    
+    -- สั่งรันมาโคร
+    _G.RunComboMacro()
 end)
