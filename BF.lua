@@ -3171,10 +3171,10 @@ end)
 
 
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 -- รายการตัวเลือก
 local WeaponList = {
@@ -3198,7 +3198,7 @@ local SkillActionList = {
 
 local MacroSettings = {
     Block1 = { Weapon = "Sword", Skill = "X", Hold = 0, Wait = 0.4, Delay = 0.05 },
-    Block2 = { Weapon = "Melee", Skill = "Z", Hold = 0, Wait = 0.4, Delay = 0.05 },
+    Block2 = { Weapon = "Melee / Fighting Style", Skill = "Z", Hold = 0, Wait = 0.4, Delay = 0.05 },
     Block3 = { Weapon = "Blox Fruit", Skill = "C", Hold = 0, Wait = 0.4, Delay = 0.05 },
     Block4 = { Weapon = "Gun", Skill = "V", Hold = 0, Wait = 0.4, Delay = 0.05 }
 }
@@ -3207,7 +3207,6 @@ local MacroSettings = {
 local isRunning = false
 local macroEnabled = true
 
--- ฟังก์ชันจำลองการกดปุ่มคีย์บอร์ด (สกิล Z, X, C, V, F ฯลฯ)
 local function PressKey(keyName, holdDuration)
     local keyCode = Enum.KeyCode[keyName]
     if not keyCode then return end
@@ -3217,7 +3216,6 @@ local function PressKey(keyName, holdDuration)
     VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
 end
 
--- ฟังก์ชันเลือกอาวุธ (กดปุ่ม 1, 2, 3, 4)
 local function EquipWeapon(weaponType)
     if weaponType == "None" then return end
     
@@ -3233,13 +3231,13 @@ local function EquipWeapon(weaponType)
     end
 
     if keyToPress then
+        -- ลดเวลาดีเลย์สลับอาวุธให้เหมาะกับมือถือที่มีเฟรมเรตจำกัด
         VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
         task.wait(0.05)
         VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
     end
 end
 
--- ฟังก์ชันสั่งใช้งานสกิลหรือแอคชันต่างๆ
 local function ExecuteAction(skill, holdDuration)
     if skill == "Jump" then
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
@@ -3254,20 +3252,19 @@ local function ExecuteAction(skill, holdDuration)
     end
 end
 
--- ฟังก์ชันรันคอมโบหลัก
-function RunComboMacro()
+-- ฟังก์ชันรันคอมโบหลัก (ครอบด้วย coroutine ป้องกันเกมกระตุกและเพิ่มความเร็วในการตอบสนอง)
+local function RunComboMacro()
     if not macroEnabled then return end
     if isRunning then return end
     
     task.spawn(function()
-        script_key_pressed = true
         isRunning = true
         
         for i = 1, 4 do
             local block = MacroSettings["Block" .. i]
             if block then
                 EquipWeapon(block.Weapon)
-                task.wait(0.08) -- หน่วงเวลาสลับอาวุธให้เสถียรบนมือถือ
+                task.wait(0.08) -- ลดเวลาหน่วงลงเพื่อความลื่นไหลบนมือถือ
                 
                 ExecuteAction(block.Skill, block.Hold)
                 
@@ -3284,7 +3281,6 @@ function RunComboMacro()
         isRunning = false
     end)
 end
-
 
 -- สร้าง UI สำหรับแต่ละ Block
 for i = 1, 4 do
