@@ -406,6 +406,9 @@ task.spawn(function()
 end)
 
 
+
+
+
 getgenv().FOVRadius = getgenv().FOVRadius or 300
 getgenv().MaxDistance = getgenv().MaxDistance or 1000
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
@@ -483,6 +486,19 @@ Snapline.To = Vector2.new(0, 0)
 ---------------------------------------------------------------------------------------
 
 
+local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+    end
+end)
 
 ---------------------------------------------------------------------------------------
 local Players = game:GetService("Players")
@@ -1036,6 +1052,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 
+
 local HideShowUI = Config:Section({ Title = "Settings" })
 
 local Keybind = Config:Keybind({
@@ -1054,11 +1071,6 @@ local Keybind = Config:Keybind({
         end
     end,
 })
-
-
-
-
-
 
 
 
@@ -1983,6 +1995,8 @@ end)
 
 
 
+
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -1994,7 +2008,40 @@ local registerAttack = netModule:WaitForChild("RE/RegisterAttack")
 
 local fastAttackConnection = nil
 
--- ฟังก์ชันหลักสำหรับเปิด-ปิดระบบโจมตีออร์โต้ (รวมผู้เล่นและมอนสเตอร์)
+-- ฟังก์ชันสำหรับส่งรีโมท M1 ผลไม้ปีศาจ
+local function fireFruitM1(targetRoot)
+    local character = player.Character
+    if not character then return end
+    
+    -- ค้นหา Tool หรือ Object ผลไม้ปีศาจที่ตัวละครถืออยู่ หรือมีอยู่ใน Character
+    for _, item in ipairs(character:GetChildren()) do
+        if item:IsA("Tool") or item.Name:find("Dragon") or item:FindFirstChild("RemoteEvent") then
+            local remoteEvent = item:FindFirstChild("RemoteEvent")
+            local leftClickRemote = item:FindFirstChild("LeftClickRemote")
+            
+            if remoteEvent then
+                pcall(function()
+                    remoteEvent:FireServer(false)
+                end)
+            end
+            
+            if leftClickRemote then
+                pcall(function()
+                    local args = {
+                        targetRoot.Position, -- ใช้ตำแหน่งเป้าหมายหรือทิศทางที่ต้องการ
+                        1
+                    }
+                    leftClickRemote:FireServer(unpack(args))
+                end)
+            end
+        end
+    end
+end
+
+
+
+
+-- ฟังก์ชันหลักสำหรับเปิด-ปิดระบบโจมตีออร์โต้
 local function SetFastAttack(state)
     _G.FastAttackRunning = state
     
@@ -2014,13 +2061,13 @@ local function SetFastAttack(state)
             if not character or not character:FindFirstChild("HumanoidRootPart") then return end
             local rootPart = character.HumanoidRootPart
             
-            -- ฟังก์ชันช่วยส่งรีโมทโจมตีเป้าหมาย
+            -- ฟังก์ชันช่วยส่งรีโมทโจมตีเป้าหมาย (รวมการตีปกติและผลไม้)
             local function attackTarget(targetRoot)
                 if targetRoot then
                     local argsHit = {
-                        targetRoot, -- พาร์ทเป้าหมายที่โดนตี
+                        targetRoot,
                         {},
-                        [4] = "211ee8ef" -- Hash อ้างอิงรีโมท
+                        [4] = "211ee8ef"
                     }
                     registerHit:FireServer(unpack(argsHit))
                     
@@ -2029,6 +2076,9 @@ local function SetFastAttack(state)
                         1
                     }
                     registerAttack:FireServer(unpack(argsAttack))
+                    
+                    -- เพิ่มการโจมตี M1 ของผลไม้ปีศาจ
+                    fireFruitM1(targetRoot)
                 end
             end
             
@@ -2048,7 +2098,7 @@ local function SetFastAttack(state)
                 end
             end
             
-            -- 2. ตีผู้เล่นคนอื่นในเซิร์ฟเวอร์ (Workspace.Characters หรือผ่าน Players Service)
+            -- 2. ตีผู้เล่นคนอื่นในเซิร์ฟเวอร์
             for _, otherPlayer in ipairs(Players:GetPlayers()) do
                 if otherPlayer ~= player then
                     local targetChar = otherPlayer.Character
@@ -2056,10 +2106,9 @@ local function SetFastAttack(state)
                         local targetRoot = targetChar.HumanoidRootPart
                         local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
                         
-                        -- เช็คว่าผู้เล่นยังมีชีวิตอยู่
                         if humanoid and humanoid.Health > 0 then
                             local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                            if distance <= 60 then -- ระยะโจมตี
+                            if distance <= 60 then
                                 attackTarget(targetRoot)
                             end
                         end
@@ -2072,6 +2121,7 @@ local function SetFastAttack(state)
         task.wait()
     end)
 end
+
 
 
 
@@ -2364,7 +2414,6 @@ CombatTab:Slider({
 
 
 local CombatBuffsSection = GeneralTab:Section({ Title = "Combat" })
-
 
 local FastAttackToggle = GeneralTab:Toggle({
     Title = "Fast Attack",
@@ -3122,10 +3171,10 @@ end)
 
 
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local HttpService = game:GetService("HttpService")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
 -- รายการตัวเลือก
 local WeaponList = {
@@ -3149,7 +3198,7 @@ local SkillActionList = {
 
 local MacroSettings = {
     Block1 = { Weapon = "Sword", Skill = "X", Hold = 0, Wait = 0.4, Delay = 0.05 },
-    Block2 = { Weapon = "Melee / Fighting Style", Skill = "Z", Hold = 0, Wait = 0.4, Delay = 0.05 },
+    Block2 = { Weapon = "Melee", Skill = "Z", Hold = 0, Wait = 0.4, Delay = 0.05 },
     Block3 = { Weapon = "Blox Fruit", Skill = "C", Hold = 0, Wait = 0.4, Delay = 0.05 },
     Block4 = { Weapon = "Gun", Skill = "V", Hold = 0, Wait = 0.4, Delay = 0.05 }
 }
@@ -3158,6 +3207,7 @@ local MacroSettings = {
 local isRunning = false
 local macroEnabled = true
 
+-- ฟังก์ชันจำลองการกดปุ่มคีย์บอร์ด (สกิล Z, X, C, V, F ฯลฯ)
 local function PressKey(keyName, holdDuration)
     local keyCode = Enum.KeyCode[keyName]
     if not keyCode then return end
@@ -3167,6 +3217,7 @@ local function PressKey(keyName, holdDuration)
     VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
 end
 
+-- ฟังก์ชันเลือกอาวุธ (กดปุ่ม 1, 2, 3, 4)
 local function EquipWeapon(weaponType)
     if weaponType == "None" then return end
     
@@ -3182,13 +3233,13 @@ local function EquipWeapon(weaponType)
     end
 
     if keyToPress then
-        -- ลดเวลาดีเลย์สลับอาวุธให้เหมาะกับมือถือที่มีเฟรมเรตจำกัด
         VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
         task.wait(0.05)
         VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
     end
 end
 
+-- ฟังก์ชันสั่งใช้งานสกิลหรือแอคชันต่างๆ
 local function ExecuteAction(skill, holdDuration)
     if skill == "Jump" then
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
@@ -3203,19 +3254,20 @@ local function ExecuteAction(skill, holdDuration)
     end
 end
 
--- ฟังก์ชันรันคอมโบหลัก (ครอบด้วย coroutine ป้องกันเกมกระตุกและเพิ่มความเร็วในการตอบสนอง)
-local function RunComboMacro()
+-- ฟังก์ชันรันคอมโบหลัก
+function RunComboMacro()
     if not macroEnabled then return end
     if isRunning then return end
     
     task.spawn(function()
+        script_key_pressed = true
         isRunning = true
         
         for i = 1, 4 do
             local block = MacroSettings["Block" .. i]
             if block then
                 EquipWeapon(block.Weapon)
-                task.wait(0.08) -- ลดเวลาหน่วงลงเพื่อความลื่นไหลบนมือถือ
+                task.wait(0.08) -- หน่วงเวลาสลับอาวุธให้เสถียรบนมือถือ
                 
                 ExecuteAction(block.Skill, block.Hold)
                 
@@ -3232,6 +3284,7 @@ local function RunComboMacro()
         isRunning = false
     end)
 end
+
 
 -- สร้าง UI สำหรับแต่ละ Block
 for i = 1, 4 do
@@ -3294,95 +3347,98 @@ Macro:Keybind({
 })
 
 
+-- ==========================================
+-- Draggable Macro Button GUI (Isolated Scope)
+-- ==========================================
+;(function()
+    local Players = game:GetService("Players")
+    local UserInputService = game:GetService("UserInputService")
+    local player = Players.LocalPlayer
+    local playerGui = player:WaitForChild("PlayerGui")
 
+    local screenGui = Instance.new("ScreenGui", playerGui)
+    screenGui.Name = "DraggableMacroGui"
+    screenGui.ResetOnSpawn = false
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+    local button = Instance.new("TextButton", screenGui)
+    button.Size = UDim2.new(0, 120, 0, 38)
+    button.Position = UDim2.new(0, 15, 0, 130)
+    button.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+    button.BorderSizePixel = 0
+    button.Text = ""
+    button.AutoButtonColor = false
 
-local screenGui = Instance.new("ScreenGui", playerGui)
-screenGui.Name, screenGui.ResetOnSpawn = "DraggableMacroGui", false
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
 
-local button = Instance.new("TextButton", screenGui)
-button.Size, button.Position = UDim2.new(0, 120, 0, 38), UDim2.new(0, 15, 0, 130)
-button.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
-button.BorderSizePixel, button.Text, button.AutoButtonColor = 0, "", false
-
-Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
-
-local uiGradient = Instance.new("UIGradient", button)
-uiGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 42)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 24))
-})
-uiGradient.Rotation = 45
-
-local uiStroke = Instance.new("UIStroke", button)
-uiStroke.Color = Color3.fromRGB(60, 60, 70)
-uiStroke.Thickness = 1.2
-uiStroke.Transparency = 0.3
-
-local textLabel = Instance.new("TextLabel", button)
-textLabel.Size, textLabel.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
-textLabel.Font = Enum.Font.GothamSemibold
-textLabel.Text = "Macro"
-textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-textLabel.TextSize = 12
-
-button.MouseButton1Click:Connect(function()
+    local uiGradient = Instance.new("UIGradient", button)
     uiGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(16, 185, 129)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 150, 105))
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 42)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 24))
     })
-    uiStroke.Color = Color3.fromRGB(52, 211, 153)
-    
-    if RunComboMacro then 
-        RunComboMacro() 
-    end
-    
-    task.delay(0.2, function()
+    uiGradient.Rotation = 45
+
+    local uiStroke = Instance.new("UIStroke", button)
+    uiStroke.Color = Color3.fromRGB(60, 60, 70)
+    uiStroke.Thickness = 1.2
+    uiStroke.Transparency = 0.3
+
+    local textLabel = Instance.new("TextLabel", button)
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Font = Enum.Font.GothamSemibold
+    textLabel.Text = "Macro"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextSize = 12
+
+    button.MouseButton1Click:Connect(function()
         uiGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 42)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 24))
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(16, 185, 129)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 150, 105))
         })
-        uiStroke.Color = Color3.fromRGB(60, 60, 70)
-    end)
-end)
-
--- ระบบลากพร้อมจำกัดไม่ให้หลุดขอบจอ
-local dragging, dragStart, startPos
-
-button.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = button.Position
+        uiStroke.Color = Color3.fromRGB(52, 211, 153)
         
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
+        if RunComboMacro then 
+            RunComboMacro() 
+        end
+        
+        task.delay(0.2, function()
+            uiGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 42)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 24))
+            })
+            uiStroke.Color = Color3.fromRGB(60, 60, 70)
         end)
-    end
-end)
+    end)
 
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        
-        -- คำนวณตำแหน่งใหม่แบบ Offset
-        local newX = startPos.X.Offset + delta.X
-        local newY = startPos.Y.Offset + delta.Y
-        
-        -- ดึงขนาดหน้าจอและขนาดปุ่มปัจจุบัน
-        local screenSize = screenGui.AbsoluteSize
-        local btnSize = button.AbsoluteSize
-        
-        -- จำกัดขอบเขต (Clamping) ไม่ให้เกินจอ
-        local clampedX = math.clamp(newX, 0, screenSize.X - btnSize.X)
-        local clampedY = math.clamp(newY, 0, screenSize.Y - btnSize.Y)
-        
-        button.Position = UDim2.new(0, clampedX, 0, clampedY)
-    end
-end)
+    local dragging, dragStart, startPos
+
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = button.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            local newX = startPos.X.Offset + delta.X
+            local newY = startPos.Y.Offset + delta.Y
+            
+            local screenSize = screenGui.AbsoluteSize
+            local btnSize = button.AbsoluteSize
+            
+            local clampedX = math.clamp(newX, 0, screenSize.X - btnSize.X)
+            local clampedY = math.clamp(newY, 0, screenSize.Y - btnSize.Y)
+            
+            button.Position = UDim2.new(0, clampedX, 0, clampedY)
+        end
+    end)
+end)()
