@@ -2972,7 +2972,7 @@ local UIKeybind = Config:Keybind({
     Title = "Interface Toggle",
     Desc = "Keybind to show or hide the user interface",
     Flag = "UIKeybindUIKeybind", 
-    Value = "V",
+    Value = "",
     Callback = function(key)
         Window:Toggle()
     end
@@ -3232,6 +3232,7 @@ local function ExecuteAction(skill, holdDuration)
     end
 end
 
+
 _G.RunComboMacro = function()
     if not macroEnabled then return end
     if isRunning then return end
@@ -3243,7 +3244,7 @@ _G.RunComboMacro = function()
             local block = MacroSettings["Block" .. i]
             if block then
                 EquipWeapon(block.Weapon)
-                task.wait(0.08)
+                task.wait(0.08) -- หน่วงเวลาสลับอาวุธให้เสถียร
                 
                 ExecuteAction(block.Skill, block.Hold)
                 
@@ -3257,15 +3258,10 @@ _G.RunComboMacro = function()
             end
         end
         
-        -- เคลียร์สถานะปุ่มทั้งหมดทันทีที่จบรอบ เพื่อไม่ให้คีย์บอร์ดค้างไปทริกเกอร์ WindUI
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Four, false, game)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.V, false, game)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-        
-        task.wait(0.1)
         isRunning = false
     end)
 end
+
 
 
 -- สร้าง UI สำหรับแต่ละ Block
