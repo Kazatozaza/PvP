@@ -44,7 +44,7 @@ pcall(function()
     WindowTopbarTitle = Color3.fromHex("#FFFFFF"),
     WindowTopbarAuthor = Color3.fromHex("#FFFFFF"),
     WindowTopbarIcon = Color3.fromHex("#FFFFFF"),
-    WindowTopbarButtonIcon = Color3.fromHex("#FFFFFF"), -- ไอคอนปุ่ม Topbar เป็นสีขาว
+    WindowTopbarButtonIcon = Color3.fromHex("#FFFFFF"),
     
     WindowSearchBarBackground = Color3.fromHex("#18181f"),
     
@@ -65,7 +65,6 @@ pcall(function()
     TabBorderTransparencyActive = 0.7,
     TabBorder = Color3.fromHex("#FFFFFF"),
 
-
     ElementBackground = Color3.fromHex("#18181f"),
     ElementBackgroundTransparency = .5,
     ElementBackgroundHover = WindUI.Creator:AddColor("ElementBackground", "#272730", 1),
@@ -85,7 +84,8 @@ pcall(function()
     DialogContent = Color3.fromHex("#cbd5e1"),
     DialogIcon = Color3.fromHex("#FFFFFF"),
     
-    Toggle = Color3.fromHex("#272730"),
+    -- ปรับสีปุ่มเปิดปิด (Toggle)
+    Toggle = Color3.fromHex("#3b82f6"), -- เปลี่ยนเป็นสีฟ้าเมื่อเปิด (หรือปรับตามต้องการ)
     ToggleBar = Color3.fromHex("#FFFFFF"),
     
     Checkbox = Color3.fromHex("#FFFFFF"),
@@ -136,7 +136,6 @@ pcall(function()
     LabelBackground = Color3.fromHex("#18181f"),
     LabelBackgroundTransparency = .5,
 
-    -- เพิ่มค่าปรับแต่งสีปุ่ม (Button) ให้เป็นสีขาว
     Button = Color3.fromHex("#272730"),
     ButtonText = Color3.fromHex("#FFFFFF"),
     ButtonIcon = Color3.fromHex("#FFFFFF"),
@@ -205,7 +204,7 @@ local Visuals = Window:Tab({
 
 local Macro = Window:Tab({
     Title = "Macro",
-    Icon = "mouse-pointer" 
+    Icon = "repeat" 
 })
 
 
@@ -486,9 +485,9 @@ end)
 
 
 
-
-
-getgenv().FOVRadius = getgenv().FOVRadius or 300
+getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
+getgenv().SilentAimMode = getgenv().SilentAimMode or "FOV"
+getgenv().FOVRadius = getgenv().FOVRadius or 100
 getgenv().MaxDistance = getgenv().MaxDistance or 1000
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled ~= false and true
 getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
@@ -852,8 +851,7 @@ local allowedRemotes = {
 }
 
 local blockedRemotes = {
-    equip = true, tool = true, inventory = true, 
-    backpack = true, loadout = true, anim = true, sound = true
+
 }
 
 -- Memoization cache to avoid repeated string scanning on the same remote
@@ -969,12 +967,6 @@ end)
 
 
 
-
-
-
-local currentUiColor = Color3.fromRGB(255, 255, 255)
-local displayedUiColor = currentUiColor
-
 RunService.RenderStepped:Connect(function(dt)
     -- Smooth Color Transition (ปรับความเร็วในการเปลี่ยนสี ยิ่งตัวเลขมากยิ่งเปลี่ยนเร็ว แนะนำ 15-25)
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
@@ -1082,7 +1074,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ระบบแสดงเส้น Tracer / Snapline (แก้ไขและรวมโค้ดสมบูรณ์)
+    -- ระบบแสดงเส้น Tracer / Snapline (ปรับปรุงโหมด 360 ให้แสดงผลทะลุจอ/ทุกตำแหน่ง)
     if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
         
@@ -1094,31 +1086,32 @@ RunService.RenderStepped:Connect(function(dt)
             local partPos = targetPart:IsA("BasePart") and targetPart.Position or targetPart:GetPivot().Position
             local targetScreenPos, targetOnScreen = camera:WorldToViewportPoint(partPos)
 
-            if targetScreenPos.Z > 0 then
-                local startPos
-                local originType = getgenv().TracerOrigin or "Center" 
-                
-                if originType == "Center" then
-                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-                elseif originType == "Bottom" then
-                    startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-                else
-                    local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
-                    startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
-                end
+            local startPos
+            local originType = getgenv().TracerOrigin or "Center" 
+            
+            if originType == "Center" then
+                startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+            elseif originType == "Bottom" then
+                startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+            else
+                local myScreenPos = camera:WorldToViewportPoint(myRoot.Position)
+                startPos = Vector2.new(myScreenPos.X, myScreenPos.Y)
+            end
 
-                Snapline.From = startPos
-                Snapline.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
-                Snapline.Color = displayedUiColor
-                
-                pcall(function()
-                    Snapline.Thickness = getgenv().TracerThickness or 1
-                    Snapline.Transparency = getgenv().TracerTransparency or 1
-                end)
+            Snapline.From = startPos
+            Snapline.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
+            Snapline.Color = displayedUiColor
+            
+            pcall(function()
+                Snapline.Thickness = getgenv().TracerThickness or 1
+                Snapline.Transparency = getgenv().TracerTransparency or 1
+            end)
 
+            -- สำหรับโหมด 360° ให้แสดงเส้นเสมอแม้เป้าหมายจะอยู่ด้านหลังกล้อง (ไม่ต้องเช็ค Z > 0)
+            if mode == "360°" then
                 Snapline.Visible = true
             else
-                Snapline.Visible = false
+                Snapline.Visible = (targetScreenPos.Z > 0)
             end
         else
             Snapline.Visible = false
@@ -1129,7 +1122,6 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
-
 
 
 local HideShowUI = Config:Section({ Title = "Settings" })
@@ -1150,8 +1142,6 @@ local Keybind = Config:Keybind({
         end
     end,
 })
-
-
 
 
 
@@ -1422,14 +1412,14 @@ task.spawn(function()
                         end
                         
                         -- จัดรูปแบบแถวรายชื่อให้ดูสะอาดตาและหรูหรา
-                        table.insert(statusList, string.format("  <font color='#ffffff'><b>%s</b></font>  <font color='#7f8c8d'>│</font>  %s", playerName, statusText))
+                        table.insert(statusList, string.format("  <font color='#ffffff'><b>%s</b></font>  <font color='#7f8c8d'></font>  %s", playerName, statusText))
                     end
                 end
             end
         end
         
         -- ดีไซน์ Header ให้มีความเป็นมืออาชีพ
-        local header = "<font color='#3498db'><b>┏━━ ⚡ PLAYER STATUS MONITOR</b></font>\n<font color='#3498db'><b>┃</b></font> <font color='#bdc3c7'>Online Tracking:</font> <font color='#2ecc71'><b>" .. #statusList .. "</b> Players</font>\n<font color='#3498db'><b>┗━━━━━━━━━━━━━━━━━━━━━━━</b></font>\n\n"
+        local header = "<font color='#3498db'><b>┏━━ ⚡ PLAYER STATUS MONITOR</b></font>\n<font color='#3498db'><b></b></font> <font color='#bdc3c7'>Online Tracking:</font> <font color='#2ecc71'><b>" .. #statusList .. "</b> Players</font>\n<font color='#3498db'><b>┗━━━━━━━━━━━━━━━━━━━━━━━</b></font>\n\n"
         local body = #statusList > 0 and table.concat(statusList, "\n") or "  <font color='#e74c3c'><i>❌ No other players detected</i></font>"
         
         updateParagraph(header .. body)
@@ -1440,7 +1430,7 @@ end)
 
 
 -- ==========================================
--- SCOPE 1: Services & Config
+-- SCOPE 1: Configuration & Colors
 -- ==========================================
 do
     getgenv().ESPConfig = getgenv().ESPConfig or {
@@ -1670,20 +1660,23 @@ do
     local function CreateESP(player)
         if player == LocalPlayer then return end
 
-        local connectionTeam, connectionHealth, connectionBounty
+        local connectionTeam, connectionHealth, connectionBounty, charAddedConn
 
         local function Cleanup()
             if connectionTeam then connectionTeam:Disconnect(); connectionTeam = nil end
             if connectionHealth then connectionHealth:Disconnect(); connectionHealth = nil end
             if connectionBounty then connectionBounty:Disconnect(); connectionBounty = nil end
+            if ActiveESPs[player] and ActiveESPs[player].Gui then
+                ActiveESPs[player].Gui:Destroy()
+            end
             ActiveESPs[player] = nil
         end
 
         local function Setup(character)
-            Cleanup()
-
-            local head = character:FindFirstChild("Head") or character:WaitForChild("Head", 3)
-            local humanoid = character:FindFirstChild("Humanoid") or character:WaitForChild("Humanoid", 3)
+            if not character then return end
+            
+            local head = character:FindFirstChild("Head") or character:WaitForChild("Head", 5)
+            local humanoid = character:FindFirstChild("Humanoid") or character:WaitForChild("Humanoid", 5)
 
             if not head or not humanoid then return end
 
@@ -1716,7 +1709,6 @@ do
             local function UpdateDynamicInfo()
                 _, teamColor, teamEnabled = GetTeamInfo(player)
                 
-                -- อัปเดตการแสดงผลตามค่า Config ปัจจุบันจากปุ่ม
                 nameLabel.Visible = ESPConfig.ShowName
                 pvpLabel.Visible = ESPConfig.ShowStatus
                 levelLabel.Visible = ESPConfig.ShowLevel
@@ -1753,39 +1745,52 @@ do
             
             ActiveESPs[player] = { Update = UpdateDynamicInfo, Head = head, Gui = gui }
 
+            if connectionHealth then connectionHealth:Disconnect() end
             connectionHealth = humanoid.HealthChanged:Connect(UpdateHealth)
-
-            local leaderstats = player:FindFirstChild("leaderstats")
-            if leaderstats then
-                local bVal = leaderstats:FindFirstChild("Bounty/Honor")
-                if bVal then
-                    connectionBounty = bVal.Changed:Connect(function(newValue)
-                        if bountyLabel and bountyLabel.Parent then
-                            bountyLabel.Text = "💎 BOUNTY: " .. FormatNumber(newValue)
-                        end
-                    end)
-                end
-            end
-
-            connectionTeam = player:GetPropertyChangedSignal("Team"):Connect(function()
-                if not gui.Parent then return end
-                teamName, teamColor, teamEnabled = GetTeamInfo(player)
-                gui.Enabled = teamEnabled
-                UpdateDynamicInfo()
-            end)
         end
 
         if player.Character then
-            task.spawn(Setup, player.Character)
+            task.spawn(function()
+                Setup(player.Character)
+            end)
         end
 
-        player.CharacterAdded:Connect(Setup)
-        player.Destroying:Connect(Cleanup)
+        charAddedConn = player.CharacterAdded:Connect(function(newChar)
+            Setup(newChar)
+        end)
+
+        local leaderstats = player:FindFirstChild("leaderstats")
+        if leaderstats then
+            local bVal = leaderstats:FindFirstChild("Bounty/Honor")
+            if bVal then
+                connectionBounty = bVal.Changed:Connect(function(newValue)
+                    if ActiveESPs[player] and ActiveESPs[player].Gui then
+                        local bountyLbl = ActiveESPs[player].Gui:FindFirstChild("BountyLabel", true)
+                        if bountyLbl then
+                            bountyLbl.Text = "💎 BOUNTY: " .. FormatNumber(newValue)
+                        end
+                    end
+                end)
+            end
+        end
+
+        connectionTeam = player:GetPropertyChangedSignal("Team"):Connect(function()
+            if ActiveESPs[player] and ActiveESPs[player].Gui then
+                local _, _, teamEnabled = GetTeamInfo(player)
+                ActiveESPs[player].Gui.Enabled = teamEnabled
+                ActiveESPs[player].Update()
+            end
+        end)
+
+        player.Destroying:Connect(function()
+            if charAddedConn then charAddedConn:Disconnect() end
+            Cleanup()
+        end)
     end
 
     RunService.RenderStepped:Connect(function()
         for _, data in pairs(ActiveESPs) do
-            if data and data.Update then
+            if data and data.Update and data.Head and data.Head.Parent then
                 data.Update()
             end
         end
@@ -1797,6 +1802,7 @@ do
 
     Players.PlayerAdded:Connect(CreateESP)
 end
+
 
 
 --วาปหาผู้เล่น (Improved Version)
@@ -2227,13 +2233,13 @@ CombatTab:Dropdown({
     Desc = "Switch targeting parameters.",
     Flag = "silent_aim_mode_dropdown",
     Values = { "FOV", "180°", "360°" },
-    Value = "FOV",
+    Value = getgenv().SilentAimMode,
     Callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
         
-        -- ถ้าเปลี่ยนจากโหมด FOV ไปโหมดอื่น ให้บันทึกค่า FOV ปัจจุบันเก็บไว้ก่อน
+        -- ถ้าอยู่โหมด FOV แล้วเปลี่ยนไปโหมดอื่น ให้บันทึกค่าปัจจุบันเก็บไว้ก่อน
         if getgenv().SilentAimMode == "FOV" and mode ~= "FOV" then
-            savedFOVRadius = getgenv().FOVRadius
+            getgenv().SavedFOVRadius = getgenv().FOVRadius
         end
 
         getgenv().SilentAimMode = mode
@@ -2242,14 +2248,12 @@ CombatTab:Dropdown({
         if mode == "360°" then
             getgenv().FOVRadius = 9999 
         elseif mode == "180°" then
-            -- กำหนดค่าเฉพาะสำหรับโหมด 180° (ปรับแต่งตัวเลขได้ตามต้องการ)
             getgenv().FOVRadius = 180 
         elseif mode == "FOV" then
-            getgenv().FOVRadius = savedFOVRadius
+            getgenv().FOVRadius = getgenv().SavedFOVRadius
         end
     end,
 })
-
 
 CombatTab:Slider({
     Title = "FOV Size",
@@ -2263,6 +2267,11 @@ CombatTab:Slider({
     },
     Callback = function(Value)
         getgenv().FOVRadius = Value
+        
+        -- ถ้าปรับขนาดตอนที่อยู่โหมด FOV ปกติ ให้บันทึกค่าเก็บไว้ใน SavedFOVRadius ด้วย
+        if getgenv().SilentAimMode == "FOV" then
+            getgenv().SavedFOVRadius = Value
+        end
     end,
 })
 
@@ -2431,13 +2440,12 @@ GeneralTab:Toggle({
     end,
 })
 
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
--- จัดเก็บสถานะและฟังก์ชันของระบบ Walking on Water ไว้ใน Table กลาง
+-- จัดเก็บสถานะและฟังก์ชันกลาง
 local IceWalkConfig = {
     GiantFloor = nil,
     FloorConnection = nil,
@@ -2465,7 +2473,7 @@ end
 function IceWalkUtils.GetOrCreateFloor()
     if not IceWalkConfig.GiantFloor or not IceWalkConfig.GiantFloor.Parent then
         local part = Instance.new("Part")
-        part.Size = Vector3.new(300, 1, 300) -- ขนาด 300 เพื่อลดภาระฟิสิกส์
+        part.Size = Vector3.new(1000, 1, 1000) -- ขยายขนาดให้กว้างขึ้นเล็กน้อยเพื่อรองรับการพุ่ง/วาปไม่ให้ตก
         part.Anchored = true
         part.CanCollide = true
         part.Transparency = 1 
@@ -2477,8 +2485,8 @@ function IceWalkUtils.GetOrCreateFloor()
 end
 
 GeneralTab:Toggle({
-    Title = "Walking on Water (Smooth Fix)",
-    Desc = "Walk on water smoothly without shaking.",
+    Title = "Walking on Water",
+    Desc = "เดินบนน้ำได้ 100% ไม่จม, ใช้สกิล, Soru และวาปได้ปกติ",
     Flag = "IceWalk",
     Value = false,
     Callback = function(state)
@@ -2490,9 +2498,6 @@ GeneralTab:Toggle({
         end
 
         local floorPart = IceWalkUtils.GetOrCreateFloor()
-        -- ขยายขนาดพื้นเล็กน้อยเพื่อให้เดินไม่ตกขอบและลดการขยับถี่ๆ
-        floorPart.Size = Vector3.new(12, 1, 12)
-        
         local raycastParams = RaycastParams.new()
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 
@@ -2513,32 +2518,34 @@ GeneralTab:Toggle({
             local hum = character:FindFirstChildOfClass("Humanoid")
 
             raycastParams.FilterDescendantsInstances = {character}
-            local seaLevel = 3
+            local seaLevel = - 2.9
 
-            -- ยิง Raycast ลงไปหาผิวน้ำ
-            local rayResult = Workspace:Raycast(rootPart.Position + Vector3.new(0, 5, 0), Vector3.new(0, -30, 0), raycastParams)
+            -- ยิง Raycast หาผิวน้ำ
+            local rayResult = Workspace:Raycast(rootPart.Position + Vector3.new(0, 5, 0), Vector3.new(0, -50, 0), raycastParams)
             if rayResult and rayResult.Material == Enum.Material.Water then
                 seaLevel = rayResult.Position.Y
             end
 
-            -- ตามตำแหน่งผู้เล่นแบบนุ่มนวล (Lerp หรืออัปเดตตามแกน XZ ของผู้เล่นแต่ยึดระดับน้ำ)
-            local targetPos = Vector3.new(rootPart.Position.X, seaLevel - 1.5, rootPart.Position.Z)
-            floorPart.Position = floorPart.Position:Lerp(targetPos, 0.5) -- ทำให้พื้นขยับตามแบบสมูท ไม่กระตุก
+            -- ติดตามผู้เล่นทันทีเมื่อมีการวาปหรือพุ่ง (Lerp เร็วขึ้นเพื่อไม่ให้ดีเลย์)
+            local targetPos = Vector3.new(rootPart.Position.X, seaLevel - 2, rootPart.Position.Z)
+            floorPart.Position = floorPart.Position:Lerp(targetPos, 0.8)
 
-            -- ป้องกันจมน้ำโดยเช็คความสูงแบบสมูท
-            if rootPart.Position.Y < (seaLevel + 3.5) then
-                if hum and hum:GetState() == Enum.HumanoidStateType.Swimming then
-                    hum:ChangeState(Enum.HumanoidStateType.Running)
-                end
-            end
-
+            -- บังคับป้องกันการจมน้ำและสถานะว่ายน้ำเด็ดขาด
             if hum then
                 hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                
+                if hum:GetState() == Enum.HumanoidStateType.Swimming or rootPart.Position.Y < (seaLevel + 3.5) then
+                    hum:ChangeState(Enum.HumanoidStateType.Running)
+                    -- ดึงตัวละครขึ้นมาเหนือผิวน้ำทันทีถ้าหลุดลงไป
+                    if rootPart.Position.Y < seaLevel then
+                        rootPart.CFrame = CFrame.new(rootPart.Position.X, seaLevel + 4, rootPart.Position.Z)
+                    end
+                end
             end
         end)
     end,
 })
-
 
 
 
@@ -3228,18 +3235,29 @@ local function pressKey(keyName)
     end)
 end
 
--- ฟังก์ชันถืออาวุธให้อัตโนมัติ
+-- ฟังก์ชันถืออาวุธให้อัตโนมัติ (ถ้าไม่ได้เลือก toolType จะเก็บอาวุธทั้งหมด)
 local function equipToolByType(toolType)
     local myChar = localPlayer.Character
     local backpack = localPlayer:FindFirstChildOfClass("Backpack")
     if not myChar then return end
-
+    
+    local humanoid = myChar:FindFirstChildOfClass("Humanoid")
     local currentTool = myChar:FindFirstChildOfClass("Tool")
+
+    -- ถ้าไม่ได้ระบุ toolType หรือเป็นค่าว่าง/nil ให้เก็บอาวุธทั้งหมดที่มีออกจากตัวละคร
+    if not toolType or toolType == "" then
+        if currentTool and backpack then
+            humanoid:UnequipTools() -- หรือจะใช้การสลับเข้า Backpack ตามความเหมาะสม
+        end
+        return
+    end
+
+    -- ตรวจสอบอาวุธที่ถืออยู่ปัจจุบันว่าตรงกับประเภทที่ต้องการไหม ถ้าตรงอยู่แล้วให้ข้ามไป
     if currentTool then
         local nameLower = currentTool.Name:lower()
         if toolType == "Melee" and (nameLower:find("combat") or nameLower:find("dark step") or nameLower:find("electro") or nameLower:find("water karate") or nameLower:find("dragon claw") or nameLower:find("superhuman") or nameLower:find("death step") or nameLower:find("sharkman karate") or nameLower:find("electric claw") or nameLower:find("dragon talon") or nameLower:find("godhuman") or nameLower:find("sanguine art")) then
             return
-        elseif toolType == "Sword" and (currentTool.ToolTip == "Sword" or (currentTool:FindFirstChild("Handle") and not nameLower:find("fruit") and not nameLower:find("gun") and not nameLower:find("godhuman") and not nameLower:find("combat") and not nameLower:find("sanguine"))) then
+        elseif toolType == "Sword" and (currentTool.ToolTip == "Sword" or (currentTool:FindFirstChild("Handle") and not nameLower:find("fruit") and not nameLower:find("gun") and not nameLower:find("godhuman") and not nameLower:find("combat") and not nameLower:find("sanguine") and not nameLower:find("superhuman"))) then
             return
         elseif toolType == "Fruit" and (currentTool.ToolTip == "Blox Fruit" or currentTool:GetAttribute("Fruit") or nameLower:find("fruit") or nameLower:find("rocket") or nameLower:find("spin") or nameLower:find("chop") or nameLower:find("spring") or nameLower:find("bomb") or nameLower:find("smoke") or nameLower:find("spike") or nameLower:find("flame") or nameLower:find("falcon") or nameLower:find("ice") or nameLower:find("sand") or nameLower:find("dark") or nameLower:find("diamond") or nameLower:find("light") or nameLower:find("rubber") or nameLower:find("barrier") or nameLower:find("ghost") or nameLower:find("magma") or nameLower:find("quake") or nameLower:find("buddha") or nameLower:find("love") or nameLower:find("spider") or nameLower:find("sound") or nameLower:find("phoenix") or nameLower:find("portal") or nameLower:find("rumble") or nameLower:find("pain") or nameLower:find("blizzard") or nameLower:find("gravity") or nameLower:find("mammoth") or nameLower:find("t-rex") or nameLower:find("dough") or nameLower:find("shadow") or nameLower:find("venom") or nameLower:find("control") or nameLower:find("spirit") or nameLower:find("dragon") or nameLower:find("leopard") or nameLower:find("kitsune") or nameLower:find("gas") or nameLower:find("yeti")) then
             return
@@ -3248,6 +3266,7 @@ local function equipToolByType(toolType)
         end
     end
 
+    -- รวบรวมไอเทมทั้งหมดจาก Backpack และ Character
     local itemsToCheck = {}
     if backpack then
         for _, item in ipairs(backpack:GetChildren()) do
@@ -3258,6 +3277,7 @@ local function equipToolByType(toolType)
         table.insert(itemsToCheck, item)
     end
 
+    -- ค้นหาและหยิบอาวุธที่ตรงกับประเภท
     for _, tool in ipairs(itemsToCheck) do
         if tool:IsA("Tool") then
             local nameLower = tool.Name:lower()
@@ -3296,7 +3316,6 @@ local function equipToolByType(toolType)
             end
 
             if isMatch then
-                local humanoid = myChar:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     humanoid:EquipTool(tool)
                     task.wait(0.05)
@@ -3308,9 +3327,8 @@ local function equipToolByType(toolType)
 end
 
 
-
 local lastComboTime = 0
-local comboCooldown = 0.9
+local comboCooldown = 0.7
 
 local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceToTarget)
     local myChar = localPlayer.Character
@@ -3329,20 +3347,27 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     end
 
     local targetPos = targetCFrame.Position
+    
+    -- ระบบดักทางเป้าหมาย (Prediction) แบบนุ่มนวล
     if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
         local targetRoot = targetChar.HumanoidRootPart
         targetPos = targetRoot.Position
         
         local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-        if targetHum and targetHum.MoveDirection then
-            targetPos = targetPos + (targetHum.MoveDirection * 3)
+        local targetVelocity = targetRoot.AssemblyLinearVelocity
+        local predictionMultiplier = 0.2
+        
+        local predictedPos = targetPos + (targetVelocity * predictionMultiplier)
+        if targetHum and targetHum.MoveDirection.Magnitude > 0 then
+            predictedPos = predictedPos + (targetHum.MoveDirection * 3)
         end
+        targetPos = predictedPos
     end
 
     local currentPos = myRoot.Position
     local distance = (targetPos - currentPos).Magnitude
     
-    -- 1. ดึงค่าระยะสูงสุดในการบิน/วาร์ปจาก Slider แรก
+    -- 1. ดึงค่าระยะสูงสุดในการบินจาก Slider แรก
     local maxDistance = 300
     if Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider then
         maxDistance = Bounty.Flags.SafeModeDistanceSlider
@@ -3354,26 +3379,30 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         enemyDistanceOffset = Bounty.Flags.EnemyDistanceSlider
     end
     
-    -- ถ้าอยู่ในระยะที่ตั้งไว้ (แต่นอกระยะโจมตี) วาร์ปไปหาเป้าหมายโดยเว้นระยะ
+    -- ถ้าอยู่ในระยะที่ตั้งไว้ (แต่นอกระยะโจมตี) ให้เคลื่อนที่เข้าไปหาแบบ Smooth (Lerp)
     if distance <= maxDistance and distance > 15 then
-        myRoot.CFrame = CFrame.new(targetPos) * CFrame.new(0, 3, enemyDistanceOffset)
+        local idealCFrame = CFrame.new(targetPos) * CFrame.new(0, 3, enemyDistanceOffset)
+        
+        -- ใช้ Lerp เกลี่ยตำแหน่งให้ไหลลื่น ไม่กระตุก (ปรับเลข 15 ให้ช้า/เร็วได้ตามต้องการ)
+        myRoot.CFrame = myRoot.CFrame:Lerp(idealCFrame, math.clamp(speed * deltaTime * 5, 0.05, 1))
+        
         myRoot.Velocity = Vector3.new(0, 0, 0)
         myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         return
     end
 
-    -- หากระยะทางเข้าใกล้เป้าหมายในระยะโจมตีแล้ว (<= 8 studs) ล็อกตัวและทำคอมโบ
+    -- หากระยะทางเข้าใกล้เป้าหมายในระยะโจมตีแล้ว (<= 15 studs) ล็อกตัวและทำคอมโบ
     if distance <= 15 then
-        -- ล็อกตำแหน่งติดกับเป้าหมายทันทีโดยไม่ให้ขยับหนีหรือสั่น
         if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-            -- เกาะติดเป้าหมายแบบเป๊ะๆ ตาม Offset ที่ตั้งไว้
-            myRoot.CFrame = targetChar.HumanoidRootPart.CFrame * CFrame.new(0, 3, enemyDistanceOffset)
+            -- เกาะติดเป้าหมายแบบสมูทด้วย Lerp ป้องกันอาการสั่นเวลาเป้าหมายขยับ
+            local combatCFrame = targetChar.HumanoidRootPart.CFrame * CFrame.new(0, 3, enemyDistanceOffset)
+            myRoot.CFrame = myRoot.CFrame:Lerp(combatCFrame, 0.5)
         else
             myRoot.CFrame = CFrame.new(myRoot.Position, targetPos) * CFrame.new(0, 3, enemyDistanceOffset)
         end
         
-        -- เคลียร์แรงฟิสิกส์ทั้งหมดเพื่อกันการกระเด็นหรือสั่น
+        -- เคลียร์แรงฟิสิกส์ทั้งหมด
         myRoot.Velocity = Vector3.new(0, 0, 0)
         myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -3430,13 +3459,14 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
             end
         end
     elseif distance > maxDistance then
-        -- ถ้าไกลกว่าระยะที่ตั้งไว้ ให้บินเข้าหาด้วยความเร็วปกติ
+        -- ถ้าไกลกว่าระยะที่ตั้งไว้ ให้บินเข้าหาแบบสมูท
         local direction = (targetPos - currentPos).Unit
         local step = speed * deltaTime
         if step > distance then
             step = distance
         end
-        myRoot.CFrame = CFrame.new(currentPos + (direction * step), targetPos)
+        local targetFlyCFrame = CFrame.new(currentPos + (direction * step), targetPos)
+        myRoot.CFrame = myRoot.CFrame:Lerp(targetFlyCFrame, 0.8)
         myRoot.Velocity = Vector3.new(0, 0, 0)
     end
 end
@@ -3588,6 +3618,39 @@ local Toggle = Bounty:Toggle({
     end
 })
 
+
+local Toggle = Bounty:Toggle({
+    Title = "Enable PvP",
+    Desc = "Automatically enables PvP combat continuously",
+    Flag = "Toggle_EnablePvP",
+    Default = false,
+    Callback = function(state)
+        -- เก็บสถานะการทำงานของลูป
+        _G.EnablePvPLoop = state
+        
+        if state then
+            task.spawn(function()
+                while _G.EnablePvPLoop do
+                    local args = {
+                        "EnablePvp"
+                    }
+                    local success, err = pcall(function()
+                        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+                    end)
+                    
+                    if success then
+                    else
+                        warn("Failed to enable PvP: " .. tostring(err))
+                    end
+                    
+                    -- หน่วงเวลา 5 วินาทีต่อรอบ (สามารถปรับลดหรือเพิ่มเวลาได้ตามต้องการ เช่น 3 หรือ 10)
+                    task.wait(5)
+                end
+            end)
+        else
+        end
+    end
+})
 
 local DropdownMyFaction = Bounty:Dropdown({
     Title = "Auto Team",
