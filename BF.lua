@@ -3243,7 +3243,7 @@ _G.RunComboMacro = function()
             local block = MacroSettings["Block" .. i]
             if block then
                 EquipWeapon(block.Weapon)
-                task.wait(0.08) -- หน่วงเวลาสลับอาวุธให้เสถียร
+                task.wait(0.08)
                 
                 ExecuteAction(block.Skill, block.Hold)
                 
@@ -3257,11 +3257,16 @@ _G.RunComboMacro = function()
             end
         end
         
-        -- ป้องกันไม่ให้การปล่อยปุ่มสุดท้ายไปทริกเกอร์ UI ของ WindUI
+        -- เคลียร์สถานะปุ่มทั้งหมดทันทีที่จบรอบ เพื่อไม่ให้คีย์บอร์ดค้างไปทริกเกอร์ WindUI
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Four, false, game)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.V, false, game)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+        
         task.wait(0.1)
         isRunning = false
     end)
 end
+
 
 -- สร้าง UI สำหรับแต่ละ Block
 for i = 1, 4 do
@@ -3322,15 +3327,7 @@ Macro:Keybind({
     end
 })
 
--- ตัวแปรป้องกันการกดปุ่มซ้อนบนมือถือ
-local lastClickTick = 0
-
 -- ปุ่มกดเรียกใช้งานผ่าน createButton ด้านนอก (รองรับมือถือ)
 createButton("Macro", Color3.fromRGB(0, 229, 255), false, function(state)
-    -- ป้องกันการกดซ้อนติดกันเร็วเกินไป (Debounce 0.5 วินาที)
-    if tick() - lastClickTick < 0.5 then return end
-    lastClickTick = tick()
-    
-    -- สั่งรันมาโคร
-    _G.RunComboMacro()
+    _G.RunComboMacro() 
 end)
