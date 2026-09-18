@@ -3245,18 +3245,72 @@ end
 -- ฟังก์ชันสั่งใช้งานสกิลหรือแอคชันต่างๆ
 local function ExecuteAction(skill, holdDuration)
     if skill == "Jump" then
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        task.wait(holdDuration > 0 and holdDuration or 0.03)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+        if UserInputService.TouchEnabled then
+            -- จำลองการกระโดดบนมือถือ
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+            task.wait(holdDuration > 0 and holdDuration or 0.03)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+        else
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+            task.wait(holdDuration > 0 and holdDuration or 0.03)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+        end
     elseif skill == "Click (M1)" then
-        -- รองรับการคลิกซ้ายทั้ง PC และจำลองทัชบนมือถือ
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-        task.wait(holdDuration > 0 and holdDuration or 0.03)
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+        if UserInputService.TouchEnabled then
+            -- จำลองการคลิกโจมตีบนมือถือ (กดหน้าจอ)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+            task.wait(holdDuration > 0 and holdDuration or 0.03)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+        else
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+            task.wait(holdDuration > 0 and holdDuration or 0.03)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+        end
     elseif skill ~= "None" then
-        PressKey(skill, holdDuration)
+        -- ตรวจสอบว่าเป็นมือถือหรือคอม
+        if UserInputService.TouchEnabled then
+            -- บนมือถือ: ค้นหาปุ่มสกิลบนหน้าจอ (PlayerGui) แล้วสั่งจำลองการทัชไปที่ปุ่มนั้นโดยตรง
+            local foundButton = false
+            for _, gui in ipairs(PlayerGui:GetDescendants()) do
+                if (gui:IsA("TextButton") or gui:IsA("ImageButton")) and (gui.Name:upper() == skill:upper() or gui.Text:upper() == skill:upper()) then
+                    -- จำลองการทัชลงบนปุ่มนั้นๆ บนมือถือ
+                    local absPos = gui.AbsolutePosition
+                    local absSize = gui.AbsoluteSize
+                    local centerX = absPos.X + (absSize.X / 2)
+                    local centerY = absPos.Y + (absSize.Y / 2)
+                    
+                    -- ส่งสัญญาณทัชหน้าจอตำแหน่งปุ่มสกิล
+                    VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
+                    task.wait(holdDuration > 0 and holdDuration or 0.05)
+                    VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
+                    
+                    foundButton = true
+                    break
+                end
+            end
+            
+            -- ถ้าหาปุ่มบนจอไม่พบ ให้ลองส่งคีย์บอร์ดเผื่อเคสที่ใช้ External Keyboard บนมือถือ
+            if not foundButton then
+                local keyCode = Enum.KeyCode[skill]
+                if keyCode then
+                    VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+                    task.wait(holdDuration > 0 and holdDuration or 0.05)
+                    VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+                end
+            end
+        else
+            -- ระบบคอมพิวเตอร์ปกติ (PC)
+            local keyCode = Enum.KeyCode[skill]
+            if keyCode then
+                VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+                task.wait(holdDuration > 0 and holdDuration or 0.03)
+                VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+            end
+        end
     end
 end
+
+
 
 -- ฟังก์ชันรันคอมโบหลัก (เก็บไว้ใน _G เพื่อให้ปุ่มเรียกใช้ได้ทันที)
 _G.RunComboMacro = function()
