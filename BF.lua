@@ -3164,25 +3164,12 @@ end)
 
 
 
-
-
-
-
-
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local UserInputService = game:GetService("UserInputService")
 
--- ตรวจสอบว่ามี Macro Library หรือยัง (ป้องกัน Error ถ้ายังไม่โหลด)
-if not Macro then
-    warn("Macro Library not found! Please make sure your UI library is loaded first.")
-    return
-end
-
--- รายการตัวเลือก
+-- รายการตัวเลือกอาวุธและสกิล
 local WeaponList = {
     "None",
     "Melee",
@@ -3202,6 +3189,7 @@ local SkillActionList = {
     "Jump"
 }
 
+-- ตั้งค่าบล็อกคอมโบ (สามารถปรับเปลี่ยนอาวุธและสกิลได้ที่นี่)
 local MacroSettings = {
     Block1 = { Weapon = "Sword", Skill = "X", Hold = 0, Wait = 0.4, Delay = 0.05 },
     Block2 = { Weapon = "Melee", Skill = "Z", Hold = 0, Wait = 0.4, Delay = 0.05 },
@@ -3209,7 +3197,7 @@ local MacroSettings = {
     Block4 = { Weapon = "Gun", Skill = "V", Hold = 0, Wait = 0.4, Delay = 0.05 }
 }
 
--- ตัวแปรสถานะ
+-- ตัวแปรสถานะการทำงาน
 local isRunning = false
 local macroEnabled = true
 
@@ -3223,7 +3211,7 @@ local function PressKey(keyName, holdDuration)
     VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
 end
 
--- ฟังก์ชันเลือกอาวุธ
+-- ฟังก์ชันเลือกอาวุธ (กดปุ่ม 1, 2, 3, 4)
 local function EquipWeapon(weaponType)
     if weaponType == "None" then return end
     
@@ -3260,7 +3248,7 @@ local function ExecuteAction(skill, holdDuration)
     end
 end
 
--- ฟังก์ชันรันคอมโบหลัก (ประกาศเป็น Global เพื่อให้ปุ่มเรียกใช้งานได้)
+
 _G.RunComboMacro = function()
     if not macroEnabled then return end
     if isRunning then return end
@@ -3272,7 +3260,7 @@ _G.RunComboMacro = function()
             local block = MacroSettings["Block" .. i]
             if block then
                 EquipWeapon(block.Weapon)
-                task.wait(0.08) -- หน่วงเวลาสลับอาวุธให้เสถียรบนมือถือ
+                task.wait(0.08) -- หน่วงเวลาสลับอาวุธให้เสถียร
                 
                 ExecuteAction(block.Skill, block.Hold)
                 
@@ -3290,7 +3278,7 @@ _G.RunComboMacro = function()
     end)
 end
 
-local RunComboMacro = _G.RunComboMacro
+
 
 -- สร้าง UI สำหรับแต่ละ Block
 for i = 1, 4 do
@@ -3348,108 +3336,11 @@ Macro:Keybind({
     Value = "",
     Flag = "RunComboMacro_Keybind",
     Callback = function(key)
-        RunComboMacro()
+        _G.RunComboMacro()
     end
 })
 
--- ==========================================
--- Draggable Macro Button GUI (Isolated Scope)
--- ==========================================
-task.spawn(function()
-    pcall(function()
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "DraggableMacroGui"
-        screenGui.ResetOnSpawn = false
-        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        
-        -- รองรับระบบป้องกัน CoreGUI หรือใส่ไว้ใน PlayerGui
-        if syn and syn.protect_gui then
-            syn.protect_gui(screenGui)
-            screenGui.Parent = CoreGui
-        else
-            screenGui.Parent = playerGui
-        end
-
-        local button = Instance.new("TextButton", screenGui)
-        button.Size = UDim2.new(0, 120, 0, 38)
-        button.Position = UDim2.new(0, 15, 0, 130)
-        button.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
-        button.BorderSizePixel = 0
-        button.Text = ""
-        button.AutoButtonColor = false
-
-        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
-
-        local uiGradient = Instance.new("UIGradient", button)
-        uiGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 42)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 24))
-        })
-        uiGradient.Rotation = 45
-
-        local uiStroke = Instance.new("UIStroke", button)
-        uiStroke.Color = Color3.fromRGB(60, 60, 70)
-        uiStroke.Thickness = 1.2
-        uiStroke.Transparency = 0.3
-
-        local textLabel = Instance.new("TextLabel", button)
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.Font = Enum.Font.GothamSemibold
-        textLabel.Text = "Macro"
-        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        textLabel.TextSize = 12
-
-        button.MouseButton1Click:Connect(function()
-            uiGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(16, 185, 129)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 150, 105))
-            })
-            uiStroke.Color = Color3.fromRGB(52, 211, 153)
-            
-            if _G.RunComboMacro then 
-                _G.RunComboMacro() 
-            end
-            
-            task.delay(0.2, function()
-                uiGradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 42)),
-                    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 24))
-                })
-                uiStroke.Color = Color3.fromRGB(60, 60, 70)
-            end)
-        end)
-
-        local dragging, dragStart, startPos
-
-        button.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                dragStart = input.Position
-                startPos = button.Position
-                
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputType.End then
-                        dragging = false
-                    end
-                end)
-            end
-        end)
-
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                local delta = input.Position - dragStart
-                local newX = startPos.X.Offset + delta.X
-                local newY = startPos.Y.Offset + delta.Y
-                
-                local screenSize = screenGui.AbsoluteSize
-                local btnSize = button.AbsoluteSize
-                
-                local clampedX = math.clamp(newX, 0, screenSize.X - btnSize.X)
-                local clampedY = math.clamp(newY, 0, screenSize.Y - btnSize.Y)
-                
-                button.Position = UDim2.new(0, clampedX, 0, clampedY)
-            end
-        end)
-    end)
+-- ปุ่มกดเรียกใช้งานผ่าน createButton ด้านนอก
+createButton("Macro", Color3.fromRGB(0, 229, 255), false, function(state)
+    _G.RunComboMacro() 
 end)
