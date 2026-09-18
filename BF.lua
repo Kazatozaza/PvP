@@ -3168,6 +3168,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local UserInputService = game:GetService("UserInputService")
 
 -- รายการตัวเลือกอาวุธและสกิล
 local WeaponList = {
@@ -3189,7 +3190,7 @@ local SkillActionList = {
     "Jump"
 }
 
--- ตั้งค่าบล็อกคอมโบ (สามารถปรับเปลี่ยนอาวุธและสกิลได้ที่นี่)
+-- ตั้งค่าบล็อกคอมโบ
 local MacroSettings = {
     Block1 = { Weapon = "Sword", Skill = "X", Hold = 0, Wait = 0.4, Delay = 0.05 },
     Block2 = { Weapon = "Melee", Skill = "Z", Hold = 0, Wait = 0.4, Delay = 0.05 },
@@ -3201,14 +3202,22 @@ local MacroSettings = {
 local isRunning = false
 local macroEnabled = true
 
--- ฟังก์ชันจำลองการกดปุ่มคีย์บอร์ด
+-- ฟังก์ชันจำลองการกดปุ่ม (รองรับทั้ง PC และ Mobile ผ่าน VirtualInputManager)
 local function PressKey(keyName, holdDuration)
     local keyCode = Enum.KeyCode[keyName]
     if not keyCode then return end
 
-    VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-    task.wait(holdDuration > 0 and holdDuration or 0.03)
-    VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+    -- ตรวจสอบว่าใช้งานบนมือถือหรือคอม เพื่อปรับวิธีส่งค่าให้เหมาะสม
+    if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+        -- สำหรับมือถือ บางครั้งต้องจำลอง Touch หรือใช้ VirtualInputManager แบบเจาะจง
+        VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+        task.wait(holdDuration > 0 and holdDuration or 0.05)
+        VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+    else
+        VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+        task.wait(holdDuration > 0 and holdDuration or 0.03)
+        VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+    end
 end
 
 -- ฟังก์ชันเลือกอาวุธ (กดปุ่ม 1, 2, 3, 4)
@@ -3228,7 +3237,7 @@ local function EquipWeapon(weaponType)
 
     if keyToPress then
         VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
-        task.wait(0.05)
+        task.wait(0.06)
         VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
     end
 end
@@ -3240,6 +3249,7 @@ local function ExecuteAction(skill, holdDuration)
         task.wait(holdDuration > 0 and holdDuration or 0.03)
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
     elseif skill == "Click (M1)" then
+        -- รองรับการคลิกซ้ายทั้ง PC และจำลองทัชบนมือถือ
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
         task.wait(holdDuration > 0 and holdDuration or 0.03)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
@@ -3248,7 +3258,7 @@ local function ExecuteAction(skill, holdDuration)
     end
 end
 
-
+-- ฟังก์ชันรันคอมโบหลัก (เก็บไว้ใน _G เพื่อให้ปุ่มเรียกใช้ได้ทันที)
 _G.RunComboMacro = function()
     if not macroEnabled then return end
     if isRunning then return end
@@ -3260,7 +3270,7 @@ _G.RunComboMacro = function()
             local block = MacroSettings["Block" .. i]
             if block then
                 EquipWeapon(block.Weapon)
-                task.wait(0.08) -- หน่วงเวลาสลับอาวุธให้เสถียร
+                task.wait(0.1) -- เพิ่มเวลาหน่วงเล็กรอนisมือถือเปลี่ยนอาวุธ
                 
                 ExecuteAction(block.Skill, block.Hold)
                 
@@ -3277,8 +3287,6 @@ _G.RunComboMacro = function()
         isRunning = false
     end)
 end
-
-
 
 -- สร้าง UI สำหรับแต่ละ Block
 for i = 1, 4 do
