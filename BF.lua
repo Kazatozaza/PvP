@@ -95,8 +95,8 @@ pcall(function()
     
     SliderIcon = Color3.fromHex("#FFFFFF"),
 
-    Slider = Color3.fromHex("#FFFFFF"),
-    SliderThumb = Color3.fromHex("#FFFFFF"),
+    Slider = Color3.fromHex("#3b82f6"),       -- สีหลอด Slider
+    SliderThumb = Color3.fromHex("#FFFFFF"),  -- สีปุ่มลาก Slider
     SliderIconFrom = Color3.fromHex("#FFFFFF"),
     SliderIconTo = Color3.fromHex("#FFFFFF"),
     
@@ -171,12 +171,12 @@ end
 
 
 Window:Section({
-    Title = "Main - 2",
+    Title = "Control Panel",
 })
 
 local Home = Window:Tab({
-    Title = "How to",
-    Icon = "house"
+    Title = "Changelog",
+    Icon = "clipboard-list"
 })
 
 
@@ -189,7 +189,7 @@ local GeneralTab = Window:Tab({
 
 Window:Divider() 
 Window:Section({
-    Title = "Combat",
+    Title = "Combat(PvP)",
 })
 
 local CombatTab = Window:Tab({
@@ -197,14 +197,14 @@ local CombatTab = Window:Tab({
     Icon = "swords"
 })
 
-local Visuals = Window:Tab({
-    Title = "Visuals",
+local Visuals = Window:Tab({ 
+    Title = "Visuals (ESP)",
     Icon = "crosshair" 
 })
 
-local Macro = Window:Tab({
-    Title = "Macro",
-    Icon = "repeat" 
+local Macro = Window:Tab({ 
+    Title = "Macro / PC",
+    Icon = "package" 
 })
 
 
@@ -212,11 +212,11 @@ local Macro = Window:Tab({
 
 Window:Divider() 
 Window:Section({
-    Title = "Player & Config",
+    Title = "Player & Configuration",
 })
 
 local Bounty = Window:Tab({
-    Title = "Bounty hunting",
+    Title = "Bounty Hunting",
     Icon = "moon" 
 })
 
@@ -297,67 +297,87 @@ elseif not isOnline then
     statusText = "■ OFFLINE [DOWN]"
 end
 
--- สร้าง Paragraph แบบจัดเรียงเท่ากันและล้ำสมัย
+-- ตรวจจับประเภทอุปกรณ์ (Device Detection)
+local userInputService = game:GetService("UserInputService")
+local players = game:GetService("Players")
+local localPlayer = players.LocalPlayer
+
+local deviceText = "Unknown Device"
+
+if userInputService.TouchEnabled and not userInputService.KeyboardEnabled then
+    deviceText = "Mobile / Tablet"
+elseif userInputService.TouchEnabled and userInputService.KeyboardEnabled then
+    deviceText = "Laptop / Touch PC"
+else
+    deviceText = "PC / Computer"
+end
+
+-- Script update & Creator information
+local isScriptUpdated = "Yes (Latest)"
+local updateDate = "September 20, 2026"
+local scriptCreator = "Destiny Hub"
+
+-- Player information
+local playerName = localPlayer.Name
+local playerDisplayName = localPlayer.DisplayName
+
 Home:Paragraph({
-    Title = "",
+    Title = "⚡ CYBERNETIC HUB | Dashboard",
     Desc = string.format(
+        "• Status: [ <font color='#00FF00'>%s</font> ]\n• Executor: <font color='#00BFFF'>%s</font>\n• Device: <font color='#FFA500'>%s</font>\n• Created By: <font color='#FF4500'>%s</font>\n• Updated Status: <font color='#00FF00'>%s</font>\n• Last Updated: <font color='#FFFF00'>%s</font>\n• Player: <font color='#FF69B4'>%s (@%s)</font>\n\n────────────────────────\n🌟 Welcome back! Thanks for using our premium script hub.",
         statusText,
-        executorName
+        executorName,
+        deviceText,
+        scriptCreator,
+        isScriptUpdated,
+        updateDate,
+        playerDisplayName,
+        playerName
     ),
     ImageSize = 28,
-    Thumbnail = "rbxassetid://130312549112790", 
-    ThumbnailSize = 78,
+    Thumbnail = "rbxassetid://79823581173943", 
+    ThumbnailSize = 58,
     Buttons = {
         {
-            Title = "Copy Official Website",
+            Title = "Copy Discord Website",
             Icon = "link",
             Callback = function()
                 if safeClipboard then
-                    safeClipboard("https://astonishing-biscotti-c152f5.netlify.app/")
+                    safeClipboard("https://discord.gg/hUMaVECvBz")
                 else
-                    warn("⚠️ [Cybernetic Hub] ตัวรันไม่รองรับฟังก์ชันคัดลอกอัตโนมัติ")
+                    warn("⚠️ [Cybernetic Hub] Your executor does not support automatic clipboard.")
                 end
             end
         }
     }
 })
 
-local AimSection = Home:Section({ Title = "-----------------------------------------" })
-
-Home:Button({
-    Title = "Reset All Stats",
-    Desc = "Instantly resets all your character stats, giving you the freedom to rebuild your specialized combat build.",
-    Callback = function()
-        local args = {
-            "BlackbeardReward",
-            "Refund",
-            "2"
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
-    end
-})
-
-Home:Button({
-    Title = "Pirates",
-    Desc = "Set sail on the open seas as a fierce pirate, seeking ultimate freedom, legendary bounties, and thrilling adventures.",
-    Callback = function()
-        local args = {
-            "SetTeam2",
-            "Pirates"
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
-    end
-})
-
-Home:Button({
-    Title = "Marines",
-    Desc = "Enlist in the prestigious Marine forces to uphold justice, maintain world order, and hunt down dangerous outlaws.",
-    Callback = function()
-        local args = {
-            "SetTeam2",
-            "Marines"
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+local FPS = Home:Input({
+    Title = "FPS Unlocker ",
+    Desc = "Enter your desired max FPS ",
+    Default = "60",
+    Placeholder = "Enter max FPS...",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num then
+            -- กำหนดขอบเขตความปลอดภัย (เช่น ไม่ต่ำกว่า 1 และไม่เกิน 9999 หรือปรับแก้ได้ตามชอบ)
+            if num < 1 then
+                num = 1
+            elseif num > 9999 then
+                num = 9999
+            end
+            
+            -- สั่งตั้งค่า FPS ให้กับเกมผ่าน SetRenderingEnabled หรือ RunService (ขึ้นอยู่กับฟังก์ชันของ Executor)
+            pcall(function()
+                if setfpscap then
+                    setfpscap(num)
+                else
+                    warn("⚠️ Your executor does not support 'setfpscap'.")
+                end
+            end)
+        else
+            warn("⚠️ Please enter a valid number!")
+        end
     end
 })
 
@@ -826,9 +846,6 @@ end
 
 
 
-
-
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
@@ -837,48 +854,14 @@ local Camera = workspace.CurrentCamera
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- Cache global functions for speed
-local type = type
-local typeof = typeof
-local unpack = unpack
-local pairs = pairs
-
-local allowedRemotes = {
-    shoot = true, fire = true, attack = true, 
-    combat = true, ability = true, skill = true, gun = true
-}
-
-local blockedRemotes = {
-
-}
-
--- Memoization cache to avoid repeated string scanning on the same remote
-local remoteCache = {}
-
-local function isAllowedRemote(self)
-    local name = self.Name
-    local cached = remoteCache[name]
-    if cached ~= nil then
-        return cached
+-- เปลี่ยนจากหา Root เป็นหา Head แทน
+local function getHead()
+    local target = getgenv().CurrentTarget
+    if target and target.Parent then
+        local character = target.Parent
+        return character:FindFirstChild("Head")
     end
-
-    local lowerName = name:lower()
-    for blockWord in pairs(blockedRemotes) do
-        if lowerName:find(blockWord, 1, true) then
-            remoteCache[name] = false
-            return false
-        end
-    end
-
-    for keyword in pairs(allowedRemotes) do
-        if lowerName:find(keyword, 1, true) then
-            remoteCache[name] = true
-            return true
-        end
-    end
-
-    remoteCache[name] = false
-    return false
+    return nil
 end
 
 task.spawn(function()
@@ -887,75 +870,41 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-local function getRoot()
-    local target = getgenv().CurrentTarget
-    if target and target.Parent then
-        local character = target.Parent
-        -- ค้นหาชิ้นส่วนส่วนลำตัวรองรับทั้ง R6 และ R15
-        return character:FindFirstChild("HumanoidRootPart") 
-            or character:FindFirstChild("UpperTorso") 
-            or character:FindFirstChild("Torso")
-    end
-    return nil
-end
-
-    -- Combined / Optimized __index Hook
+    -- __index Hook สำหรับดักข้อมูล Mouse (Hit, Target, X, Y)
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and self == Mouse then
-            local r = getRoot()
-            if r then
+            local head = getHead()
+            if head then
                 if idx == "Hit" then 
-                    return r.CFrame
+                    return head.CFrame
                 elseif idx == "Target" then 
-                    return r
+                    return head -- แก้ไขจาก r.NRP เป็น head ตัวจริง
                 elseif idx == "X" or idx == "Y" then 
-                    return Camera:WorldToScreenPoint(r.Position)[idx]
+                    return Camera:WorldToScreenPoint(head.Position)[idx]
                 end
             end
         end
         return oldIndex(self, idx)
     end))
 
-    -- Combined / Optimized __namecall Hook
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
         local target = getgenv().CurrentTarget
         local enabled = getgenv().SilentAimEnabled
 
-        if target then
-            -- Handle Raycast / Viewport overrides
-            if enabled or UserInputService.TouchEnabled then
-                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                    local r = getRoot()
-                    if r then 
-                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
-                    end
-                end
-            end
-
-            -- Handle Remote FireServer / InvokeServer overrides
-            if enabled and (method == "FireServer" or method == "InvokeServer") then
-                if isAllowedRemote(self) then
-                    local targetPos = GetPredictedPosition(target)
-                    if targetPos then
-                        local args = { ... }
-                        for i = 1, #args do
-                            local arg = args[i]
-                            local argType = typeof(arg)
-                            if argType == "Vector3" then
-                                args[i] = targetPos
-                            elseif argType == "CFrame" then
-                                args[i] = arg - arg.Position + targetPos
-                            end
-                        end
-                        return oldNamecall(self, unpack(args))
-                    end
+        if enabled and target then
+            if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                local head = getHead()
+                if head then 
+                    local origin = Camera.CFrame.Position
+                    local destination = head.Position
+                    return Ray.new(origin, (destination - origin).Unit * 1000) 
                 end
             end
         end
-
+        
         return oldNamecall(self, ...)
     end))
 end)
@@ -963,10 +912,86 @@ end)
 
 
 
+do
+    getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
+    getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255) -- เปลี่ยนค่าเริ่มต้นเป็นสีขาว
+
+    local LocalPlayer = game:GetService("Players").LocalPlayer
+
+    -- ฟังก์ชันสำหรับเปลี่ยนสีเฉพาะ Particle, Trail และ Beam ของสกิลเท่านั้น
+    local function applySkillColorOnly(targetObj)
+        if not targetObj or not getgenv().SkillColorChangerEnabled then return end
+        
+        local function apply(item)
+            if item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") then
+                pcall(function()
+                    item.Color = ColorSequence.new(getgenv().SkillColor)
+                end)
+            end
+        end
+
+        for _, descendant in ipairs(targetObj:GetDescendants()) do
+            apply(descendant)
+        end
+    end
+
+    -- ฟังก์ชันเฝ้าระวังเอฟเฟกต์ใหม่ที่ตัวละคร
+    local function hookCharacterEffects(character)
+        if not character then return end
+        applySkillColorOnly(character)
+        
+        character.DescendantAdded:Connect(function(descendant)
+            if getgenv().SkillColorChangerEnabled then
+                task.defer(function()
+                    applySkillColorOnly(descendant)
+                end)
+            end
+        end)
+    end
+
+    if LocalPlayer.Character then
+        hookCharacterEffects(LocalPlayer.Character)
+    end
+    LocalPlayer.CharacterAdded:Connect(hookCharacterEffects)
+
+    -- ดักจับเอฟเฟกต์สกิลที่ถูกปล่อยออกมาใน Workspace
+    workspace.DescendantAdded:Connect(function(descendant)
+        if getgenv().SkillColorChangerEnabled and LocalPlayer.Character and descendant:IsDescendantOf(workspace) then
+            task.defer(function()
+                applySkillColorOnly(descendant)
+            end)
+        end
+    end)
+end
 
 
+CombatTab:Toggle({
+    Title = "Skill Color Changer",
+    Desc = "Change skill effect colors only.",
+    Flag = "skill_color_toggle",
+    Value = getgenv().SkillColorChangerEnabled,
+    Callback = function(Value)
+        getgenv().SkillColorChangerEnabled = Value
+        if Value and LocalPlayer.Character then
+            applySkillColorOnly(LocalPlayer.Character)
+        else
+        end
+    end,
+})
 
-
+CombatTab:Colorpicker({
+    Title = "Select Skill Color",
+    Desc = "Choose your custom skill effect color.",
+    Default = getgenv().SkillColor,
+    Callback = function(color)
+        if not getgenv().RainbowModeEnabled then
+            getgenv().SkillColor = color
+            if getgenv().SkillColorChangerEnabled and LocalPlayer.Character then
+                applySkillColorOnly(LocalPlayer.Character)
+            end
+        end
+    end
+})
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
@@ -1126,6 +1151,32 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
+
+
+getgenv().HitboxEnabled = true
+getgenv().HitboxSize = 6
+
+-- ==========================================
+RunService.RenderStepped:Connect(function()
+    if not getgenv().HitboxEnabled then return end
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local char = p.Character
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            
+            if hum and hum.Health > 0 then
+                local head = char:FindFirstChild("Head")
+                if head then
+                    head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                    head.Transparency = 1
+                    head.CanCollide = false
+                    head.CastShadow = false
+                end
+            end
+        end
+    end
+end)
 
 
 local HideShowUI = Config:Section({ Title = "Settings" })
@@ -1954,68 +2005,7 @@ local function SetFastAttack(state)
         task.wait()
     end)
 end
-
--- ฮิตBox (ขยายหัวผู้เล่นอื่น)
-getgenv().HitboxEnabled = getgenv().HitboxEnabled or true
-getgenv().HitboxSize = getgenv().HitboxSize or 18
-getgenv().HitboxColor = getgenv().HitboxColor or Color3.fromRGB(96, 205, 255)
-getgenv().HitboxShowBox = getgenv().HitboxShowBox or true
-
-local function resetPlayerHitbox(character)
-    if not character then return end
-    local head = character:FindFirstChild("Head")
-    if head then
-        local originalSize = head:FindFirstChild("OriginalSize")
-        if originalSize then
-            head.Size = originalSize.Value
-            originalSize:Destroy()
-        end
-        local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
-        if selectionBox then selectionBox:Destroy() end
-        head.Transparency, head.CanCollide, head.CastShadow = 0, true, true
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    if not getgenv().HitboxEnabled then return end
-
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= player and p.Character then
-            local char = p.Character
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            
-            if hum and hum.Health > 0 then
-                local head = char:FindFirstChild("Head")
-                if head then
-                    local originalSize = head:FindFirstChild("OriginalSize")
-                    if not originalSize then
-                        originalSize = Instance.new("Vector3Value", head)
-                        originalSize.Name, originalSize.Value = "OriginalSize", head.Size
-                    end
-                    
-                    local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
-                    if getgenv().HitboxShowBox then
-                        if not selectionBox then
-                            selectionBox = Instance.new("SelectionBox", head)
-                            selectionBox.Name = "CustomHitboxSelectionBox"
-                        end
-                        selectionBox.Adornee = head
-                        selectionBox.Color3 = getgenv().HitboxColor
-                        selectionBox.LineThickness = 0.001
-                    elseif selectionBox then
-                        selectionBox:Destroy()
-                    end
-                    
-                    head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                    head.Transparency, head.CanCollide, head.CastShadow = 1, false, false
-                end
-            else
-                resetPlayerHitbox(char)
-            end
-        end
-    end
-end)
-
+ 
 
 --  ปุ่มทั้งหมด=================================================================
 
@@ -2167,67 +2157,6 @@ CombatTab:Slider({
         getgenv().MaxDistance = Value
     end,
 })
-
-local HitboxSection = CombatTab:Section({ Title = "Hitbox Expander" })
-
-CombatTab:Toggle({
-    Title = "Expand Hitboxes",
-    Desc = "Enlarge player hitboxes.",
-    Flag = "HitboxToggle",
-    Value = getgenv().HitboxEnabled,
-    Callback = function(state)
-        getgenv().HitboxEnabled = state
-        if not state then
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character then
-                    resetPlayerHitbox(player.Character)
-                end
-            end
-        end
-    end,
-})
-
-CombatTab:Toggle({
-    Title = "Show Hitbox Visual",
-    Desc = "Render hitbox outlines.",
-    Flag = "HitboxVisualToggle",
-    Value = getgenv().HitboxShowBox,
-    Callback = function(state)
-        getgenv().HitboxShowBox = state
-        if not state then
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character then
-                    local head = player.Character:FindFirstChild("Head")
-                    if head then
-                        local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
-                        if selectionBox then
-                            selectionBox:Destroy()
-                        end
-                    end
-                end
-            end
-        end
-    end,
-})
-
-CombatTab:Slider({
-    Title = "Hitbox Scale",
-    Desc = "Adjust hitbox size multiplier.",
-    Flag = "HitboxSizeSlider",
-    Value = {
-        Min = 10,
-        Max = 50,
-        Default = getgenv().HitboxSize
-    },
-    Increment = 1,
-    Callback = function(value)
-        getgenv().HitboxSize = value
-    end,
-})
-
-
-
-local CombatBuffsSection = GeneralTab:Section({ Title = "Combat" })
 
 local FastAttackToggle = GeneralTab:Toggle({
     Title = "Fast Attack",
@@ -2486,8 +2415,6 @@ GeneralTab:Slider({
     end,
 })
 
-local ESPSection = Visuals:Section({ Title = "ESP Settings" })
-
 
 Visuals:Toggle({
     Title = "Show Name",
@@ -2688,7 +2615,18 @@ Config:Toggle({
     end,
 })
 
-
+Config:Button({
+    Title = "Reset All Stats",
+    Desc = "Instantly resets all your character stats, giving you the freedom to rebuild your specialized combat build.",
+    Callback = function()
+        local args = {
+            "BlackbeardReward",
+            "Refund",
+            "2"
+        }
+        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+    end
+})
 
 
 
@@ -3050,8 +2988,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local localPlayer = Players.LocalPlayer
 
-
-
 local autoBountyEnabled = false
 local bountyConnection = nil
 local safeModeActive = true
@@ -3250,7 +3186,7 @@ local function equipToolByType(toolType)
 end
 
 
-local flySpeed = 260
+local flySpeed = 250
 
 -- ฟังก์ชันช่วยตรวจสอบและใช้งานสกิลแบบลื่นไหล
 local function executeSkills(skillTable, toolType)
@@ -3357,7 +3293,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         -- ถ้านอกระยะ MaxDistance ให้บินพุ่งเข้าหาแบบควบคุมความเร็วด้วย AssemblyLinearVelocity
         local direction = (targetPos - currentPos).Unit
         local currentSpeed = speed or flySpeed
-        local clampedSpeed = math.min(currentSpeed, 260)
+        local clampedSpeed = math.min(currentSpeed, 250)
         
         myRoot.AssemblyLinearVelocity = direction * clampedSpeed
         myRoot.AssemblyAngularVelocity = Vector3.zero
@@ -3381,14 +3317,14 @@ local function runAutoBounty(deltaTime)
     local currentHpPercent = (humanoid.Health / humanoid.MaxHealth) * 100
 
     -- 1. ระบบ Safe Mode (เช็คและบังคับหนีทันทีเมื่อเลือดต่ำกว่าเกณฑ์)
-if safeModeActive and humanoid.Health > 0 then
+    if safeModeActive and humanoid.Health > 0 then
         -- เริ่มกระบวนการหนีฉุกเฉิน
         if currentHpPercent <= safeModePercent and not isSafeEscaping then
             isSafeEscaping = true
             setSafeNoclip(true)
             myRoot.AssemblyLinearVelocity = Vector3.new(0, flySpeed, 0)
             myRoot.AssemblyAngularVelocity = Vector3.zero
-            myChar:PivotTo(myRoot.CFrame + Vector3.new(0, 660, 0))
+            myChar:PivotTo(myRoot.CFrame + Vector3.new(0, 500, 0))
             humanoid.PlatformStand = true
             if notify then notify("Safe Mode", "Critical HP! Emergency teleport & high-speed flight activated!") end
         end
@@ -3404,9 +3340,9 @@ if safeModeActive and humanoid.Health > 0 then
             if currentHpPercent >= safeStopPercent then
                 isSafeEscaping = false
                 humanoid.PlatformStand = false
-                setSafeNoclip(false) -- ปิด Noclip เพื่อให้ตัวละครชนพื้นและตกลงตามแรงโน้มถ่วงปกติ
-                myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- ล้างความเร็วแนวตั้ง เพื่อให้แรงโน้มถ่วงดึงตกลงมาตรงๆ
-                if notify then notify("Safe Mode", "HP fully restored. Dropping down!") end
+                setSafeNoclip(false)
+                myRoot.AssemblyLinearVelocity = Vector3.zero
+                if notify then notify("Safe Mode", "HP fully restored. Resuming normal operations.") end
             end
             
             -- ตัดจบการทำงานในรอบนี้ทันที ไม่ให้ไปทำระบบล่าต่อขณะกำลังหนี
@@ -3414,7 +3350,6 @@ if safeModeActive and humanoid.Health > 0 then
         end
     end
     
-
 
 
 
@@ -3499,10 +3434,14 @@ for _, targetPlayer in ipairs(Players:GetPlayers()) do
 
                             if isLevelValid then
                                 local distance = (targetRoot.Position - myRoot.Position).Magnitude
-                                if distance < shortestDistance then
-                                    shortestDistance = distance
-                                    nearestTargetRoot = targetRoot
-                                    nearestTargetChar = char
+                                
+                                -- **เพิ่มเงื่อนไขตรวจสอบระยะทาง: ถ้ามากกว่า 10000 จะไม่สนใจ**
+                                if distance <= 10000 then
+                                    if distance < shortestDistance then
+                                        shortestDistance = distance
+                                        nearestTargetRoot = targetRoot
+                                        nearestTargetChar = char
+                                    end
                                 end
                             end
                         end 
@@ -3512,8 +3451,6 @@ for _, targetPlayer in ipairs(Players:GetPlayers()) do
         end 
     end 
 end
-
-
 
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -3578,33 +3515,36 @@ end
 -- ดึงข้อมูล Player จาก Character ของเป้าหมาย
 local targetPlayer = game:GetService("Players"):GetPlayerFromCharacter(nearestTargetChar)
 
--- ตรวจสอบเป้าหมาย, เลเวล และทีม (ทำงานตามปกติ ไม่ติดเงื่อนไข Combat)
+-- ตรวจสอบเป้าหมาย, เลเวล, ทีม และระยะทาง
 local isTargetValid = false
 if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 then
-    if not shouldSkipTarget(nearestTargetChar, targetPlayer) then
-        local success, targetLevel = pcall(function()
-            return nearestTargetChar.Data.Level.Value 
-        end)
-        local myLevel = pcall(function() return localPlayer.Data.Level.Value end) and localPlayer.Data.Level.Value or 0
-
-        local isLevelValid = true
-        if success and type(myLevel) == "number" and type(targetLevel) == "number" then
-            if math.abs(myLevel - targetLevel) > 800 then
-                isLevelValid = false
-            end
-        end
-
-        if isLevelValid then
-            isTargetValid = true
-            pcall(function()
-                smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
+    -- เช็กระยะทางว่าต้องไม่เกิน 10000 หน่วย
+    if shortestDistance <= 10000 then
+        if not shouldSkipTarget(nearestTargetChar, targetPlayer) then
+            local success, targetLevel = pcall(function()
+                return nearestTargetChar.Data.Level.Value 
             end)
-            return
+            local myLevel = pcall(function() return localPlayer.Data.Level.Value end) and localPlayer.Data.Level.Value or 0
+
+            local isLevelValid = true
+            if success and type(myLevel) == "number" and type(targetLevel) == "number" then
+                if math.abs(myLevel - targetLevel) > 800 then
+                    isLevelValid = false
+                end
+            end
+
+            if isLevelValid then
+                isTargetValid = true
+                pcall(function()
+                    smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
+                end)
+                return
+            end
         end
     end
 end
 
--- ถ้าไม่มีเป้าหมาย, เลเวลห่างเกิน 800, หรืออยู่ทีม Marines เหมือนกัน ให้เข้าสู่กระบวนการ Server Hop
+-- ถ้าไม่มีเป้าหมาย, ระยะทางเกิน 10000, หรือเลเวลห่างเกิน 800 ให้เข้าสู่กระบวนการ Server Hop
 if not autoBountyEnabled then return end
 
 for i = 1, 50 do 
@@ -3614,11 +3554,10 @@ end
 
 if not autoBountyEnabled then return end
 
--- 🔴 [จุดที่เพิ่ม] ก่อนจะเริ่มเปิดหน้าต่าง Server Browser เพื่อย้ายเซิร์ฟ ให้เช็กว่าเราติด Combat อยู่หรือไม่
+-- ตรวจสอบก่อนเปิด Server Browser ว่าผู้เล่นติด Combat อยู่หรือไม่
 local currentCharacter = localPlayer.Character
 if isPlayerInCombat(localPlayer, currentCharacter) then
-    print("[Server Hop] 🔴 กำลังติด Combat อยู่ ยกเลิกการย้ายเซิร์ฟเพื่อความปลอดภัย!")
-    return -- ถ้าติดคอมแابتอยู่ จะหยุดกระบวนการย้ายเซิร์ฟทันที
+    return -- หากติด Combat จะหยุดการย้ายเซิร์ฟทันที
 end
 
 local frame = localPlayer.PlayerGui:WaitForChild("ServerBrowser")
@@ -3636,9 +3575,8 @@ end
 
 -- วนลูปกดปุ่ม Join ทุกๆ 0.1 วินาที และเลื่อนหน้าจอ
 while autoBountyEnabled do
-    -- เช็กซ้ำอีกรอบระหว่างกำลังกดเปลี่ยนเซิร์ฟ
+    -- เช็กซ้ำระหว่างกำลังกดเปลี่ยนเซิร์ฟ
     if isPlayerInCombat(localPlayer, localPlayer.Character) then
-        print("[Server Hop] 🔴 ติด Combat ระหว่างกดหาเซิร์ฟ ยกเลิกการย้าย!")
         frame.Enabled = false
         return
     end
@@ -3667,14 +3605,13 @@ while autoBountyEnabled do
 end
 end
 
-
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local charactersFolder = Workspace:WaitForChild("Characters", 5)
 
 local statusParagraph = Bounty:Paragraph({
-    Title = "สถานะผู้เล่นในเซิร์ฟเวอร์ (PvP Status)",
+    Title = "Combat Status Monitor",
     Desc = "กำลังโหลดข้อมูล..."
 })
 
@@ -3691,25 +3628,11 @@ local function updateParagraph(text)
     end)
 end
 
-
 task.spawn(function()
     while true do
         local Players = game:GetService("Players")
         local LocalPlayer = Players.LocalPlayer
-        
-        -- ถ้ายังไม่มีตัวละครหรือ LocalPlayer ให้รอแล้ววนลูปใหม่ (ป้องกันลูปตาย/Script Crash)
-        if not LocalPlayer then
-            task.wait(1)
-            continue
-        end
-
-        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            task.wait(1)
-            continue
-        end
-
-        local myRoot = LocalPlayer.Character.HumanoidRootPart
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if not LocalPlayer then return end
 
         -- ฟังก์ชันดึงเลเวลจาก Player หรือ Character
         local function getPlayerLevel(player)
@@ -3724,18 +3647,22 @@ task.spawn(function()
             return success and lvl or nil
         end
 
-        -- ดึงเลเวลของผู้เล่นหลัก (LocalPlayer)
         local myLevel = getPlayerLevel(LocalPlayer)
 
-        -- ตัวแปรสำหรับเก็บเป้าหมายที่ใกล้ที่สุด
         local nearestTargetRoot = nil
         local nearestTargetChar = nil
         local shortestDistance = math.huge
 
+        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            task.wait(0.5)
+            continue
+        end
+        local myRoot = LocalPlayer.Character.HumanoidRootPart
+
         for _, targetPlayer in ipairs(Players:GetPlayers()) do
             if targetPlayer ~= LocalPlayer then
                 
-                -- ตรวจสอบทีม Marines (ถ้าอยู่ทีมเดียวกัน ข้ามทันที)
+                -- ตรวจสอบทีม Marines
                 if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
                     if targetPlayer.Team and targetPlayer.Team == LocalPlayer.Team then 
                         continue 
@@ -3748,14 +3675,7 @@ task.spawn(function()
                     local targetRoot = char:FindFirstChild("HumanoidRootPart")
 
                     if targetHum and targetHum.Health > 0 and targetRoot then
-                        local skipTarget = false
-                        pcall(function()
-                            if _G.shouldSkipTarget and _G.shouldSkipTarget(targetPlayer, char) then
-                                skipTarget = true
-                            end
-                        end)
-
-                        if not skipTarget then
+                        if not shouldSkipTarget or not shouldSkipTarget(targetPlayer, char) then
                             local inCombat = false 
                             local inSafeZone = false
                             
@@ -3775,7 +3695,6 @@ task.spawn(function()
                                     local targetLevel = getPlayerLevel(targetPlayer)
                                     local isLevelValid = true
                                     
-                                    -- ถ้าระดับเลเวลต่างกันเกิน 800 จะถูกข้าม
                                     if type(myLevel) == "number" and type(targetLevel) == "number" then
                                         local diff = math.abs(myLevel - targetLevel)
                                         if diff > 800 then
@@ -3785,10 +3704,13 @@ task.spawn(function()
 
                                     if isLevelValid then
                                         local distance = (targetRoot.Position - myRoot.Position).Magnitude
-                                        if distance < shortestDistance then
-                                            shortestDistance = distance
-                                            nearestTargetRoot = targetRoot
-                                            nearestTargetChar = char
+                                        
+                                        if distance <= 10000 then
+                                            if distance < shortestDistance then
+                                                shortestDistance = distance
+                                                nearestTargetRoot = targetRoot
+                                                nearestTargetChar = char
+                                            end
                                         end
                                     end
                                 end 
@@ -3797,7 +3719,7 @@ task.spawn(function()
                     end 
                 end 
             end 
-        end
+        end 
         
         -- ข้อมูลเป้าหมายสำหรับแสดงผลบน UI
         local lockedTargetName = "None"
@@ -3806,10 +3728,24 @@ task.spawn(function()
         local targetCurrentHp = 0
         local targetMaxHp = 0
         local targetLevelStr = "???"
+        local targetTeamName = "Unknown"
+        local targetTeamColorHex = "#ffffff"
 
         if nearestTargetChar then
             local p = Players:GetPlayerFromCharacter(nearestTargetChar)
             lockedTargetName = p and p.Name or nearestTargetChar.Name
+            
+            -- ดึงข้อมูลทีมของเป้าหมาย
+            if p and p.Team then
+                targetTeamName = p.Team.Name
+                if targetTeamName == "Marines" then
+                    targetTeamColorHex = "#3498db" -- สีฟ้า
+                elseif targetTeamName == "Pirates" then
+                    targetTeamColorHex = "#e74c3c" -- สีแดง
+                else
+                    targetTeamColorHex = "#f1c40f" -- สีเหลือง
+                end
+            end
             
             if shortestDistance ~= math.huge then
                 lockedTargetDist = string.format("%.1f studs", shortestDistance)
@@ -3841,27 +3777,28 @@ task.spawn(function()
             end)
         end
         
-        -- ดีไซน์ UI
-        local uiContent = ""
+        -- ดีไซน์ UI ใหม่ (ลบอีโมจิออก + เพิ่มสีเรืองแสง)
+local uiContent = ""
         if nearestTargetChar then
             uiContent = string.format([[
-<font color='#f1c40f'><b>⚡ TARGET LOCK SYSTEM ⚡</b></font>
-<font color='#3498db'>----------------------------------------</font>
-Target Name : <font color='#ffffff'><b>%s</b></font>
-Level       : <font color='#f1c40f'><b>Lv. %s</b></font>
-Distance    : <font color='#e74c3c'><b>%s</b></font>
-Health      : <font color='#2ecc71'><b>%d / %d (%d%%)</b></font>
-<font color='#3498db'>----------------------------------------</font>
-<font color='#2ecc71'><i>🟢 Status: Tracking & Ready to Engage!</i></font>
-]], lockedTargetName, targetLevelStr, lockedTargetDist, targetCurrentHp, targetMaxHp, math.floor(targetHealthPercent * 100))
+<font size='15'>
+<font color='#00ffff'><b> TARGET LOCK SYSTEM </b></font>
+<font color='#00bfff'>━━━━━━━━━━━━━━━━━━━━━━━━━━</font>
+<font color='#00ffcc'>Name:</font> <font color='#ffffff'><b>%s</b></font>
+<font color='#00ffcc'>Team:</font>        <font color='%s'><b>[%s]</b></font>
+<font color='#00ffcc'>Level:</font>       <font color='#ffff00'><b>Lv. %s</b></font>
+<font color='#00ffcc'>Distance:</font>    <font color='#ff3366'><b>%s</b></font>
+<font color='#00ffcc'>Health:</font>      <font color='#00ff66'><b>%d / %d (%d%%)</b></font>
+</font>
+]], lockedTargetName, targetTeamColorHex, targetTeamName, targetLevelStr, lockedTargetDist, targetCurrentHp, targetMaxHp, math.floor(targetHealthPercent * 100))
         else
             uiContent = [[
-<font color='#f1c40f'><b>⚡ TARGET LOCK SYSTEM ⚡</b></font>
-<font color='#3498db'>----------------------------------------</font>
-Target Name : <font color='#e74c3c'><b>Searching...</b></font>
-Distance    : <font color='#95a5a6'>---</font>
-<font color='#3498db'>----------------------------------------</font>
-<font color='#e74c3c'><i>❌ No valid targets found in range</i></font>
+<font size='15'>
+<font color='#00ffff'><b> TARGET LOCK SYSTEM </b></font>
+<font color='#00bfff'>━━━━━━━━━━━━━━━━━━━━━━━━━━</font>
+<font color='#00ffcc'>Name:</font> <font color='#ff3366'><b>Searching...</b></font>
+<font color='#00ffcc'>Distance:</font>    <font color='#808080'>---</font>
+</font>
 ]]
         end
         
@@ -3869,7 +3806,6 @@ Distance    : <font color='#95a5a6'>---</font>
             updateParagraph(uiContent)
         end
         
-        -- หน่วงเวลาลูปเพื่อความเสถียร
         task.wait(0.15)
     end
 end)
@@ -3877,6 +3813,7 @@ end)
 
 Bounty:Slider({
     Title = "Safe Mode ",
+    Desc = "The escape system is currently in the beta stage.",
     Increment = 1,
     Value = {
         Min = 10,
