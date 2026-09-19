@@ -1156,7 +1156,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 6
+getgenv().HitboxSize = 8
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
@@ -2995,7 +2995,7 @@ local bountyConnection = nil
 local safeModeActive = true
 local isSafeEscaping = false
 local safeModePercent = 30   
-local safeStopPercent = 80
+local safeStopPercent = 100
 
 
 -- เก็บค่าเป็น Table สำหรับรองรับการเลือกหลายสกิล
@@ -3204,7 +3204,7 @@ local function executeSkills(skillTable, toolType)
     
     if hasValid then
         equipToolByType(toolType)
-        task.wait(0.05)
+        task.wait(0.01)
         for _, skill in ipairs(skillTable) do
             if skill ~= "None" then
                 pressKey(skill)
@@ -3307,8 +3307,9 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
 end
 
 
+
 local function runAutoBounty(deltaTime)
-    if not autoBountyEnabled then return end
+   if not autoBountyEnabled then return end
 
     local myChar = localPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
@@ -3326,7 +3327,7 @@ local function runAutoBounty(deltaTime)
             setSafeNoclip(true)
             myRoot.AssemblyLinearVelocity = Vector3.new(0, flySpeed, 0)
             myRoot.AssemblyAngularVelocity = Vector3.zero
-            myChar:PivotTo(myRoot.CFrame + Vector3.new(0, 500, 0))
+            myChar:PivotTo(myRoot.CFrame + Vector3.new(0, 550, 0))
             humanoid.PlatformStand = true
             if notify then notify("Safe Mode", "Critical HP! Emergency teleport & high-speed flight activated!") end
         end
@@ -3352,6 +3353,8 @@ local function runAutoBounty(deltaTime)
         end
     end
     
+
+  
 
 
 
@@ -3455,9 +3458,9 @@ for _, targetPlayer in ipairs(Players:GetPlayers()) do
 end
 
 local Players = game:GetService("Players")
-local localPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 
--- ฟังก์ชันเช็กสถานะ InCombat
+-- ฟังก์ชันเช็คสถานะ InCombat
 local function isPlayerInCombat(player, character)
     if not player then return false end
     
@@ -3546,7 +3549,6 @@ if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 
     end
 end
 
--- ถ้าไม่มีเป้าหมาย, ระยะทางเกิน 10000, หรือเลเวลห่างเกิน 800 ให้เข้าสู่กระบวนการ Server Hop
 if not autoBountyEnabled then return end
 
 for i = 1, 50 do 
@@ -3607,218 +3609,13 @@ while autoBountyEnabled do
 end
 end
 
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
-local charactersFolder = Workspace:WaitForChild("Characters", 5)
-
-local statusParagraph = Bounty:Paragraph({
-    Title = "Combat Status Monitor",
-    Desc = "กำลังโหลดข้อมูล..."
-})
-
--- ฟังก์ชันกลางช่วยอัปเดตข้อความ ป้องกัน Error ของ UI Library
-local function updateParagraph(text)
-    pcall(function()
-        if statusParagraph.Set then
-            statusParagraph:Set(text)
-        elseif statusParagraph.SetDesc then
-            statusParagraph:SetDesc(text)
-        elseif statusParagraph.UpdateDesc then
-            statusParagraph:UpdateDesc(text)
-        end
-    end)
-end
-
-task.spawn(function()
-    while true do
-        local Players = game:GetService("Players")
-        local LocalPlayer = Players.LocalPlayer
-        if not LocalPlayer then return end
-
-        -- ฟังก์ชันดึงเลเวลจาก Player หรือ Character
-        local function getPlayerLevel(player)
-            local success, lvl = pcall(function()
-                if player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") then
-                    return player.Data.Level.Value
-                elseif player.Character and player.Character:FindFirstChild("Data") and player.Character.Data:FindFirstChild("Level") then
-                    return player.Character.Data.Level.Value
-                end
-                return nil
-            end)
-            return success and lvl or nil
-        end
-
-        local myLevel = getPlayerLevel(LocalPlayer)
-
-        local nearestTargetRoot = nil
-        local nearestTargetChar = nil
-        local shortestDistance = math.huge
-
-        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            task.wait(0.5)
-            continue
-        end
-        local myRoot = LocalPlayer.Character.HumanoidRootPart
-
-        for _, targetPlayer in ipairs(Players:GetPlayers()) do
-            if targetPlayer ~= LocalPlayer then
-                
-                -- ตรวจสอบทีม Marines
-                if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
-                    if targetPlayer.Team and targetPlayer.Team == LocalPlayer.Team then 
-                        continue 
-                    end
-                end
-
-                local char = targetPlayer.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    local targetHum = char:FindFirstChildOfClass("Humanoid")
-                    local targetRoot = char:FindFirstChild("HumanoidRootPart")
-
-                    if targetHum and targetHum.Health > 0 and targetRoot then
-                        if not shouldSkipTarget or not shouldSkipTarget(targetPlayer, char) then
-                            local inCombat = false 
-                            local inSafeZone = false
-                            
-                            pcall(function()
-                                if isPlayerInCombat then inCombat = isPlayerInCombat(targetPlayer, char) end
-                                if isPlayerInSafeZone then inSafeZone = isPlayerInSafeZone(targetPlayer, char) end
-                            end)
-
-                            if not inSafeZone then
-                                local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled")
-                                
-                                if char:GetAttribute("PvpDisabled") ~= nil then
-                                    pvpDisabled = char:GetAttribute("PvpDisabled")
-                                end
-
-                                if pvpDisabled ~= true then
-                                    local targetLevel = getPlayerLevel(targetPlayer)
-                                    local isLevelValid = true
-                                    
-                                    if type(myLevel) == "number" and type(targetLevel) == "number" then
-                                        local diff = math.abs(myLevel - targetLevel)
-                                        if diff > 800 then
-                                            isLevelValid = false
-                                        end
-                                    end
-
-                                    if isLevelValid then
-                                        local distance = (targetRoot.Position - myRoot.Position).Magnitude
-                                        
-                                        if distance <= 10000 then
-                                            if distance < shortestDistance then
-                                                shortestDistance = distance
-                                                nearestTargetRoot = targetRoot
-                                                nearestTargetChar = char
-                                            end
-                                        end
-                                    end
-                                end 
-                            end 
-                        end 
-                    end 
-                end 
-            end 
-        end 
-        
-        -- ข้อมูลเป้าหมายสำหรับแสดงผลบน UI
-        local lockedTargetName = "None"
-        local lockedTargetDist = "---"
-        local targetHealthPercent = 0
-        local targetCurrentHp = 0
-        local targetMaxHp = 0
-        local targetLevelStr = "???"
-        local targetTeamName = "Unknown"
-        local targetTeamColorHex = "#ffffff"
-
-        if nearestTargetChar then
-            local p = Players:GetPlayerFromCharacter(nearestTargetChar)
-            lockedTargetName = p and p.Name or nearestTargetChar.Name
-            
-            -- ดึงข้อมูลทีมของเป้าหมาย
-            if p and p.Team then
-                targetTeamName = p.Team.Name
-                if targetTeamName == "Marines" then
-                    targetTeamColorHex = "#3498db" -- สีฟ้า
-                elseif targetTeamName == "Pirates" then
-                    targetTeamColorHex = "#e74c3c" -- สีแดง
-                else
-                    targetTeamColorHex = "#f1c40f" -- สีเหลือง
-                end
-            end
-            
-            if shortestDistance ~= math.huge then
-                lockedTargetDist = string.format("%.1f studs", shortestDistance)
-            end
-
-            pcall(function()
-                local hum = nearestTargetChar:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    targetCurrentHp = math.floor(hum.Health)
-                    targetMaxHp = math.floor(hum.MaxHealth)
-                    targetHealthPercent = math.clamp(targetCurrentHp / targetMaxHp, 0, 1)
-                end
-                
-                local dataFolder = nearestTargetChar:FindFirstChild("Data") or (p and p:FindFirstChild("Data"))
-                if dataFolder and dataFolder:FindFirstChild("Level") then
-                    targetLevelStr = tostring(dataFolder.Level.Value)
-                end
-            end)
-            
-            -- ระบบบินเข้าหาเป้าหมายแบบสมูท
-            pcall(function()
-                if autoBountyEnabled and typeof(smoothFlyTo) == "function" and nearestTargetRoot then
-                    local dynamicSpeed = flySpeed or 350
-                    if shortestDistance < 50 then
-                        dynamicSpeed = math.min(flySpeed or 350, 150)
-                    end
-                    smoothFlyTo(nearestTargetRoot.CFrame, dynamicSpeed, 0.03, nearestTargetChar, shortestDistance)
-                end
-            end)
-        end
-        
-        -- ดีไซน์ UI ใหม่ (ลบอีโมจิออก + เพิ่มสีเรืองแสง)
-local uiContent = ""
-        if nearestTargetChar then
-            uiContent = string.format([[
-<font size='15'>
-<font color='#00ffff'><b> TARGET LOCK SYSTEM </b></font>
-<font color='#00bfff'>━━━━━━━━━━━━━━━━━━━━━━━━━━</font>
-<font color='#00ffcc'>Name:</font> <font color='#ffffff'><b>%s</b></font>
-<font color='#00ffcc'>Team:</font>        <font color='%s'><b>[%s]</b></font>
-<font color='#00ffcc'>Level:</font>       <font color='#ffff00'><b>Lv. %s</b></font>
-<font color='#00ffcc'>Distance:</font>    <font color='#ff3366'><b>%s</b></font>
-<font color='#00ffcc'>Health:</font>      <font color='#00ff66'><b>%d / %d (%d%%)</b></font>
-</font>
-]], lockedTargetName, targetTeamColorHex, targetTeamName, targetLevelStr, lockedTargetDist, targetCurrentHp, targetMaxHp, math.floor(targetHealthPercent * 100))
-        else
-            uiContent = [[
-<font size='15'>
-<font color='#00ffff'><b> TARGET LOCK SYSTEM </b></font>
-<font color='#00bfff'>━━━━━━━━━━━━━━━━━━━━━━━━━━</font>
-<font color='#00ffcc'>Name:</font> <font color='#ff3366'><b>Searching...</b></font>
-<font color='#00ffcc'>Distance:</font>    <font color='#808080'>---</font>
-</font>
-]]
-        end
-        
-        if typeof(updateParagraph) == "function" then
-            updateParagraph(uiContent)
-        end
-        
-        task.wait(0.15)
-    end
-end)
-
 
 Bounty:Slider({
     Title = "Safe Mode ",
     Desc = "The escape system is currently in the beta stage.",
     Increment = 1,
     Value = {
-        Min = 10,
+        Min = 30,
         Max = 100,
         Default = 30
     },
