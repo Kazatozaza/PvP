@@ -362,23 +362,19 @@ local FPS = Home:Input({
     Callback = function(text)
         local num = tonumber(text)
         if num then
-            -- กำหนดขอบเขตความปลอดภัย (เช่น ไม่ต่ำกว่า 1 และไม่เกิน 9999 หรือปรับแก้ได้ตามชอบ)
+            -- กำหนดขอบเขตความปลอดภัย (เช่น ไม่ต่ำกว่า 1 และไม่เกิน 9999)
             if num < 1 then
                 num = 1
             elseif num > 9999 then
                 num = 9999
             end
             
-            -- สั่งตั้งค่า FPS ให้กับเกมผ่าน SetRenderingEnabled หรือ RunService (ขึ้นอยู่กับฟังก์ชันของ Executor)
+            -- สั่งตั้งค่า FPS ให้กับเกมผ่าน Executor
             pcall(function()
                 if setfpscap then
                     setfpscap(num)
-                else
-                    warn("⚠️ Your executor does not support 'setfpscap'.")
                 end
             end)
-        else
-            warn("⚠️ Please enter a valid number!")
         end
     end
 })
@@ -1156,7 +1152,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 8
+getgenv().HitboxSize = 5
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
@@ -3309,49 +3305,67 @@ end
 
 
 local function runAutoBounty(deltaTime)
-   if not autoBountyEnabled then return end
+  if not autoBountyEnabled then return end
 
-    local myChar = localPlayer.Character
-    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
-    local myRoot = myChar.HumanoidRootPart
-    local humanoid = myChar:FindFirstChildOfClass("Humanoid")
+local myChar = localPlayer.Character
+if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
+local myRoot = myChar.HumanoidRootPart
+local humanoid = myChar:FindFirstChildOfClass("Humanoid")
 
-    -- คำนวณเปอร์เซ็นต์เลือดปัจจุบัน
-    local currentHpPercent = (humanoid.Health / humanoid.MaxHealth) * 100
+-- Services สำหรับทำ Smooth Tween
+local TweenService = game:GetService("TweenService")
 
-    -- 1. ระบบ Safe Mode (เช็คและบังคับหนีทันทีเมื่อเลือดต่ำกว่าเกณฑ์)
-    if safeModeActive and humanoid.Health > 0 then
-        -- เริ่มกระบวนการหนีฉุกเฉิน
-        if currentHpPercent <= safeModePercent and not isSafeEscaping then
-            isSafeEscaping = true
-            setSafeNoclip(true)
-            myRoot.AssemblyLinearVelocity = Vector3.new(0, flySpeed, 0)
-            myRoot.AssemblyAngularVelocity = Vector3.zero
-            myChar:PivotTo(myRoot.CFrame + Vector3.new(0, 550, 0))
-            humanoid.PlatformStand = true
-            if notify then notify("Safe Mode", "Critical HP! Emergency teleport & high-speed flight activated!") end
-        end
+-- คำนวณเปอร์เซ็นต์เลือดปัจจุบัน
+local currentHpPercent = (humanoid.Health / humanoid.MaxHealth) * 100
 
-        -- ขณะกำลังหนี (ล็อคสถานะ ห้ามวิ่งไปหาเป้าหมายเด็ดขาด)
-        if isSafeEscaping then
-            humanoid.PlatformStand = true
-            setSafeNoclip(true)
-            myRoot.AssemblyLinearVelocity = Vector3.new(0, flySpeed, 0)
-            myRoot.AssemblyAngularVelocity = Vector3.zero
-            
-            -- หยุดหนีเมื่อเลือดฟื้นกลับมาถึงเกณฑ์ปลอดภัย (safeStopPercent)
-            if currentHpPercent >= safeStopPercent then
-                isSafeEscaping = false
-                humanoid.PlatformStand = false
-                setSafeNoclip(false)
-                myRoot.AssemblyLinearVelocity = Vector3.zero
-                if notify then notify("Safe Mode", "HP fully restored. Resuming normal operations.") end
-            end
-            
-            -- ตัดจบการทำงานในรอบนี้ทันที ไม่ให้ไปทำระบบล่าต่อขณะกำลังหนี
-            return 
-        end
+-- 1. ระบบ Safe Mode (เช็คและบังคับหนีทันทีเมื่อเลือดต่ำกว่าเกณฑ์)
+if safeModeActive and humanoid.Health > 0 then
+    -- เริ่มกระบวนการหนีฉุกเฉิน
+    if currentHpPercent <= safeModePercent and not isSafeEscaping then
+        isSafeEscaping = true
+        setSafeNoclip(true)
+        humanoid.PlatformStand = true
+        
+        -- ล็อกการเคลื่อนไหวทางฟิสิกส์เบื้องต้น
+        myRoot.AssemblyLinearVelocity = Vector3.zero
+        myRoot.AssemblyAngularVelocity = Vector3.zero
+
+        if notify then notify("Safe Mode", "Critical HP! Smooth emergency flight activated!") end
+
+        -- ใช้ Tween วาร์ปและลอยขึ้นฟ้าอย่างนุ่มนวล (ใช้เวลา 0.5 วินาที ไม่กระตุก)
+        local targetCFrame = myRoot.CFrame + Vector3.new(0, 1500, 0)
+        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(myRoot, tweenInfo, {CFrame = targetCFrame})
+        tween:Play()
     end
+
+    -- ขณะกำลังหนี (ล็อกตำแหน่งให้อยู่บนฟ้า และป้องกันการวาปกลับด้วยการบังคับ CFrame / Velocity)
+    if isSafeEscaping then
+        humanoid.PlatformStand = true
+        setSafeNoclip(true)
+        
+        -- ล็อกความเร็วให้ลอยนิ่งๆ อยู่บนฟ้า (ป้องกัน Server หรือผู้เล่นอื่นดึงกลับลงมา)
+        myRoot.AssemblyLinearVelocity = Vector3.new(0, flySpeed, 0)
+        myRoot.AssemblyAngularVelocity = Vector3.zero
+        
+        -- ป้องกันการถูกดึงตำแหน่ง (Anti-Desync: บังคับรักษาความสูงถ้าเผลอโดนดึงร่วงลงมา)
+        if myRoot.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
+            myRoot.CFrame = myRoot.CFrame + Vector3.new(0, 100, 0)
+        end
+        
+        -- หยุดหนีเมื่อเลือดฟื้นกลับมาถึงเกณฑ์ปลอดภัย (safeStopPercent)
+        if currentHpPercent >= safeStopPercent then
+            isSafeEscaping = false
+            humanoid.PlatformStand = false
+            setSafeNoclip(false)
+            myRoot.AssemblyLinearVelocity = Vector3.zero
+            if notify then notify("Safe Mode", "HP fully restored. Resuming normal operations.") end
+        end
+        
+        -- ตัดจบการทำงานในรอบนี้ทันที ไม่ให้ไปทำระบบล่าต่อขณะกำลังหนี
+        return 
+    end
+end
     
 
   
@@ -3456,46 +3470,45 @@ for _, targetPlayer in ipairs(Players:GetPlayers()) do
         end 
     end 
 end
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- ฟังก์ชันเช็คสถานะ InCombat
+-- ฟังก์ชันเช็คสถานะ InCombat แบบแม่นยำและครอบคลุม
 local function isPlayerInCombat(player, character)
     if not player then return false end
     
     -- 1. เช็ค Attribute ในตัว Player
-    local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag")
+    local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag") or player:GetAttribute("PvpMode")
     if pCombat == true or pCombat == 1 or pCombat == "1" then
         return true
     end
     
-    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
+    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime") or player:GetAttribute("SafeZoneTimer")
     if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
         return true
     end
 
-    -- 2. เช็คในส่วนของ Character
+    -- 2. เช็คในส่วนของ Character และ Children ภายใน Character
     if character then
         local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
         if cCombat == true or cCombat == 1 or cCombat == "1" then
             return true
         end
 
-        local combatObj = character:FindFirstChild("InCombat") 
-            or character:FindFirstChild("Combat") 
-            or character:FindFirstChild("CombatTag")
-            or character:FindFirstChild("PvpTag")
-
-        if combatObj then
-            if combatObj:IsA("BoolValue") and combatObj.Value == true then
-                return true
-            elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
-                return true
-            elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" then
-                return true
-            elseif combatObj:IsA("ValueBase") then
-                return true
+        -- เช็ค Object ค่า Value ต่าง ๆ ที่มักใช้เก็บสถานะต่อสู้
+        local combatObjNames = {"InCombat", "Combat", "CombatTag", "PvpTag", "SafeZone", "Attacking"}
+        for _, name in ipairs(combatObjNames) do
+            local combatObj = character:FindFirstChild(name)
+            if combatObj then
+                if combatObj:IsA("BoolValue") and combatObj.Value == true then
+                    return true
+                elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
+                    return true
+                elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" and combatObj.Value ~= "None" then
+                    return true
+                elseif combatObj:IsA("ValueBase") and combatObj.Value then
+                    return true
+                end
             end
         end
     end
@@ -3506,9 +3519,9 @@ end
 -- ฟังก์ชันเช็กเงื่อนไขการข้ามเป้าหมาย
 local function shouldSkipTarget(targetChar, targetPlayer)
     if not targetPlayer then return false end
-    if targetPlayer == localPlayer then return true end
+    if targetPlayer == LocalPlayer then return true end
     
-    if localPlayer.Team and localPlayer.Team.Name == "Marines" then
+    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
         if targetPlayer.Team and targetPlayer.Team.Name == "Marines" then 
             return true 
         end
@@ -3529,7 +3542,7 @@ if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 
             local success, targetLevel = pcall(function()
                 return nearestTargetChar.Data.Level.Value 
             end)
-            local myLevel = pcall(function() return localPlayer.Data.Level.Value end) and localPlayer.Data.Level.Value or 0
+            local myLevel = pcall(function() return LocalPlayer.Data.Level.Value end) and LocalPlayer.Data.Level.Value or 0
 
             local isLevelValid = true
             if success and type(myLevel) == "number" and type(targetLevel) == "number" then
@@ -3553,18 +3566,29 @@ if not autoBountyEnabled then return end
 
 for i = 1, 50 do 
     if not autoBountyEnabled then return end
+    
+    -- เช็คระหว่างรอ เพื่อนับถอยหลังย้ายเซิร์ฟ (ถ้าติดคอมแบทให้หยุดย้ายเซิร์ฟทันที)
+    local currentCharacter = LocalPlayer.Character
+    if isPlayerInCombat(LocalPlayer, currentCharacter) then
+        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+        if browser then browser.Enabled = false end
+        return 
+    end
+    
     task.wait(0.1)
 end
 
 if not autoBountyEnabled then return end
 
 -- ตรวจสอบก่อนเปิด Server Browser ว่าผู้เล่นติด Combat อยู่หรือไม่
-local currentCharacter = localPlayer.Character
-if isPlayerInCombat(localPlayer, currentCharacter) then
+local currentCharacter = LocalPlayer.Character
+if isPlayerInCombat(LocalPlayer, currentCharacter) then
+    local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+    if browser then browser.Enabled = false end
     return -- หากติด Combat จะหยุดการย้ายเซิร์ฟทันที
 end
 
-local frame = localPlayer.PlayerGui:WaitForChild("ServerBrowser")
+local frame = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
 frame.Enabled = true 
 task.wait(1)
 
@@ -3579,8 +3603,8 @@ end
 
 -- วนลูปกดปุ่ม Join ทุกๆ 0.1 วินาที และเลื่อนหน้าจอ
 while autoBountyEnabled do
-    -- เช็กซ้ำระหว่างกำลังกดเปลี่ยนเซิร์ฟ
-    if isPlayerInCombat(localPlayer, localPlayer.Character) then
+    -- เช็กซ้ำระหว่างกำลังกดเปลี่ยนเซิร์ฟ ถ้าติด Combat ให้ปิด UI และหยุดทันที
+    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
         frame.Enabled = false
         return
     end
@@ -3589,6 +3613,12 @@ while autoBountyEnabled do
     
     for _, i in ipairs(frame.Frame:GetDescendants()) do
         if not autoBountyEnabled then return end
+        
+        -- เช็กระหว่างกดปุ่มย้ายเซิร์ฟด้วย
+        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+            frame.Enabled = false
+            return
+        end
         
         if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
             if firesignal then 
