@@ -354,7 +354,9 @@ Home:Paragraph({
 
 local FPS = Home:Input({
     Title = "FPS Unlocker ",
+    Icon = "user",
     Desc = "Enter your desired max FPS ",
+    Flag = "FPSUnlocker",
     Default = "60",
     Placeholder = "Enter max FPS...",
     Callback = function(text)
