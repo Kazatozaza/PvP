@@ -228,6 +228,275 @@ local Config = Window:Tab({
 
 GeneralTab:Select()
 
+-- Minimalist Monochrome Status Tags with Lucide String Icons
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+
+-- FPS Counter Setup
+local FPSTag = Window:Tag({
+    Title = "FPS: --",
+    Icon = "gauge",
+    Color = Color3.fromRGB(240, 240, 240),
+})
+
+local frameCount, lastUpdate = 0, os.clock()
+
+RunService.RenderStepped:Connect(function()
+frameCount = frameCount + 1
+    local now = os.clock()
+    local elapsed = now - lastUpdate
+    
+    if elapsed >= 0.5 then
+        local fps = math.floor(frameCount / elapsed)
+        FPSTag:SetTitle(string.format("FPS: %d", fps))
+        
+        frameCount = 0
+        lastUpdate = now
+    end
+end)
+
+-- Ping Counter Setup
+local PingTag = Window:Tag({
+    Title = "Ping: --ms",
+    Icon = "wifi",
+    Color = Color3.fromRGB(180, 180, 180),
+})
+
+task.spawn(function()
+    local dataPing = Stats.Network.ServerStatsItem:FindFirstChild("Data Ping")
+    
+    while true do
+        local success, ping = pcall(function()
+            if dataPing then
+                return math.floor(dataPing:GetValue())
+            end
+            return math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
+        
+        if success and ping then
+            PingTag:SetTitle(string.format("Ping: %dms", ping))
+        end
+        
+        task.wait(1)
+    end
+end)
+
+
+-- ตรวจสอบฟังก์ชันพื้นฐานเพื่อความปลอดภัย
+local executorName = (identifyexecutor and identifyexecutor()) or (getexecutorname and getexecutorname()) or "Unknown Executor"
+local safeClipboard = setclipboard or toclipboard or (syn and syn.write_clipboard)
+
+-- ตัวแปรสถานะระบบ
+local isOnline = true 
+local isMaintenance = false 
+
+local statusText = "● ONLINE [STABLE]"
+if isMaintenance then
+    statusText = "▲ MAINTENANCE [UPDATING]"
+elseif not isOnline then
+    statusText = "■ OFFLINE [DOWN]"
+end
+
+-- ตรวจจับประเภทอุปกรณ์ (Device Detection)
+local userInputService = game:GetService("UserInputService")
+local players = game:GetService("Players")
+local localPlayer = players.LocalPlayer
+
+local deviceText = "Unknown Device"
+
+if userInputService.TouchEnabled and not userInputService.KeyboardEnabled then
+    deviceText = "Mobile / Tablet"
+elseif userInputService.TouchEnabled and userInputService.KeyboardEnabled then
+    deviceText = "Laptop / Touch PC"
+else
+    deviceText = "PC / Computer"
+end
+
+-- Script update & Creator information
+local isScriptUpdated = "Yes (Latest)"
+local updateDate = "September 20, 2026"
+local scriptCreator = "Destiny Hub"
+
+-- Player information
+local playerName = localPlayer.Name
+local playerDisplayName = localPlayer.DisplayName
+
+Home:Paragraph({
+    Title = "⚡ CYBERNETIC HUB | Dashboard",
+    Desc = string.format(
+        "• Status: [ <font color='#00FF00'>%s</font> ]\n• Executor: <font color='#00BFFF'>%s</font>\n• Device: <font color='#FFA500'>%s</font>\n• Created By: <font color='#FF4500'>%s</font>\n• Updated Status: <font color='#00FF00'>%s</font>\n• Last Updated: <font color='#FFFF00'>%s</font>\n• Player: <font color='#FF69B4'>%s (@%s)</font>\n\n────────────────────────\n🌟 Welcome back! Thanks for using our premium script hub.",
+        statusText,
+        executorName,
+        deviceText,
+        scriptCreator,
+        isScriptUpdated,
+        updateDate,
+        playerDisplayName,
+        playerName
+    ),
+    ImageSize = 28,
+    Thumbnail = "rbxassetid://79823581173943", 
+    ThumbnailSize = 58,
+    Buttons = {
+        {
+            Title = "Copy Discord Website",
+            Icon = "link",
+            Callback = function()
+                if safeClipboard then
+                    safeClipboard("https://discord.gg/hUMaVECvBz")
+                else
+                    warn("⚠️ [Cybernetic Hub] Your executor does not support automatic clipboard.")
+                end
+            end
+        }
+    }
+})
+
+local FPS = Home:Input({
+    Title = "FPS Unlocker ",
+    Icon = "user",
+    Desc = "Enter your desired max FPS ",
+    Flag = "FPSUnlocker",
+    Default = "60",
+    Placeholder = "Enter max FPS...",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num then
+            -- กำหนดขอบเขตความปลอดภัย (เช่น ไม่ต่ำกว่า 1 และไม่เกิน 9999)
+            if num < 1 then
+                num = 1
+            elseif num > 9999 then
+                num = 9999
+            end
+            
+            -- สั่งตั้งค่า FPS ให้กับเกมผ่าน Executor
+            pcall(function()
+                if setfpscap then
+                    setfpscap(num)
+                end
+            end)
+        end
+    end
+})
+
+local MyConfig = Window.ConfigManager:Config("DestinyConfig")
+
+Config:Button({
+    Title = "Save Configuration",
+    Desc = "บันทึกการตั้งค่าปัจจุบันทั้งหมด",
+    Callback = function()
+        MyConfig:Save()
+        WindUI:Notify({
+            Title = "System Saved",
+            Content = "บันทึกการตั้งค่าลงระบบเรียบร้อยแล้ว!",
+            Icon = "bell-ring",
+            Duration = 3,
+        })
+    end,
+})
+
+-- ปุ่ม Reset
+Config:Button({
+    Title = "Reset Configuration",
+    Desc = "ลบไฟล์เซฟและคืนค่าเริ่มต้น",
+    Callback = function()
+        pcall(function()
+            MyConfig:Delete()
+        end)
+        WindUI:Notify({
+            Title = "System Warning",
+            Content = "ล้างค่าการตั้งค่าทั้งหมดเรียบร้อยแล้ว!",
+            Icon = "bell-ring", 
+            Duration = 3,
+        })
+    end,
+})
+
+
+
+
+local Configjson = Config:Section({ Title = "Config.json" })
+
+
+local importedConfigData = ""
+local configFilePath = "WindUI/Destiny Hub/config/DestinyConfig.json"
+
+Config:Input({
+    Title = "Configuration Code",
+    Desc = "วางโค้ด Config ที่นี่เพื่อ Import หรือคัดลอกออก",
+    Value = "",
+    Placeholder = "วางโค้ด JSON ที่นี่...",
+    Callback = function(text)
+        importedConfigData = text
+    end,
+})
+
+Config:Button({
+    Title = "Import Configuration",
+    Desc = "บันทึกโค้ดตั้งค่าจากช่องด้านบนลงไฟล์",
+    Callback = function()
+        pcall(function()
+            if importedConfigData and importedConfigData ~= "" then
+                -- ตรวจสอบและสร้างโฟลเดอร์ย่อยทีละระดับแบบปลอดภัย
+                if makefolder then
+                    if not isfolder("WindUI") then makefolder("WindUI") end
+                    if not isfolder("WindUI/Destiny Hub") then makefolder("WindUI/Destiny Hub") end
+                    if not isfolder("WindUI/Destiny Hub/config") then makefolder("WindUI/Destiny Hub/config") end
+                end
+                
+                -- เขียนไฟล์ Config หากฟังก์ชัน writefolder รองรับ
+                if writefile then
+                    writefile(configFilePath, importedConfigData)
+                    WindUI:Notify({
+                        Title = "Import Success",
+                        Content = "นำเข้าและบันทึก Config เรียบร้อยแล้ว!",
+                        Duration = 3,
+                    })
+                end
+            else
+                WindUI:Notify({
+                    Title = "Import Failed",
+                    Content = "กรุณากรอกหรือวางโค้ด Config ก่อนกด Import",
+                    Duration = 3,
+                })
+            end
+        end)
+    end,
+})
+
+Config:Button({
+    Title = "Export Configuration",
+    Desc = "คัดลอกโค้ดการตั้งค่าเพื่อแชร์ให้คนอื่น",
+    Callback = function()
+        pcall(function()
+            if isfile and isfile(configFilePath) then
+                local configData = readfile(configFilePath)
+                
+                if setclipboard then
+                    setclipboard(configData)
+                    WindUI:Notify({
+                        Title = "Export Success",
+                        Content = "คัดลอกโค้ด Config ไปยังคลิปบอร์ดแล้ว!",
+                        Duration = 3,
+                    })
+                end
+            else
+                WindUI:Notify({
+                    Title = "Export Failed",
+                    Content = "ไม่พบไฟล์ตั้งค่า กรุณากด Save ก่อน",
+                    Duration = 3,
+                })
+            end
+        end)
+    end,
+})
+
+task.spawn(function()
+    task.wait()
+    pcall(function()
+        MyConfig:Load()
+    end)
+end)
 
 
 
@@ -356,6 +625,16 @@ createButton("Teleport Player", Color3.fromRGB(0, 229, 255), 2, function(state)
         getgenv().CurrentTarget = nil
     end
 end)
+
+Config:Toggle({
+    Title = "Mobile Custom Toggles UI",
+    Desc = "A modern mobile toggle menu with smooth animations and a master hide/show switch.",
+    Flag = "MobileMobile",
+    Value = true, -- ค่าเริ่มต้นให้แสดงผล
+    Callback = function(Value)
+        container.Visible = Value
+    end,
+})
 
 
 
