@@ -185,12 +185,6 @@ local Home = Window:Tab({
 })
 
 
-local GeneralTab = Window:Tab({
-    Title = "General",
-    Icon = "gauge"
-})
-
-
 
 Window:Divider() 
 Window:Section({
@@ -207,11 +201,11 @@ local Visuals = Window:Tab({
     Icon = "crosshair" 
 })
 
-local Macro = Window:Tab({ 
-    Title = "Macro / PC",
-    Icon = "package" 
-})
 
+local GeneralTab = Window:Tab({
+    Title = "General",
+    Icon = "gauge"
+})
 
 
 
@@ -2668,15 +2662,7 @@ local UIKeybind = Config:Keybind({
     end
 })
 
-Config:Keybind({
-    Title = "Run Combo Macro",
-    Desc = "Hotkey for combo macro.",
-    Value = "",
-    Flag = "RunComboMacro_Keybind",
-    Callback = function(key)
-        _G.RunComboMacro()
-    end
-})
+
 
 
 
@@ -2893,197 +2879,6 @@ Config:Toggle({
 
 
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
-local WeaponList = {
-    "None",
-    "Melee",
-    "Blox Fruit",
-    "Sword",
-    "Gun"
-}
-
-local SkillActionList = {
-    "None",
-    "Z",
-    "X",
-    "C",
-    "V",
-    "F",
-    "Click (M1)",
-    "Jump"
-}
-
--- ตั้งค่าบล็อกคอมโบ (สามารถเลือกอาวุธซ้ำกันได้ตามต้องการ)
-local MacroSettings = {
-    Block1 = { Weapon = "Sword", Skill = "Z", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
-    Block2 = { Weapon = "Sword", Skill = "X", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
-    Block3 = { Weapon = "Melee", Skill = "Z", Hold = 1.0, Wait = 0.4, Delay = 0.05 },
-    Block4 = { Weapon = "Melee", Skill = "X", Hold = 2.0, Wait = 0.4, Delay = 0.05 },
-    Block5 = { Weapon = "Melee", Skill = "C", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
-    Block6 = { Weapon = "Blox Fruit", Skill = "Z", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
-    Block7 = { Weapon = "Blox Fruit", Skill = "X", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
-    Block8 = { Weapon = "Gun", Skill = "Z", Hold = 0.1, Wait = 0.4, Delay = 0.05 }
-}
-
-local isRunning = false
-local macroEnabled = true
-local currentEquippedWeapon = nil -- ตัวแปรจำสถานะอาวุธที่ถืออยู่ปัจจุบัน
-
-local function PressKey(keyName, holdDuration)
-    local keyCode = Enum.KeyCode[keyName]
-    if not keyCode then return end
-
-    VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-    local duration = (holdDuration and holdDuration > 0) and holdDuration or 0.05
-    task.wait(duration)
-    VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
-end
-
--- ฟังก์ชันเลือกอาวุธแบบเช็คสถานะ: ถ้าเป็นอาวุธเดิม จะไม่กดซ้ำเพื่อให้กดสกิลต่อได้ทันที
-local function EquipWeapon(weaponType)
-    if weaponType == "None" then return end
-    
-    -- ถ้าเป็นอาวุธเดิมที่ถืออยู่แล้ว ข้ามการกดเปลี่ยนอาวุธไปเลย เพื่อความลื่นไหล
-    if currentEquippedWeapon == weaponType then
-        return 
-    end
-    
-    local keyToPress = nil
-    if weaponType == "Melee" or weaponType == "Melee / Fighting Style" then
-        keyToPress = Enum.KeyCode.One
-    elseif weaponType == "Blox Fruit" then
-        keyToPress = Enum.KeyCode.Two
-    elseif weaponType == "Sword" then
-        keyToPress = Enum.KeyCode.Three
-    elseif weaponType == "Gun" then
-        keyToPress = Enum.KeyCode.Four
-    end
-
-    if keyToPress then
-        VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
-        task.wait(0.05)
-        VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
-        currentEquippedWeapon = weaponType -- อัปเดตสถานะอาวุธปัจจุบัน
-        task.wait(0.08) -- หน่วงเวลารอโมเดลขึ้น
-    end
-end
-
-local function ExecuteAction(skill, holdDuration)
-    if skill == "Jump" then
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        task.wait(holdDuration > 0 and holdDuration or 0.05)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-    elseif skill == "Click (M1)" then
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-        task.wait(holdDuration > 0 and holdDuration or 0.05)
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-    elseif skill ~= "None" then
-        PressKey(skill, holdDuration)
-    end
-end
-
-_G.RunComboMacro = function()
-    if not macroEnabled then return end
-    if isRunning then return end
-    
-    task.spawn(function()
-        isRunning = true
-        currentEquippedWeapon = nil -- รีเซ็ตสถานะทุกครั้งที่เริ่มรันคอมโบใหม่
-        
-        for i = 1, 8 do
-            local block = MacroSettings["Block" .. i]
-            if block and block.Weapon ~= "None" and block.Skill ~= "None" then
-                -- ถืออาวุธ (ถ้าซ้ำกับบล็อกก่อนหน้า จะข้ามการกดปุ่มเปลี่ยนอาวุธและกดสกิลต่อทันที)
-                EquipWeapon(block.Weapon)
-                
-                -- สั่งใช้สกิล
-                ExecuteAction(block.Skill, block.Hold)
-                
-                if block.Wait and block.Wait > 0 then
-                    task.wait(block.Wait)
-                end
-                
-                if block.Delay and block.Delay > 0 then
-                    task.wait(block.Delay)
-                end
-            end
-        end
-        
-        isRunning = false
-    end)
-end
-
--- สร้าง UI สำหรับแต่ละ Block
-for i = 1, 8 do
-    local blockKey = "Block" .. i
-    local section = Macro:Section({ Title = "Block " .. i })
-
-    Macro:Dropdown({
-        Title = "Weapon",
-        Desc = "Select weapon type",
-        Values = WeaponList,
-        Value = MacroSettings[blockKey].Weapon,
-        Flag = "block" .. i .. "_weapon",
-        Callback = function(selected)
-            if selected then
-                MacroSettings[blockKey].Weapon = selected
-            end
-        end
-    })
-
-    Macro:Dropdown({
-        Title = "Skill / Action",
-        Desc = "Select skill to use",
-        Values = SkillActionList,
-        Value = MacroSettings[blockKey].Skill,
-        Flag = "block" .. i .. "_skill",
-        Callback = function(selected)
-            if selected then
-                MacroSettings[blockKey].Skill = selected
-            end
-        end
-    })
-
-    Macro:Input({
-        Title = "Hold Duration",
-        Desc = "Time to hold key/click (seconds)",
-        Value = tostring(MacroSettings[blockKey].Hold),
-        Flag = "block" .. i .. "_hold",
-        Callback = function(val) 
-            MacroSettings[blockKey].Hold = tonumber(val) or 0.1 
-        end
-    })
-
-    Macro:Input({
-        Title = "Skill Wait Time",
-        Desc = "Wait time for skill animation (seconds)",
-        Value = tostring(MacroSettings[blockKey].Wait),
-        Flag = "block" .. i .. "_wait",
-        Callback = function(val) 
-            MacroSettings[blockKey].Wait = tonumber(val) or 0.4 
-        end
-    })
-
-    Macro:Input({
-        Title = "Delay",
-        Desc = "Delay after action (seconds)",
-        Value = tostring(MacroSettings[blockKey].Delay),
-        Flag = "block" .. i .. "_delay",
-        Callback = function(val) 
-            MacroSettings[blockKey].Delay = tonumber(val) or 0.05 
-        end
-    })
-end
-
-
--- ปุ่มกดเรียกใช้งานผ่าน createButton ด้านนอก (รองรับมือถือ)
-createButton("Macro", Color3.fromRGB(), false, function(state)
-    _G.RunComboMacro() 
-end)
 
 
 
@@ -3750,7 +3545,7 @@ Bounty:Slider({
     Increment = 1,
     Value = {
         Min = 20,
-        Max = 100,
+        Max = 80,
         Default = 20
     },
     Flag = "SafeModePercentSlider",
