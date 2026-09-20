@@ -639,7 +639,6 @@ Config:Toggle({
 
 
 
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -664,7 +663,7 @@ local SkillActionList = {
     "Jump"
 }
 
--- ตั้งค่าบล็อกคอมโบ
+-- ตั้งค่าบล็อกคอมโบเริ่มต้น
 local MacroSettings = {
     Block1 = { Weapon = "Sword", Skill = "Z", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block2 = { Weapon = "Sword", Skill = "X", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
@@ -680,58 +679,130 @@ local isRunning = false
 local macroEnabled = true
 local currentEquippedWeapon = nil
 
--- ฟังก์ชันจำลองการทัชสกรีน (ใช้สำหรับมือถือโดยเฉพาะ)
+-- ฟังก์ชันจำลองการทัชสกรีน (ใช้สำหรับมือถือ)
 local function TouchScreenAt(x, y, holdDuration)
     VirtualInputManager:SendTouchEvent(1, true, x, y, game)
     task.wait(holdDuration > 0 and holdDuration or 0.05)
     VirtualInputManager:SendTouchEvent(1, false, x, y, game)
 end
 
--- ฟังก์ชันกดเปลี่ยนอาวุธสำหรับมือถือ (คลิกปุ่มสลอตด้านล่างจอ หรือใช้คีย์ลัดช่อง 1-4)
+-- ฟังก์ชันกดเปลี่ยนอาวุธสำหรับมือถือ (ค้นหาปุ่ม Hotbar / Backpack บน UI ของมือถือโดยตรง)
 local function EquipWeaponMobile(weaponType)
     if weaponType == "None" then return end
     if currentEquippedWeapon == weaponType then return end
 
-    local keyToPress = nil
-    if weaponType == "Melee" then
-        keyToPress = Enum.KeyCode.One
-    elseif weaponType == "Blox Fruit" then
-        keyToPress = Enum.KeyCode.Two
-    elseif weaponType == "Sword" then
-        keyToPress = Enum.KeyCode.Three
-    elseif weaponType == "Gun" then
-        keyToPress = Enum.KeyCode.Four
-    end
+    local success = false
+    local backpackGui = PlayerGui:FindFirstChild("Main") and PlayerGui.Main:FindFirstChild("Hotbar") 
+        or PlayerGui:FindFirstChild("Backpack") or PlayerGui:FindFirstChild("TouchGui")
 
-    if keyToPress then
-        VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
-        task.wait(0.05)
-        VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
-        currentEquippedWeapon = weaponType
-        task.wait(0.08)
-    end
-end
-
--- ฟังก์ชันกดสกิลจาก PlayerGui.Main.Skills โดยตรงตามภาพที่คุณส่งมา
-local function PressMobileSkillUI(skillName)
-    local skillsFolder = PlayerGui:FindFirstChild("Main") and PlayerGui.Main:FindFirstChild("Skills")
-    if not skillsFolder then return end
-
-    local targetButton = nil
-    
-    -- ค้นหาโฟลเดอร์สกิล เช่น Z, X, C, V, F ภายใน Main.Skills
-    for _, skillFolder in ipairs(skillsFolder:GetChildren()) do
-        if skillFolder.Name == skillName or (skillFolder:FindFirstChild("Title") and skillFolder.Title.Text == skillName) then
-            -- เจาะจงหาปุ่ม "Mobile" หรือ "_Mobile" ตามโครงสร้างในภาพ Explorer ของคุณ
-            targetButton = skillFolder:FindFirstChild("Mobile") or skillFolder:FindFirstChild("_Mobile")
-            break
+    if backpackGui then
+        -- ค้นหาไอเท็มใน Hotbar ตามประเภทอาวุธ
+        for _, child in ipairs(backpackGui:GetDescendants()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") then
+                if string.find(string.lower(child.Text), string.lower(weaponType)) then
+                    local btn = child
+                    while btn and not (btn:IsA("GuiButton") or btn:IsA("TextButton") or btn:IsA("ImageButton")) do
+                        btn = btn.Parent
+                    end
+                    if btn and btn:IsA("GuiObject") then
+                        local pos = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
+                        TouchScreenAt(pos.X, pos.Y, 0.05)
+                        success = true
+                        break
+                    end
+                end
+            end
         end
     end
 
-    -- ถ้าเจอ ให้คำนวณตำแหน่งพิกัด AbsolutePosition แล้วกดทัชลงไปทันที
-    if targetButton and targetButton:IsA("GuiObject") then
-        local pos = targetButton.AbsolutePosition + (targetButton.AbsoluteSize / 2)
-        TouchScreenAt(pos.X, pos.Y, 0.05)
+    -- วิธีสำรอง: ค้นหาจาก Character ถ้ามี Tool อยู่ในกระเป๋าแล้วกด Equipt ผ่าน Backpack ปกติ
+    if not success and LocalPlayer.Backpack then
+        for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                local matchType = false
+                if weaponType == "Sword" and (tool:FindFirstChild("Sword") or tool.ToolTip == "Sword" or string.find(string.lower(tool.Name), "sword") or string.find(string.lower(tool.Name), "katana")) then
+                    matchType = true
+                elseif weaponType == "Melee" and (tool.ToolTip == "Melee" or string.find(string.lower(tool.Name), "combat") or string.find(string.lower(tool.Name), "fighting")) then
+                    matchType = true
+                elseif weaponType == "Blox Fruit" and (tool.ToolTip == "Blox Fruit" or string.find(string.lower(tool.Name), "fruit")) then
+                    matchType = true
+                elseif weaponType == "Gun" and (tool.ToolTip == "Gun" or string.find(string.lower(tool.Name), "gun") or string.find(string.lower(tool.Name), "rifle")) then
+                    matchType = true
+                end
+
+                if matchType and LocalPlayer.Character then
+                    LocalPlayer.Character.Humanoid:EquipTool(tool)
+                    success = true
+                    break
+                end
+            end
+        end
+    end
+
+    currentEquippedWeapon = weaponType
+    task.wait(0.1)
+end
+
+-- ฟังก์ชันกดสกิลแบบผสมผสาน
+local function PressSkillAdvanced(skillKey, holdDuration)
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local heldTool = character:FindFirstChildOfClass("Tool")
+    local weaponName = heldTool and heldTool.Name or ""
+    
+    local skillsGui = PlayerGui:FindFirstChild("Main") and PlayerGui.Main:FindFirstChild("Skills")
+    local success = false
+
+    if skillsGui then
+        local weaponFolder = weaponName ~= "" and skillsGui:FindFirstChild(weaponName) or nil
+        local skillButton = nil
+
+        if weaponFolder then
+            skillButton = weaponFolder:FindFirstChild(skillKey)
+        end
+
+        if not skillButton then
+            for _, folder in ipairs(skillsGui:GetChildren()) do
+                if folder.Name == skillKey or (folder:FindFirstChild("Title") and folder.Title.Text == skillKey) then
+                    skillButton = folder
+                    break
+                end
+            end
+        end
+
+        if skillButton then
+            local btn = skillButton:FindFirstChild("Mobile") or skillButton:FindFirstChild("_Mobile") or skillButton:FindFirstChild("Frame") or skillButton
+            
+            if btn and (btn:IsA("GuiButton") or btn:IsA("TextButton") or btn:IsA("ImageButton")) then
+                local fired = false
+                if getconnections then
+                    pcall(function()
+                        for _, conn in ipairs(getconnections(btn.Activated)) do
+                            conn:Fire()
+                            fired = true
+                        end
+                        for _, conn in ipairs(getconnections(btn.MouseButton1Click)) do
+                            conn:Fire()
+                            fired = true
+                        end
+                    end)
+                end
+
+                if btn:IsA("GuiObject") then
+                    local pos = btn.AbsolutePosition + (btn.AbsoluteSize / 2)
+                    TouchScreenAt(pos.X, pos.Y, holdDuration)
+                    success = true
+                elseif fired then
+                    success = true
+                end
+            end
+        end
+    end
+
+    if not success then
+        local screenSize = workspace.CurrentCamera.ViewportSize
+        TouchScreenAt(screenSize.X / 2, screenSize.Y / 2, holdDuration)
     end
 end
 
@@ -745,8 +816,7 @@ local function ExecuteActionMobile(skill, holdDuration)
         local screenSize = workspace.CurrentCamera.ViewportSize
         TouchScreenAt(screenSize.X / 2, screenSize.Y / 2, holdDuration)
     elseif skill ~= "None" then
-        -- บังคับเรียกใช้ระบบกด UI หน้าจอโทรศัพท์ (PlayerGui.Main.Skills) ตรงๆ
-        PressMobileSkillUI(skill)
+        PressSkillAdvanced(skill, holdDuration)
     end
 end
 
@@ -815,7 +885,7 @@ for i = 1, 8 do
         Title = "Hold Duration",
         Desc = "Time to hold key/click (seconds)",
         Value = tostring(MacroSettings[blockKey].Hold),
-        Flag = "block" .. i .. "_hold",
+        Flag = "block" + i + "_hold",
         Callback = function(val) 
             MacroSettings[blockKey].Hold = tonumber(val) or 0.1 
         end
@@ -825,7 +895,7 @@ for i = 1, 8 do
         Title = "Skill Wait Time",
         Desc = "Wait time for skill animation (seconds)",
         Value = tostring(MacroSettings[blockKey].Wait),
-        Flag = "block" .. i .. "_wait",
+        Flag = "block" + i + "_wait",
         Callback = function(val) 
             MacroSettings[blockKey].Wait = tonumber(val) or 0.4 
         end
@@ -835,7 +905,7 @@ for i = 1, 8 do
         Title = "Delay",
         Desc = "Delay after action (seconds)",
         Value = tostring(MacroSettings[blockKey].Delay),
-        Flag = "block" .. i .. "_delay",
+        Flag = "block" + i + "_delay",
         Callback = function(val) 
             MacroSettings[blockKey].Delay = tonumber(val) or 0.05 
         end
@@ -851,7 +921,7 @@ Config:Keybind({
     end
 })
 
--- ปุ่มลอยบนหน้าจอสำหรับมือถือ (Floating Button)
+-- ปุ่มลอยบนหน้าจอสำหรับมือถือ (Floating Button) - แก้ไขการเรียกใช้งานให้ถูกต้อง
 createButton("Macro", Color3.fromRGB(0, 170, 255), false, function(state)
     _G.RunComboMacro() 
 end)
