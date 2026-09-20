@@ -849,16 +849,14 @@ end
 
 
 
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- ฟังก์ชันค้นหาผู้เล่นหรือเป้าหมายที่ใกล้ที่สุดในแมพ Blox Fruits (ถ้ายังไม่ได้ตั้งเป้าหมายเอง)
+-- ค้นหาเป้าหมายที่ใกล้ที่สุดในแมพ (ผู้เล่นอื่น)
 local function getClosestTarget()
     if getgenv().CurrentTarget and getgenv().CurrentTarget.Parent then
         return getgenv().CurrentTarget
@@ -870,7 +868,6 @@ local function getClosestTarget()
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
     local myPos = myChar.HumanoidRootPart.Position
 
-    -- เช็คทั้งผู้เล่นอื่นและมอนสเตอร์/บอสในแมพ Blox Fruits
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local hrp = player.Character:FindFirstChild("HumanoidRootPart")
@@ -902,7 +899,7 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-    -- Hook Mouse สำหรับปืนหรือสกิลที่ใช้ Mouse.Hit / Mouse.Target
+    -- Hook Mouse Index (สำหรับปืนหรือระบบที่เช็กตำแหน่งเมาส์)
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and self == Mouse then
@@ -921,30 +918,26 @@ task.spawn(function()
         return oldIndex(self, idx)
     end))
 
-    -- Hook Namecall สำหรับดักจับ Remote ของ Blox Fruits (เช่น การยิงปืน หรือใช้สกิลผลไม้)
+    -- Hook Namecall (จำกัดเฉพาะ Remote ยิงปืนหรือโจมตี เพื่อไม่ให้กระทบการเคลื่อนไหว)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
         
         if getgenv().SilentAimEnabled and (method == "FireServer" or method == "InvokeServer") then
             local remoteName = self.Name:lower()
-            -- รายชื่อ Remote หลักๆ ใน Blox Fruits ที่ใช้ในการโจมตี/ยิงสกิล
-            if remoteName:find("remote") or remoteName:find("skill") or remoteName:find("attack") or remoteName:find("shoot") or remoteName:find("combat") then
+            
+            -- กรองชื่อ Remote ให้จำกัดเฉพาะการยิง/โจมตีจริงๆ (ป้องกันการส่งค่าผิดพลาดไปยัง Remote ตัวอื่นที่ควบคุมการเดิน)
+            if remoteName:find("shoot") or remoteName:find("bullet") or remoteName:find("gun") or remoteName:find("combat") then
                 local head = getTargetHead()
                 if head then
                     local targetPos = head.Position
-                    local targetCFrame = head.CFrame
                     local args = { ... }
 
+                    -- เปลี่ยนเฉพาะค่า Vector3 ตัวแรกที่เจอในอาร์กิวเมนต์ (มักจะเป็นจุดพิกัดเป้าหมายการยิง)
                     for i = 1, #args do
-                        local arg = args[i]
-                        local argType = typeof(arg)
-                        
-                        -- เปลี่ยนพิกัดเฉพาะ Vector3 หรือ CFrame ตัวแรกๆ ที่มักเป็นตำแหน่งพุ่งไป
-                        if argType == "Vector3" then
+                        if typeof(args[i]) == "Vector3" then
                             args[i] = targetPos
-                        elseif argType == "CFrame" then
-                            args[i] = targetCFrame
+                            break -- เปลี่ยนแค่ตัวแรกพอ เพื่อไม่ให้ค่าอื่นๆ เพี้ยนจนตัวละครค้าง
                         end
                     end
 
@@ -956,7 +949,6 @@ task.spawn(function()
         return oldNamecall(self, ...)
     end))
 end)
-
 
 
 
