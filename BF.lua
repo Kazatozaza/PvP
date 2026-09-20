@@ -841,56 +841,76 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-
-
-
-
-
-
-
-
- local Players = game:GetService("Players")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- ค้นหาเป้าหมายที่ใกล้ที่สุดในแมพ (ผู้เล่นอื่น)
-local function getClosestTarget()
-    if getgenv().CurrentTarget and getgenv().CurrentTarget.Parent then
-        return getgenv().CurrentTarget
-    end
-    
-    local closestTarget = nil
-    local shortestDistance = math.huge
-    local myChar = LocalPlayer.Character
-    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
-    local myPos = myChar.HumanoidRootPart.Position
+-- Fast References & Caches
+local type = type
+local typeof = typeof
+local unpack = unpack
+local pairs = pairs
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-            local hum = player.Character:FindFirstChild("Humanoid")
-            if hrp and hum and hum.Health > 0 then
-                local dist = (hrp.Position - myPos).Magnitude
-                if dist < shortestDistance then
-                    shortestDistance = dist
-                    closestTarget = hrp
-                end
-            end
+local allowedRemotes = {
+    shoot = true, fire = true, attack = true, 
+    combat = true, ability = true, skill = true, gun = true
+}
+
+local blockedRemotes = {
+    equip = true, tool = true, inventory = true, 
+    backpack = true, loadout = true, anim = true, sound = true
+}
+
+local remoteCache = {}
+
+-- ฟังก์ชันเช็ค Remote แบบรวดเร็วผ่าน Cache
+local function isAllowedRemote(self)
+    local name = self.Name
+    local cached = remoteCache[name]
+    if cached ~= nil then return cached end
+
+    local lowerName = name:lower()
+    for blockWord in pairs(blockedRemotes) do
+        if lowerName:find(blockWord, 1, true) then
+            remoteCache[name] = false
+            return false
         end
     end
-    
-    return closestTarget
+
+    for keyword in pairs(allowedRemotes) do
+        if lowerName:find(keyword, 1, true) then
+            remoteCache[name] = true
+            return true
+        end
+    end
+
+    remoteCache[name] = false
+    return false
 end
 
+-- ระบบดึงตำแหน่ง Head ล่วงหน้าแบบลื่นไหล (รองรับ Prediction เบื้องต้น)
+local cachedHead = nil
+local lastTarget = nil
+
 local function getTargetHead()
-    local target = getClosestTarget()
-    if target and target.Parent then
-        return target.Parent:FindFirstChild("Head") or target.Parent:FindFirstChild("HumanoidRootPart")
+    local target = getgenv().CurrentTarget
+    if not target or not target.Parent then 
+        cachedHead = nil
+        lastTarget = nil
+        return nil 
     end
-    return nil
+    
+    if target ~= lastTarget then
+        lastTarget = target
+        cachedHead = target.Parent:FindFirstChild("Head")
+    end
+    
+    return cachedHead
 end
 
 task.spawn(function()
@@ -899,48 +919,51 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-    -- Hook Mouse Index (สำหรับปืนหรือระบบที่เช็กตำแหน่งเมาส์)
+    -- Optimized __index Hook (ลื่นปรื๊ด ไม่มีอาการหน่วง)
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and self == Mouse then
             local head = getTargetHead()
             if head then
-                if idx == "Hit" then
+                if idx == "Hit" then 
                     return head.CFrame
-                elseif idx == "Target" then
+                elseif idx == "Target" then 
                     return head
-                elseif idx == "X" or idx == "Y" then
-                    local screenPoint = Camera:WorldToScreenPoint(head.Position)
-                    return screenPoint[idx]
+                elseif idx == "X" or idx == "Y" then 
+                    return Camera:WorldToScreenPoint(head.Position)[idx]
                 end
             end
         end
         return oldIndex(self, idx)
     end))
 
-    -- Hook Namecall (จำกัดเฉพาะ Remote ยิงปืนหรือโจมตี เพื่อไม่ให้กระทบการเคลื่อนไหว)
+    -- Optimized __namecall Hook (จัดการ Remote และ Raycast แบบความเร็วสูง)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
-        
-        if getgenv().SilentAimEnabled and (method == "FireServer" or method == "InvokeServer") then
-            local remoteName = self.Name:lower()
-            
-            -- กรองชื่อ Remote ให้จำกัดเฉพาะการยิง/โจมตีจริงๆ (ป้องกันการส่งค่าผิดพลาดไปยัง Remote ตัวอื่นที่ควบคุมการเดิน)
-            if remoteName:find("shoot") or remoteName:find("bullet") or remoteName:find("gun") or remoteName:find("combat") then
-                local head = getTargetHead()
-                if head then
+        local enabled = getgenv().SilentAimEnabled
+        local head = getTargetHead()
+
+        if head then
+            if enabled or UserInputService.TouchEnabled then
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                    return Ray.new(Camera.CFrame.Position, (head.Position - Camera.CFrame.Position).Unit * 1000) 
+                end
+            end
+
+            if enabled and (method == "FireServer" or method == "InvokeServer") then
+                if isAllowedRemote(self) then
                     local targetPos = head.Position
                     local args = { ... }
-
-                    -- เปลี่ยนเฉพาะค่า Vector3 ตัวแรกที่เจอในอาร์กิวเมนต์ (มักจะเป็นจุดพิกัดเป้าหมายการยิง)
                     for i = 1, #args do
-                        if typeof(args[i]) == "Vector3" then
+                        local arg = args[i]
+                        local argType = typeof(arg)
+                        if argType == "Vector3" then
                             args[i] = targetPos
-                            break -- เปลี่ยนแค่ตัวแรกพอ เพื่อไม่ให้ค่าอื่นๆ เพี้ยนจนตัวละครค้าง
+                        elseif argType == "CFrame" then
+                            args[i] = arg - arg.Position + targetPos
                         end
                     end
-
                     return oldNamecall(self, unpack(args))
                 end
             end
