@@ -2926,7 +2926,7 @@ local MacroSettings = {
     Block2 = { Weapon = "Sword", Skill = "X", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block3 = { Weapon = "Melee", Skill = "Z", Hold = 1.0, Wait = 0.4, Delay = 0.05 },
     Block4 = { Weapon = "Melee", Skill = "X", Hold = 2.0, Wait = 0.4, Delay = 0.05 },
-    Block5 = { Weapon/ = "Melee", Skill = "C", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
+    Block5 = { Weapon = "Melee", Skill = "C", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block6 = { Weapon = "Blox Fruit", Skill = "Z", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block7 = { Weapon = "Blox Fruit", Skill = "X", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block8 = { Weapon = "Gun", Skill = "Z", Hold = 0.1, Wait = 0.4, Delay = 0.05 }
@@ -3900,59 +3900,3 @@ local DropdownMyFaction = Bounty:Dropdown({
 })
 
 
-
-
-local DropdownMelee = Bounty:Dropdown({
-    Title = "Melee",
-    Desc = "Select Melee skills (Supports all fighting styles in the game)",
-    Values = {"Z", "X", "C", "None"},
-    Value = {"Z"},
-    Multi = true,
-    Locked = false,
-    Flag = "melee_skill_multi",
-    Callback = function(selected)
-        selectedMeleeSkills = selected
-    end
-})
-
--- UI Dropdown Sword
-local DropdownSword = Bounty:Dropdown({
-    Title = "Sword",
-    Desc = "Select Sword skills (Supports all swords in the game)",
-    Values = {"Z", "X", "None"},
-    Value = {"Z"},
-    Multi = true,
-    Locked = false,
-    Flag = "sword_skill_multi",
-    Callback = function(selected)
-        selectedSwordSkills = selected
-    end
-})
-
--- UI Dropdown Fruit
-local DropdownFruit = Bounty:Dropdown({
-    Title = "Blox Fruit",
-    Desc = "Select Blox Fruit skills (Supports all fruits in the game)",
-    Values = {"Z", "X", "C", "V", "F", "None"},
-    Value = {"Z"},
-    Multi = true,
-    Locked = false,
-    Flag = "fruit_skill_multi",
-    Callback = function(selected)
-        selectedFruitSkills = selected
-    end
-})
-
--- UI Dropdown Gun
-local DropdownGun = Bounty:Dropdown({
-    Title = "Gun",
-    Desc = "Select Gun skills (Supports all guns in the game)",
-    Values = {"Z", "X", "None"},
-    Value = {"Z"},
-    Multi = true,
-    Locked = false,
-    Flag = "gun_skill_multi",
-    Callback = function(selected)
-        selectedGunSkills = selected
-    end
-})
