@@ -847,6 +847,7 @@ end
 
 
 
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
@@ -855,58 +856,49 @@ local Camera = workspace.CurrentCamera
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- กำหนดปุ่มสกิลที่ไม่ต้องการให้ Silent Aim ทำงาน (สำหรับคีย์บอร์ด PC)
-getgenv().IgnoredKeys = getgenv().IgnoredKeys or {
-    Enum.KeyCode.F,
-    Enum.KeyCode.R
+-- Cache global functions for speed
+local type = type
+local typeof = typeof
+local unpack = unpack
+local pairs = pairs
+
+local allowedRemotes = {
+    shoot = true, fire = true, attack = true, 
+    combat = true, ability = true, skill = true, gun = true
 }
 
--- [เพิ่มใหม่] ตั้งค่าสำหรับมือถือ (Mobile)
-getgenv().MobileSettings = getgenv().MobileSettings or {
-    AutoDetectTouch = true, -- ตรวจจับการสัมผัสหน้าจออัตโนมัติ
-    IgnoredGuiObjects = {}  -- รายชื่อปุ่ม GUI บนจอที่ไม่ต้องการให้ทำงาน (ถ้ามี)
+local blockedRemotes = {
+    equip = true, tool = true, inventory = true, 
+    backpack = true, loadout = true, anim = true, sound = true
 }
 
--- ฟังก์ชันเช็คว่ากำลังกดปุ่มที่ถูกยกเว้นอยู่หรือไม่ (PC)
-local function isIgnoredKeyPressed()
-    for _, keyCode in ipairs(getgenv().IgnoredKeys) do
-        if UserInputService:IsKeyDown(keyCode) then
+-- Memoization cache to avoid repeated string scanning on the same remote
+local remoteCache = {}
+
+local function isAllowedRemote(self)
+    local name = self.Name
+    local cached = remoteCache[name]
+    if cached ~= nil then
+        return cached
+    end
+
+    local lowerName = name:lower()
+    for blockWord in pairs(blockedRemotes) do
+        if lowerName:find(blockWord, 1, true) then
+            remoteCache[name] = false
+            return false
+        end
+    end
+
+    for keyword in pairs(allowedRemotes) do
+        if lowerName:find(keyword, 1, true) then
+            remoteCache[name] = true
             return true
         end
     end
+
+    remoteCache[name] = false
     return false
-end
-
--- [เพิ่มใหม่] ฟังก์ชันเช็คการสัมผัสหน้าจอบนมือถือ
-local function isMobileTouchActive()
-    if not getgenv().MobileSettings.AutoDetectTouch then return false end
-    
-    -- เช็คว่าผู้เล่นใช้นิ้วทัชหน้าจออยู่หรือไม่
-    local touches = UserInputService:GetTouches()
-    if #touches > 0 then
-        -- สามารถใส่เงื่อนไขเช็คตำแหน่ง UI เพิ่มเติมได้ที่นี่ถ้าต้องการ
-        return false -- ถ้าแตะหน้าจอปกติ ให้ Silent Aim ทำงานตามปกติ
-    end
-    
-    return false
-end
-
--- ฟังก์ชันหา Head ที่รองรับทั้ง Player, Model (Character) และ BasePart
-local function getHead()
-    local target = getgenv().CurrentTarget
-    if not target then return nil end
-
-    if target:IsA("Player") then
-        if target.Character then
-            return target.Character:FindFirstChild("Head")
-        end
-    elseif target:IsA("Model") then
-        return target:FindFirstChild("Head")
-    elseif target:IsA("BasePart") then
-        return target.Parent:FindFirstChild("Head")
-    end
-    
-    return nil
 end
 
 task.spawn(function()
@@ -915,57 +907,77 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-    local mt = getrawmetatable(Mouse)
-    if not mt then return end
-    
-    setreadonly(mt, false)
-    local oldIndex = mt.__index
+local function getRoot()
+    local target = getgenv().CurrentTarget
+    if target and target.Parent then
+        local character = target.Parent
+        -- ค้นหาชิ้นส่วนส่วนลำตัวรองรับทั้ง R6 และ R15
+        return character:FindFirstChild("HumanoidRootPart") 
+            or character:FindFirstChild("UpperTorso") 
+            or character:FindFirstChild("Torso")
+    end
+    return nil
+end
 
-    mt.__index = newcclosure(function(self, idx)
-        -- เช็คว่าเปิดใช้งาน และไม่ได้กดปุ่มยกเว้น หรือติดทัชมือถือ
-        if getgenv().SilentAimEnabled and self == Mouse and not isIgnoredKeyPressed() then
-            local head = getHead()
-            if head then
-                if idx == "Hit" then
-                    return head.CFrame
-                elseif idx == "Target" then
-                    return head
-                elseif idx == "X" or idx == "Y" then
-                    return Camera:WorldToScreenPoint(head.Position)[idx]
+    -- Combined / Optimized __index Hook
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+        if getgenv().SilentAimEnabled and self == Mouse then
+            local r = getRoot()
+            if r then
+                if idx == "Hit" then 
+                    return r.CFrame
+                elseif idx == "Target" then 
+                    return r
+                elseif idx == "X" or idx == "Y" then 
+                    return Camera:WorldToScreenPoint(r.Position)[idx]
                 end
             end
         end
         return oldIndex(self, idx)
-    end)
-    
-    setreadonly(mt, true)
+    end))
 
+    -- Combined / Optimized __namecall Hook
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
         local target = getgenv().CurrentTarget
         local enabled = getgenv().SilentAimEnabled
 
-        if enabled and target and not isIgnoredKeyPressed() then
-            if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                local head = getHead()
-                if head then 
-                    local origin = Camera.CFrame.Position
-                    local destination = head.Position
-                    return Ray.new(origin, (destination - origin).Unit * 1000) 
+        if target then
+            -- Handle Raycast / Viewport overrides
+            if enabled or UserInputService.TouchEnabled then
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                    local r = getRoot()
+                    if r then 
+                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
+                    end
+                end
+            end
+
+            -- Handle Remote FireServer / InvokeServer overrides
+            if enabled and (method == "FireServer" or method == "InvokeServer") then
+                if isAllowedRemote(self) then
+                    local targetPos = GetPredictedPosition(target)
+                    if targetPos then
+                        local args = { ... }
+                        for i = 1, #args do
+                            local arg = args[i]
+                            local argType = typeof(arg)
+                            if argType == "Vector3" then
+                                args[i] = targetPos
+                            elseif argType == "CFrame" then
+                                args[i] = arg - arg.Position + targetPos
+                            end
+                        end
+                        return oldNamecall(self, unpack(args))
+                    end
                 end
             end
         end
-        
+
         return oldNamecall(self, ...)
     end))
-end)
-
--- [เพิ่มใหม่] รองรับการโจมตี/ยิงผ่าน TouchInput สำหรับมือถือ
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        -- ตรงนี้จะช่วยให้ระบบรองรับการกดจอฝั่งมือถือเมื่อใช้งานร่วมกับระบบยิงของเกม
-    end
 end)
 
 
