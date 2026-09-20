@@ -2899,6 +2899,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local GuiService = game:GetService("GuiService")
 
 local WeaponList = {
     "None",
@@ -2919,13 +2920,13 @@ local SkillActionList = {
     "Jump"
 }
 
--- ตั้งค่าบล็อกคอมโบ (สามารถเลือกอาวุธซ้ำกันได้ตามต้องการ)
+-- ตั้งค่าบล็อกคอมโบ
 local MacroSettings = {
     Block1 = { Weapon = "Sword", Skill = "Z", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block2 = { Weapon = "Sword", Skill = "X", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block3 = { Weapon = "Melee", Skill = "Z", Hold = 1.0, Wait = 0.4, Delay = 0.05 },
     Block4 = { Weapon = "Melee", Skill = "X", Hold = 2.0, Wait = 0.4, Delay = 0.05 },
-    Block5 = { Weapon = "Melee", Skill = "C", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
+    Block5 = { Weapon/ = "Melee", Skill = "C", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block6 = { Weapon = "Blox Fruit", Skill = "Z", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block7 = { Weapon = "Blox Fruit", Skill = "X", Hold = 0.1, Wait = 0.4, Delay = 0.05 },
     Block8 = { Weapon = "Gun", Skill = "Z", Hold = 0.1, Wait = 0.4, Delay = 0.05 }
@@ -2933,8 +2934,9 @@ local MacroSettings = {
 
 local isRunning = false
 local macroEnabled = true
-local currentEquippedWeapon = nil -- ตัวแปรจำสถานะอาวุธที่ถืออยู่ปัจจุบัน
+local currentEquippedWeapon = nil
 
+-- ฟังก์ชันกดปุ่มคีย์บอร์ดสำรอง (เผื่อรันบน Emulator หรือ PC)
 local function PressKey(keyName, holdDuration)
     local keyCode = Enum.KeyCode[keyName]
     if not keyCode then return end
@@ -2945,11 +2947,45 @@ local function PressKey(keyName, holdDuration)
     VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
 end
 
--- ฟังก์ชันเลือกอาวุธแบบเช็คสถานะ: ถ้าเป็นอาวุธเดิม จะไม่กดซ้ำเพื่อให้กดสกิลต่อได้ทันที
+-- ฟังก์ชันกดปุ่มสกิลบนมือถือโดยอิงจาก PlayerGui.Main.Skills
+local function PressMobileSkill(skillName)
+    local skillsFolder = PlayerGui:FindFirstChild("Main") and PlayerGui.Main:FindFirstChild("Skills")
+    if not skillsFolder then
+        -- ถ้าหาโฟลเดอร์ Skills ไม่เจอ ให้ใช้ KeyPress ปกติแทน
+        PressKey(skillName, 0.05)
+        return
+    end
+
+    -- วนหาปุ่มสกิลที่ตรงกับชื่อสกิล (เช่น Z, X, C, V, F) ภายในหมวดหมู่อาวุธที่ถืออยู่หรือโฟลเดอร์ทั้งหมด
+    local targetButton = nil
+    for _, child in ipairs(skillsFolder:GetChildren()) do
+        if child.Name == skillName or (child:FindFirstChild("Title") and child.Title.Text == skillName) then
+            -- เช็คหาปุ่ม Mobile ภายในโฟลเดอร์สกิลนั้น
+            local mobileBtn = child:FindFirstChild("Mobile") or child:FindFirstChild("_Mobile")
+            if mobileBtn then
+                targetButton = mobileBtn
+                break
+            end
+        end
+    end
+
+    -- ถ้าเจอ ให้นำตำแหน่ง AbsolutePosition มาจำลองการแตะหน้าจอ (Touch Tap)
+    if targetButton and targetButton:IsA("GuiObject") then
+        local pos = targetButton.AbsolutePosition + (targetButton.AbsoluteSize / 2)
+        -- จำลองการกดนิ้วลงบนหน้าจอมือถือ
+        VirtualInputManager:SendTouchEvent(1, true, pos.X, pos.Y, game)
+        task.wait(0.05)
+        VirtualInputManager:SendTouchEvent(1, false, pos.X, pos.Y, game)
+    else
+        -- หากไม่เจอ UI บนมือถือ ให้ใช้การกดปุ่มคีย์บอร์ดจำลองแทน
+        PressKey(skillName, 0.05)
+    end
+end
+
+-- ฟังก์ชันเลือกอาวุธสำหรับมือถือ (กดปุ่มสลับ Slot 1-4 ด้านล่างจอ)
 local function EquipWeapon(weaponType)
     if weaponType == "None" then return end
     
-    -- ถ้าเป็นอาวุธเดิมที่ถืออยู่แล้ว ข้ามการกดเปลี่ยนอาวุธไปเลย เพื่อความลื่นไหล
     if currentEquippedWeapon == weaponType then
         return 
     end
@@ -2969,8 +3005,8 @@ local function EquipWeapon(weaponType)
         VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
         task.wait(0.05)
         VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
-        currentEquippedWeapon = weaponType -- อัปเดตสถานะอาวุธปัจจุบัน
-        task.wait(0.08) -- หน่วงเวลารอโมเดลขึ้น
+        currentEquippedWeapon = weaponType
+        task.wait(0.08)
     end
 end
 
@@ -2984,7 +3020,8 @@ local function ExecuteAction(skill, holdDuration)
         task.wait(holdDuration > 0 and holdDuration or 0.05)
         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     elseif skill ~= "None" then
-        PressKey(skill, holdDuration)
+        -- เรียกใช้ฟังก์ชันกดสกิลสำหรับมือถือโดยเฉพาะ
+        PressMobileSkill(skill)
     end
 end
 
@@ -2994,15 +3031,12 @@ _G.RunComboMacro = function()
     
     task.spawn(function()
         isRunning = true
-        currentEquippedWeapon = nil -- รีเซ็ตสถานะทุกครั้งที่เริ่มรันคอมโบใหม่
+        currentEquippedWeapon = nil
         
         for i = 1, 8 do
             local block = MacroSettings["Block" .. i]
             if block and block.Weapon ~= "None" and block.Skill ~= "None" then
-                -- ถืออาวุธ (ถ้าซ้ำกับบล็อกก่อนหน้า จะข้ามการกดปุ่มเปลี่ยนอาวุธและกดสกิลต่อทันที)
                 EquipWeapon(block.Weapon)
-                
-                -- สั่งใช้สกิล
                 ExecuteAction(block.Skill, block.Hold)
                 
                 if block.Wait and block.Wait > 0 then
@@ -3019,7 +3053,7 @@ _G.RunComboMacro = function()
     end)
 end
 
--- สร้าง UI สำหรับแต่ละ Block
+-- สร้าง UI สำหรับแต่ละ Block (ตามเดิม)
 for i = 1, 8 do
     local blockKey = "Block" .. i
     local section = Macro:Section({ Title = "Block " .. i })
@@ -3081,7 +3115,6 @@ for i = 1, 8 do
     })
 end
 
-
 Config:Keybind({
     Title = "Run Combo Macro",
     Value = "",
@@ -3091,11 +3124,10 @@ Config:Keybind({
     end
 })
 
--- ปุ่มกดเรียกใช้งานผ่าน createButton ด้านนอก (รองรับมือถือ)
-createButton("Macro", Color3.fromRGB(), false, function(state)
+-- ปุ่มลอยบนหน้าจอสำหรับมือถือ (Floating Button)
+createButton("Macro", Color3.fromRGB(0, 170, 255), false, function(state)
     _G.RunComboMacro() 
 end)
-
 
 
 
