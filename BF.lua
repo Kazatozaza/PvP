@@ -851,17 +851,47 @@ end
 
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- ฟังก์ชันดึงเป้าหมาย (หัวของตัวละคร)
+-- ฟังก์ชันค้นหาผู้เล่นหรือเป้าหมายที่ใกล้ที่สุดในแมพ Blox Fruits (ถ้ายังไม่ได้ตั้งเป้าหมายเอง)
+local function getClosestTarget()
+    if getgenv().CurrentTarget and getgenv().CurrentTarget.Parent then
+        return getgenv().CurrentTarget
+    end
+    
+    local closestTarget = nil
+    local shortestDistance = math.huge
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = myChar.HumanoidRootPart.Position
+
+    -- เช็คทั้งผู้เล่นอื่นและมอนสเตอร์/บอสในแมพ Blox Fruits
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            local hum = player.Character:FindFirstChild("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                local dist = (hrp.Position - myPos).Magnitude
+                if dist < shortestDistance then
+                    shortestDistance = dist
+                    closestTarget = hrp
+                end
+            end
+        end
+    end
+    
+    return closestTarget
+end
+
 local function getTargetHead()
-    local target = getgenv().CurrentTarget
+    local target = getClosestTarget()
     if target and target.Parent then
-        return target.Parent:FindFirstChild("Head")
+        return target.Parent:FindFirstChild("Head") or target.Parent:FindFirstChild("HumanoidRootPart")
     end
     return nil
 end
@@ -872,7 +902,7 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-    -- Hook __index เพื่อหลอกตำแหน่ง Mouse (Hit, Target, X, Y)
+    -- Hook Mouse สำหรับปืนหรือสกิลที่ใช้ Mouse.Hit / Mouse.Target
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and self == Mouse then
@@ -891,31 +921,35 @@ task.spawn(function()
         return oldIndex(self, idx)
     end))
 
-    -- Hook __namecall บังคับยัดค่า CFrame และ Vector3 ตรงๆ ทุก FireServer / InvokeServer
+    -- Hook Namecall สำหรับดักจับ Remote ของ Blox Fruits (เช่น การยิงปืน หรือใช้สกิลผลไม้)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
         
         if getgenv().SilentAimEnabled and (method == "FireServer" or method == "InvokeServer") then
-            local head = getTargetHead()
-            if head then
-                local targetPos = head.Position
-                local targetCFrame = head.CFrame
-                local args = { ... }
+            local remoteName = self.Name:lower()
+            -- รายชื่อ Remote หลักๆ ใน Blox Fruits ที่ใช้ในการโจมตี/ยิงสกิล
+            if remoteName:find("remote") or remoteName:find("skill") or remoteName:find("attack") or remoteName:find("shoot") or remoteName:find("combat") then
+                local head = getTargetHead()
+                if head then
+                    local targetPos = head.Position
+                    local targetCFrame = head.CFrame
+                    local args = { ... }
 
-                -- วนลูปหาค่าที่เป็น Vector3 หรือ CFrame แล้วเปลี่ยนเป็นเป้าหมายทันที
-                for i = 1, #args do
-                    local arg = args[i]
-                    local argType = typeof(arg)
-                    
-                    if argType == "Vector3" then
-                        args[i] = targetPos
-                    elseif argType == "CFrame" then
-                        args[i] = targetCFrame
+                    for i = 1, #args do
+                        local arg = args[i]
+                        local argType = typeof(arg)
+                        
+                        -- เปลี่ยนพิกัดเฉพาะ Vector3 หรือ CFrame ตัวแรกๆ ที่มักเป็นตำแหน่งพุ่งไป
+                        if argType == "Vector3" then
+                            args[i] = targetPos
+                        elseif argType == "CFrame" then
+                            args[i] = targetCFrame
+                        end
                     end
-                end
 
-                return oldNamecall(self, unpack(args))
+                    return oldNamecall(self, unpack(args))
+                end
             end
         end
 
