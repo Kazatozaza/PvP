@@ -235,6 +235,152 @@ GeneralTab:Select()
 
 
 
+
+
+
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CustomMobileTogglesStyle"
+screenGui.Parent = CoreGui
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local container = Instance.new("Frame")
+container.Size = UDim2.new(0, 120, 0, 144) 
+container.Position = UDim2.new(0, 20, 0, 20)
+container.BackgroundTransparency = 1
+container.Parent = screenGui
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = container
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 10)
+
+local function createButton(text, accentColor, order, callback)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 120, 0, 38)
+    button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+    button.BackgroundTransparency = 0.15
+    button.BorderSizePixel = 0
+    button.LayoutOrder = order
+    button.AutoButtonColor = false
+    button.Text = ""
+    button.Parent = container
+
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 10)
+    uiCorner.Parent = button
+
+    local shadow = Instance.new("UIStroke")
+    shadow.Name = "Shadow"
+    shadow.Parent = button
+    shadow.Color = Color3.fromRGB(0, 0, 0)
+    shadow.Transparency = 0.5
+    shadow.Thickness = 2.5
+    shadow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Name = "Border"
+    uiStroke.Parent = button
+    uiStroke.Color = Color3.fromRGB(45, 45, 55)
+    uiStroke.Thickness = 1.5
+    uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -20, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = text
+    textLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+    textLabel.TextSize = 12
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.Parent = button
+
+    local indicator = Instance.new("Frame")
+    indicator.Size = UDim2.new(0, 6, 0, 6)
+    indicator.Position = UDim2.new(1, -14, 0.5, -3)
+    indicator.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+    indicator.BorderSizePixel = 0
+    indicator.Parent = button
+
+    local indCorner = Instance.new("UICorner")
+    indCorner.CornerRadius = UDim.new(1, 0)
+    indCorner.Parent = indicator
+
+    local activeState = false
+    
+    button.MouseButton1Click:Connect(function()
+        activeState = not activeState
+        
+        local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        
+        if activeState then
+            TweenService:Create(button, tweenInfo, {BackgroundColor3 = Color3.fromRGB(28, 28, 36)}):Play()
+            TweenService:Create(uiStroke, tweenInfo, {Color = accentColor}):Play()
+            TweenService:Create(textLabel, tweenInfo, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            TweenService:Create(indicator, tweenInfo, {BackgroundColor3 = accentColor}):Play()
+        else
+            TweenService:Create(button, tweenInfo, {BackgroundColor3 = Color3.fromRGB(18, 18, 22)}):Play()
+            TweenService:Create(uiStroke, tweenInfo, {Color = Color3.fromRGB(45, 45, 55)}):Play()
+            TweenService:Create(textLabel, tweenInfo, {TextColor3 = Color3.fromRGB(200, 200, 210)}):Play()
+            TweenService:Create(indicator, tweenInfo, {BackgroundColor3 = Color3.fromRGB(70, 70, 80)}):Play()
+        end
+
+        if callback then
+            callback(activeState)
+        end
+    end)
+
+    return button
+end
+
+
+createButton("Camera Lock", Color3.fromRGB(0, 229, 255), 1, function(Value)
+    getgenv().CamlockEnabled = Value
+    if not Value then
+        getgenv().CurrentTarget = nil
+    end
+end)
+
+createButton("Teleport Player", Color3.fromRGB(0, 229, 255), 2, function(state)
+    FollowEnabled = state
+    getgenv().TPToTargetEnabled = state
+    getgenv().FollowEnabled = state
+
+    if not state then
+        currentTarget = nil
+        getgenv().CurrentTarget = nil
+    end
+end)
+
+Config:Toggle({
+    Title = "Mobile Custom Toggles UI",
+    Desc = "A modern mobile toggle menu with smooth animations and a master hide/show switch.",
+    Flag = "MobileMobile",
+    Value = true, -- ค่าเริ่มต้นให้แสดงผล
+    Callback = function(Value)
+        container.Visible = Value
+    end,
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
