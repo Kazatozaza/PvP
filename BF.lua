@@ -850,142 +850,84 @@ end
 
 
 
-
-
-
-
-
-
-
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- Fast References & Caches
-local type = type
-local typeof = typeof
-local unpack = unpack
-local pairs = pairs
-
-local allowedRemotes = {
-    shoot = true, fire = true, attack = true, 
-    combat = true, ability = true, skill = true, gun = true
-}
-
-local blockedRemotes = {
-    equip = true, tool = true, inventory = true, 
-    backpack = true, loadout = true, anim = true, sound = true
-}
-
-local remoteCache = {}
-
--- ฟังก์ชันเช็ค Remote แบบรวดเร็วผ่าน Cache
-local function isAllowedRemote(self)
-    local name = self.Name
-    local cached = remoteCache[name]
-    if cached ~= nil then return cached end
-
-    local lowerName = name:lower()
-    for blockWord in pairs(blockedRemotes) do
-        if lowerName:find(blockWord, 1, true) then
-            remoteCache[name] = false
-            return false
-        end
-    end
-
-    for keyword in pairs(allowedRemotes) do
-        if lowerName:find(keyword, 1, true) then
-            remoteCache[name] = true
-            return true
-        end
-    end
-
-    remoteCache[name] = false
-    return false
-end
-
--- ระบบดึงตำแหน่ง Head ล่วงหน้าแบบลื่นไหล (รองรับ Prediction เบื้องต้น)
-local cachedHead = nil
-local lastTarget = nil
-
+-- ฟังก์ชันดึงเป้าหมาย (หัวของตัวละคร)
 local function getTargetHead()
     local target = getgenv().CurrentTarget
-    if not target or not target.Parent then 
-        cachedHead = nil
-        lastTarget = nil
-        return nil 
+    if target and target.Parent then
+        return target.Parent:FindFirstChild("Head")
     end
-    
-    if target ~= lastTarget then
-        lastTarget = target
-        cachedHead = target.Parent:FindFirstChild("Head")
-    end
-    
-    return cachedHead
+    return nil
 end
 
-task.spawn(function() 
-    local success, Mouse = pcall(function() 
-        return LocalPlayer:GetMouse() 
-    end) 
-    if not success or not Mouse then return end 
+task.spawn(function()
+    local success, Mouse = pcall(function()
+        return LocalPlayer:GetMouse()
+    end)
+    if not success or not Mouse then return end
 
-    -- Optimized __index Hook 
-    local oldIndex 
-    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx) 
-        if getgenv().SilentAimEnabled and self == Mouse then 
-            local head = getTargetHead() 
-            if head then 
-                if idx == "Hit" then  
-                    return head.CFrame  
-                elseif idx == "Target" then  
-                    return head  
-                elseif idx == "X" or idx == "Y" then  
+    -- Hook __index เพื่อหลอกตำแหน่ง Mouse (Hit, Target, X, Y)
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+        if getgenv().SilentAimEnabled and self == Mouse then
+            local head = getTargetHead()
+            if head then
+                if idx == "Hit" then
+                    return head.CFrame
+                elseif idx == "Target" then
+                    return head
+                elseif idx == "X" or idx == "Y" then
                     local screenPoint = Camera:WorldToScreenPoint(head.Position)
                     return screenPoint[idx]
-                end 
-            end 
-        end 
-        return oldIndex(self, idx) 
-    end)) 
+                end
+            end
+        end
+        return oldIndex(self, idx)
+    end))
 
-    -- Optimized __namecall Hook (บังคับยิงด้วย CFrame / Position ตรงๆ ทะลุกำแพง)
-    local oldNamecall 
-    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...) 
-        local method = getnamecallmethod() 
-        local enabled = getgenv().SilentAimEnabled 
-        local head = getTargetHead() 
+    -- Hook __namecall บังคับยัดค่า CFrame และ Vector3 ตรงๆ ทุก FireServer / InvokeServer
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        
+        if getgenv().SilentAimEnabled and (method == "FireServer" or method == "InvokeServer") then
+            local head = getTargetHead()
+            if head then
+                local targetPos = head.Position
+                local targetCFrame = head.CFrame
+                local args = { ... }
 
-        if enabled and head then 
-            if method == "FireServer" or method == "InvokeServer" then 
-                if isAllowedRemote(self) then 
-                    local targetPos = head.Position 
-                    local targetCFrame = head.CFrame
-                    local args = { ... } 
+                -- วนลูปหาค่าที่เป็น Vector3 หรือ CFrame แล้วเปลี่ยนเป็นเป้าหมายทันที
+                for i = 1, #args do
+                    local arg = args[i]
+                    local argType = typeof(arg)
                     
-                    for i = 1, #args do 
-                        local arg = args[i] 
-                        local argType = typeof(arg) 
-                        -- บังคับเปลี่ยนค่า Vector3 หรือ CFrame ให้พุ่งเข้าหาหัวศัตรูทันที
-                        if argType == "Vector3" then 
-                            args[i] = targetPos 
-                        elseif argType == "CFrame" then 
-                            args[i] = targetCFrame 
-                        end 
-                    end 
-                    return oldNamecall(self, unpack(args)) 
-                end 
-            end 
-        end 
+                    if argType == "Vector3" then
+                        args[i] = targetPos
+                    elseif argType == "CFrame" then
+                        args[i] = targetCFrame
+                    end
+                end
 
-        return oldNamecall(self, ...) 
-    end)) 
+                return oldNamecall(self, unpack(args))
+            end
+        end
+
+        return oldNamecall(self, ...)
+    end))
 end)
+
+
+
+
+
+
 
 
 
