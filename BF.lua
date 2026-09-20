@@ -357,26 +357,6 @@ createButton("Teleport Player", Color3.fromRGB(0, 229, 255), 2, function(state)
     end
 end)
 
-Config:Toggle({
-    Title = "Mobile Custom Toggles UI",
-    Desc = "A modern mobile toggle menu with smooth animations and a master hide/show switch.",
-    Flag = "MobileMobile",
-    Value = true, -- ค่าเริ่มต้นให้แสดงผล
-    Callback = function(Value)
-        container.Visible = Value
-    end,
-})
-
-
-
-
-
-
-
-
-
-
-
 
 
 
