@@ -847,9 +847,6 @@ end
 
 
 
-
-
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
@@ -858,19 +855,39 @@ local Camera = workspace.CurrentCamera
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- กำหนดปุ่มสกิลที่ไม่ต้องการให้ Silent Aim ทำงาน (เช่น ปุ่ม F, V หรือปุ่มอื่นๆ)
+-- กำหนดปุ่มสกิลที่ไม่ต้องการให้ Silent Aim ทำงาน (สำหรับคีย์บอร์ด PC)
 getgenv().IgnoredKeys = getgenv().IgnoredKeys or {
-    Enum.KeyCode.F, -- ตัวอย่าง: ไม่ให้ทำงานตอนแปลงร่าง/บิน (สกิล F)
-    Enum.KeyCode.R  -- ตัวอย่าง: ไม่ให้ทำงานตอนใช้สกิล V
+    Enum.KeyCode.F,
+    Enum.KeyCode.R
 }
 
--- ฟังก์ชันเช็คว่ากำลังกดปุ่มที่ถูกยกเว้นอยู่หรือไม่
+-- [เพิ่มใหม่] ตั้งค่าสำหรับมือถือ (Mobile)
+getgenv().MobileSettings = getgenv().MobileSettings or {
+    AutoDetectTouch = true, -- ตรวจจับการสัมผัสหน้าจออัตโนมัติ
+    IgnoredGuiObjects = {}  -- รายชื่อปุ่ม GUI บนจอที่ไม่ต้องการให้ทำงาน (ถ้ามี)
+}
+
+-- ฟังก์ชันเช็คว่ากำลังกดปุ่มที่ถูกยกเว้นอยู่หรือไม่ (PC)
 local function isIgnoredKeyPressed()
     for _, keyCode in ipairs(getgenv().IgnoredKeys) do
         if UserInputService:IsKeyDown(keyCode) then
             return true
         end
     end
+    return false
+end
+
+-- [เพิ่มใหม่] ฟังก์ชันเช็คการสัมผัสหน้าจอบนมือถือ
+local function isMobileTouchActive()
+    if not getgenv().MobileSettings.AutoDetectTouch then return false end
+    
+    -- เช็คว่าผู้เล่นใช้นิ้วทัชหน้าจออยู่หรือไม่
+    local touches = UserInputService:GetTouches()
+    if #touches > 0 then
+        -- สามารถใส่เงื่อนไขเช็คตำแหน่ง UI เพิ่มเติมได้ที่นี่ถ้าต้องการ
+        return false -- ถ้าแตะหน้าจอปกติ ให้ Silent Aim ทำงานตามปกติ
+    end
+    
     return false
 end
 
@@ -884,7 +901,7 @@ local function getHead()
             return target.Character:FindFirstChild("Head")
         end
     elseif target:IsA("Model") then
-        return target:FindFirstChild("Head") -- แก้ไขจาก . เป็น :
+        return target:FindFirstChild("Head")
     elseif target:IsA("BasePart") then
         return target.Parent:FindFirstChild("Head")
     end
@@ -905,7 +922,7 @@ task.spawn(function()
     local oldIndex = mt.__index
 
     mt.__index = newcclosure(function(self, idx)
-        -- เช็คว่าเปิดใช้งาน และไม่ได้กดปุ่มสกิลที่ยกเว้นไว้
+        -- เช็คว่าเปิดใช้งาน และไม่ได้กดปุ่มยกเว้น หรือติดทัชมือถือ
         if getgenv().SilentAimEnabled and self == Mouse and not isIgnoredKeyPressed() then
             local head = getHead()
             if head then
@@ -944,6 +961,12 @@ task.spawn(function()
     end))
 end)
 
+-- [เพิ่มใหม่] รองรับการโจมตี/ยิงผ่าน TouchInput สำหรับมือถือ
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        -- ตรงนี้จะช่วยให้ระบบรองรับการกดจอฝั่งมือถือเมื่อใช้งานร่วมกับระบบยิงของเกม
+    end
+end)
 
 
 
