@@ -929,67 +929,77 @@ local function getTargetHead()
     return cachedHead
 end
 
-task.spawn(function()
-    local success, Mouse = pcall(function()
-        return LocalPlayer:GetMouse()
-    end)
-    if not success or not Mouse then return end
+task.spawn(function() 
+    local success, Mouse = pcall(function() 
+        return LocalPlayer:GetMouse() 
+    end) 
+    if not success or not Mouse then return end 
 
-    -- Optimized __index Hook (ทะลุกำแพง / ไม่สนสิ่งกีดขวาง)
-    local oldIndex
-    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        if getgenv().SilentAimEnabled and self == Mouse then
-            -- ข้ามการเช็คกำแพง โดยดึงตำแหน่งหัวตรงๆ
-            local head = getTargetHead()
-            if head then
-                if idx == "Hit" then 
-                    return head.CFrame
-                elseif idx == "Target" then 
-                    return head
-                elseif idx == "X" or idx == "Y" then 
-                    return Camera:WorldToScreenPoint(head.Position)[idx]
-                end
-            end
-        end
-        return oldIndex(self, idx)
-    end))
-
-    -- Optimized __namecall Hook (บังคับส่งค่าพิกัดเป้าหมายทะลุสิ่งกีดขวาง)
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local enabled = getgenv().SilentAimEnabled
-        local head = getTargetHead()
-
-        if head then
-            if enabled or UserInputService.TouchEnabled then
-                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                    return Ray.new(Camera.CFrame.Position, (head.Position - Camera.CFrame.Position).Unit * 1000) 
-                end
-            end
-
-            if enabled and (method == "FireServer" or method == "InvokeServer") then
-                if isAllowedRemote(self) then
-                    local targetPos = head.Position
-                    local args = { ... }
-                    for i = 1, #args do
-                        local arg = args[i]
-                        local argType = typeof(arg)
-                        if argType == "Vector3" then
-                            args[i] = targetPos
-                        elseif argType == "CFrame" then
-                            args[i] = arg - arg.Position + targetPos
-                        end
+    -- Optimized __index Hook 
+    local oldIndex 
+    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx) 
+        if getgenv().SilentAimEnabled and self == Mouse then 
+            local head = getTargetHead() 
+            if head then 
+                local screenPoint, onScreen = Camera:WorldToScreenPoint(head.Position)
+                if idx == "Hit" then  
+                    return head.CFrame  
+                elseif idx == "Target" then  
+                    return head  
+                elseif idx == "X" or idx == "Y" then  
+                    -- ป้องกันค่าเพี้ยนเวลาเป้าหมายอยู่หลังจอหรือติดกำแพง
+                    if onScreen or screenPoint.Z > 0 then
+                        return screenPoint[idx]
+                    else
+                        -- คืนค่าตำแหน่งเมาส์เดิมถ้าอยู่นอกจอเพื่อไม่ให้สะบัด
+                        return Mouse[idx]
                     end
-                    return oldNamecall(self, unpack(args))
-                end
-            end
-        end
+                end 
+            end 
+        end 
+        return oldIndex(self, idx) 
+    end)) 
 
-        return oldNamecall(self, ...)
-    end))
+    -- Optimized __namecall Hook 
+    local oldNamecall 
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...) 
+        local method = getnamecallmethod() 
+        local enabled = getgenv().SilentAimEnabled 
+        local head = getTargetHead() 
+
+        if head then 
+            if enabled or UserInputService.TouchEnabled then 
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then 
+                    local origin = Camera.CFrame.Position
+                    local direction = (head.Position - origin)
+                    -- ป้องกันเวกเตอร์พังกรณีระยะประชิดหรือทะลุกำแพง
+                    if direction.Magnitude > 0.1 then
+                        return Ray.new(origin, direction.Unit * 1000)  
+                    end
+                end 
+            end 
+
+            if enabled and (method == "FireServer" or method == "InvokeServer") then 
+                if isAllowedRemote(self) then 
+                    local targetPos = head.Position 
+                    local args = { ... } 
+                    for i = 1, #args do 
+                        local arg = args[i] 
+                        local argType = typeof(arg) 
+                        if argType == "Vector3" then 
+                            args[i] = targetPos 
+                        elseif argType == "CFrame" then 
+                            args[i] = arg - arg.Position + targetPos 
+                        end 
+                    end 
+                    return oldNamecall(self, unpack(args)) 
+                end 
+            end 
+        end 
+
+        return oldNamecall(self, ...) 
+    end)) 
 end)
-
 
 
 
