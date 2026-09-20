@@ -845,6 +845,11 @@ end
 
 
 
+
+
+
+
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
@@ -860,18 +865,13 @@ local unpack = unpack
 local pairs = pairs
 
 local allowedRemotes = {
-    shoot = true, fire = true, attack = true,
+    shoot = true, fire = true, attack = true, 
     combat = true, ability = true, skill = true, gun = true
 }
 
 local blockedRemotes = {
-    equip = true, tool = true, inventory = true,
+    equip = true, tool = true, inventory = true, 
     backpack = true, loadout = true, anim = true, sound = true
-}
-
-getgenv().IgnoredKeys = getgenv().IgnoredKeys or {
-    Enum.KeyCode.F, -- ตัวอย่าง: ไม่ให้ทำงานตอนแปลงร่าง/บิน (สกิล F)
-    Enum.KeyCode.R  -- ตัวอย่าง: ไม่ให้ทำงานตอนใช้สกิล V
 }
 
 -- Memoization cache to avoid repeated string scanning on the same remote
@@ -903,32 +903,23 @@ local function isAllowedRemote(self)
     return false
 end
 
--- เพิ่มฟังก์ชันหา RootPart ของเป้าหมาย
-local function getRoot(target)
-    local t = target or getgenv().CurrentTarget
-    if t and t.Parent then
-        local character = t.Parent
-        return character:FindFirstChild("HumanoidRootPart")
-            or character:FindFirstChild("UpperTorso")
-            or character:FindFirstChild("Torso")
-    end
-    return nil
-end
-
--- เพิ่มฟังก์ชันทำนายตำแหน่ง (Prediction) พื้นฐาน
-local function GetPredictedPosition(target)
-    local root = getRoot(target)
-    if not root then return nil end
-    
-    -- สามารถเพิ่มระบบคำนวณความเร็ว (Velocity) ตรงนี้ได้ถ้าต้องการความแม่นยำเพิ่มขึ้น
-    return root.Position
-end
-
 task.spawn(function()
     local success, Mouse = pcall(function()
         return LocalPlayer:GetMouse()
     end)
     if not success or not Mouse then return end
+
+local function getRoot()
+    local target = getgenv().CurrentTarget
+    if target and target.Parent then
+        local character = target.Parent
+        -- ค้นหาชิ้นส่วนส่วนลำตัวรองรับทั้ง R6 และ R15
+        return character:FindFirstChild("HumanoidRootPart") 
+            or character:FindFirstChild("UpperTorso") 
+            or character:FindFirstChild("Torso")
+    end
+    return nil
+end
 
     -- Combined / Optimized __index Hook
     local oldIndex
@@ -936,11 +927,11 @@ task.spawn(function()
         if getgenv().SilentAimEnabled and self == Mouse then
             local r = getRoot()
             if r then
-                if idx == "Hit" then
+                if idx == "Hit" then 
                     return r.CFrame
-                elseif idx == "Target" then
+                elseif idx == "Target" then 
                     return r
-                elseif idx == "X" or idx == "Y" then
+                elseif idx == "X" or idx == "Y" then 
                     return Camera:WorldToScreenPoint(r.Position)[idx]
                 end
             end
@@ -960,8 +951,8 @@ task.spawn(function()
             if enabled or UserInputService.TouchEnabled then
                 if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
                     local r = getRoot()
-                    if r then
-                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000)
+                    if r then 
+                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
                     end
                 end
             end
@@ -990,6 +981,7 @@ task.spawn(function()
         return oldNamecall(self, ...)
     end))
 end)
+
 
 
 
@@ -3094,4 +3086,3 @@ Macro:Keybind({
 createButton("Macro", Color3.fromRGB(), false, function(state)
     _G.RunComboMacro() 
 end)
-
