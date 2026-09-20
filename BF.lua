@@ -935,10 +935,11 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-    -- Optimized __index Hook (ลื่นปรื๊ด ไม่มีอาการหน่วง)
+    -- Optimized __index Hook (ทะลุกำแพง / ไม่สนสิ่งกีดขวาง)
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and self == Mouse then
+            -- ข้ามการเช็คกำแพง โดยดึงตำแหน่งหัวตรงๆ
             local head = getTargetHead()
             if head then
                 if idx == "Hit" then 
@@ -953,7 +954,7 @@ task.spawn(function()
         return oldIndex(self, idx)
     end))
 
-    -- Optimized __namecall Hook (จัดการ Remote และ Raycast แบบความเร็วสูง)
+    -- Optimized __namecall Hook (บังคับส่งค่าพิกัดเป้าหมายทะลุสิ่งกีดขวาง)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
@@ -988,8 +989,6 @@ task.spawn(function()
         return oldNamecall(self, ...)
     end))
 end)
-
-
 
 
 
