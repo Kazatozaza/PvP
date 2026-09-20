@@ -680,7 +680,7 @@ local isRunning = false
 local macroEnabled = true
 local currentEquippedWeapon = nil
 
--- ตรวจสอบว่าเป็นมือถือหรือไม่ (เช็คจาก TouchEnabled และไม่มี Keyboard เต็มรูปแบบ หรือเลือกบังคับแยกได้)
+-- ตรวจสอบว่าเป็นมือถือหรือไม่
 local function IsMobileDevice()
     return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 end
@@ -733,23 +733,25 @@ local function ExecuteActionPC(skill, holdDuration)
     end
 end
 
--- ==================== ฟังก์ชันสำหรับมือถือ (Mobile) ====================
+-- ==================== ฟังก์ชันสำหรับมือถือ (Mobile เฉพาะตัว) ====================
+-- ฟังก์ชันจำลองการทัชสกรีน ณ ตำแหน่งพิกัด X, Y บนหน้าจอ
+local function TouchScreenAt(x, y, holdDuration)
+    VirtualInputManager:SendTouchEvent(1, true, x, y, game)
+    task.wait(holdDuration > 0 and holdDuration or 0.05)
+    VirtualInputManager:SendTouchEvent(1, false, x, y, game)
+end
+
 local function PressMobileSkill(skillName)
     local skillsFolder = PlayerGui:FindFirstChild("Main") and PlayerGui.Main:FindFirstChild("Skills")
-    if not skillsFolder then
-        PressPCKey(skillName, 0.05)
-        return
-    end
+    if not skillsFolder then return end
 
     local targetButton = nil
     
-    -- วนหาปุ่มสกิลตามโครงสร้าง UI ในภาพ (Main.Skills.[Z, X, C, V, F])
+    -- วนหาปุ่มสกิลตามโครงสร้าง UI ในมือถือ (Z, X, C, V, F)
     for _, child in ipairs(skillsFolder:GetChildren()) do
         if child.Name == skillName or (child:FindFirstChild("Title") and child.Title.Text == skillName) then
-            -- ค้นหาปุ่ม Mobile ภายในโครงสร้าง (รองรับทั้ง Mobile และ _Mobile ตามภาพ Explorer)
             local mobileBtn = child:FindFirstChild("Mobile") or child:FindFirstChild("_Mobile")
             if not mobileBtn then
-                -- เผื่อกรณีโครงสร้างลึกลงไปใน Frame
                 for _, sub in ipairs(child:GetDescendants()) do
                     if sub.Name == "Mobile" or sub.Name == "_Mobile" then
                         mobileBtn = sub
@@ -765,15 +767,10 @@ local function PressMobileSkill(skillName)
         end
     end
 
+    -- หากเจอ UI ปุ่มสกิลบนมือถือ ให้กดทัชที่ตำแหน่งนั้นทันที
     if targetButton and targetButton:IsA("GuiObject") then
         local pos = targetButton.AbsolutePosition + (targetButton.AbsoluteSize / 2)
-        -- จำลองการกดทัชสกรีนลงบนตำแหน่งปุ่มสกิลจริงๆ บนมือถือ
-        VirtualInputManager:SendTouchEvent(1, true, pos.X, pos.Y, game)
-        task.wait(0.05)
-        VirtualInputManager:SendTouchEvent(1, false, pos.X, pos.Y, game)
-    else
-        -- ถ้าหาปุ่มไม่เจอจริงๆ ให้ลองกดปุ่มคีย์บอร์ดสำรอง
-        PressPCKey(skillName, 0.05)
+        TouchScreenAt(pos.X, pos.Y, 0.05)
     end
 end
 
@@ -781,7 +778,8 @@ local function EquipWeaponMobile(weaponType)
     if weaponType == "None" then return end
     if currentEquippedWeapon == weaponType then return end
 
-    -- บนมือถือมักจะใช้การจำลองกดปุ่มเลข 1-4 เช่นเดียวกัน หรือกดปุ่มเปลี่ยนอาวุธบนจอ
+    -- บนมือถือ Blox Fruits จะมีปุ่มช่องเก็บอาวุธ/สลอตด้านล่าง (สามารถปรับตำแหน่งพิกัดปุ่มสลับอาวุธบนจอ หรือใช้การกดปุ่ม Slot)
+    -- ตรงนี้ใช้ระบบจำลองการกด Slot อาวุธ หรือถ้าเป็นระบบทัชสล็อต สามารถแก้พิกัดตรงนี้ได้ครับ
     local keyToPress = nil
     if weaponType == "Melee" then
         keyToPress = Enum.KeyCode.One
@@ -794,6 +792,7 @@ local function EquipWeaponMobile(weaponType)
     end
 
     if keyToPress then
+        -- บนมือถือบาง Executor รองรับ SendKeyEvent สำหรับปุ่มลัด
         VirtualInputManager:SendKeyEvent(true, keyToPress, false, game)
         task.wait(0.05)
         VirtualInputManager:SendKeyEvent(false, keyToPress, false, game)
@@ -804,14 +803,14 @@ end
 
 local function ExecuteActionMobile(skill, holdDuration)
     if skill == "Jump" then
+        -- จำลองปุ่มกระโดดบนมือถือ (หรือใช้ Touch ทับปุ่ม Jump ถ้ามี)
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
         task.wait(holdDuration > 0 and holdDuration or 0.05)
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
     elseif skill == "Click (M1)" then
-        -- จำลองการคลิกโจมตีบนมือถือ
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-        task.wait(holdDuration > 0 and holdDuration or 0.05)
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+        -- จำลองการกดโจมตีธรรมดาบนมือถือ (กดทัชกลางจอหรือตำแหน่งปุ่มตี)
+        local screenSize = workspace.CurrentCamera.ViewportSize
+        TouchScreenAt(screenSize.X / 2, screenSize.Y / 2, holdDuration)
     elseif skill ~= "None" then
         PressMobileSkill(skill)
     end
@@ -832,7 +831,6 @@ _G.RunComboMacro = function()
             local block = MacroSettings["Block" .. i]
             if block and block.Weapon ~= "None" and block.Skill ~= "None" then
                 
-                -- แยกการทำงานระหว่างมือถือและคอมพิวเตอร์ตรงนี้
                 if isMobile then
                     EquipWeaponMobile(block.Weapon)
                     ExecuteActionMobile(block.Skill, block.Hold)
