@@ -639,6 +639,7 @@ Config:Toggle({
 
 
 
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -921,7 +922,7 @@ Config:Keybind({
     end
 })
 
--- ปุ่มลอยบนหน้าจอสำหรับมือถือ (Floating Button) - แก้ไขการเรียกใช้งานให้ถูกต้อง
+-- ปุ่มลอยบนหน้าจอสำหรับมือถือ (Floating Button)
 createButton("Macro", Color3.fromRGB(0, 170, 255), false, function(state)
-    _G.RunComboMacro() 
+    _G.RunExecutor = _G.RunComboMacro() 
 end)
