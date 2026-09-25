@@ -854,8 +854,6 @@ end
 
 
 
-
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -933,6 +931,9 @@ local function getTargetHead()
 end
 
 task.spawn(function()
+    -- ** เพิ่มการหน่วงเวลา 2 วินาทีก่อนรันระบบหลัก **
+    task.wait(5)
+
     local success, Mouse = pcall(function()
         return LocalPlayer:GetMouse()
     end)
@@ -998,8 +999,6 @@ end)
 
 
 
-
-
 local HttpService = game:GetService("HttpService")
 local FileName = "SkillColorConfig.json"
 
@@ -1035,7 +1034,11 @@ local function loadConfig()
 end
 
 loadConfig()
-do
+
+-- ** เพิ่ม task.spawn และ task.wait(2) ก่อนเริ่มรันระบบหลัก **
+task.spawn(function()
+    task.wait(5)
+
     getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
     getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
 
@@ -1115,7 +1118,8 @@ do
             end
         end
     end)
-end
+end)
+
 
 
 System:Toggle({
@@ -1312,7 +1316,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 8
+getgenv().HitboxSize = 6
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
@@ -2170,15 +2174,6 @@ end
 
 
 
-
---  ปุ่มทั้งหมด=================================================================
-
--- ==============================================================================
--- 🚀 COMBAT TAB CONFIGURATION
--- ==============================================================================
-
--- [ 1. Main Toggles ] ---------------------------------------------------------
-
 CombatTab:Toggle({
     Title = "CamLock (PC/Mobile)",
     Desc  = "Lock onto targets instantly.",
@@ -2209,7 +2204,8 @@ CombatTab:Toggle({
 })
 
 
--- [ 2. Targeting & FOV Settings ] ----------------------------------------------
+-- [ 2. TARGETING & FOV SETTINGS ] -----------------------------------------------
+local FOVSection = CombatTab:Section({ Title = "Targeting & FOV" })
 
 CombatTab:Dropdown({
     Title = "Silent Aim Mode",
@@ -2220,14 +2216,12 @@ CombatTab:Dropdown({
     Callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
         
-        -- ถ้าอยู่โหมด FOV แล้วเปลี่ยนไปโหมดอื่น ให้บันทึกค่าปัจจุบันเก็บไว้ก่อน
         if getgenv().SilentAimMode == "FOV" and mode ~= "FOV" then
             getgenv().SavedFOVRadius = getgenv().FOVRadius
         end
 
         getgenv().SilentAimMode = mode
         
-        -- ปรับค่า FOVRadius ตามโหมดที่เลือก
         if mode == "360°" then
             getgenv().FOVRadius = 9999 
         elseif mode == "180°" then
@@ -2251,7 +2245,6 @@ CombatTab:Slider({
     Callback = function(Value)
         getgenv().FOVRadius = Value
         
-        -- ถ้าปรับขนาดตอนที่อยู่โหมด FOV ปกติ ให้บันทึกค่าเก็บไว้ใน SavedFOVRadius ด้วย
         if getgenv().SilentAimMode == "FOV" then
             getgenv().SavedFOVRadius = Value
         end
@@ -2284,7 +2277,8 @@ CombatTab:Toggle({
 })
 
 
--- [ 3. Visuals & Filters ] ----------------------------------------------------
+-- [ 3. VISUALS & FILTERS ] ----------------------------------------------------
+local VisualsSection = CombatTab:Section({ Title = "Visuals & Filters" })
 
 CombatTab:Toggle({
     Title = "Show Red Snapline",
@@ -2327,7 +2321,6 @@ CombatTab:Dropdown({
         getgenv().TargetMode = mode
     end,
 })
-
 
 
 
@@ -3126,7 +3119,7 @@ local function executeSkills(skillTable, toolType)
     
     if hasValid then
         equipToolByType(toolType)
-        task.wait(0.01)
+        task.wait()
         for _, skill in ipairs(skillTable) do
             if skill ~= "None" then
                 pressKey(skill)
