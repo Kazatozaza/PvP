@@ -3126,7 +3126,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local distance = (targetPos - currentPos).Magnitude
     
     -- ดึงค่าระยะจาก Settings/Flags
-    local maxDistance = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 100
+    local maxDistance = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 300
     local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
     
     -- ถ้าอยู่ในระยะ MaxDistance ให้ "วาปแปะล็อกติดตัวเป้าหมายทันที" (Instant Teleport & Lock)
@@ -3144,7 +3144,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         myRoot.AssemblyAngularVelocity = Vector3.zero
 
         -- หากอยู่ในระยะโจมตี (<= 25 studs) ทำคอมโบ
-        if distance <= 50 then
+        if distance <= 250 then
             lastComboTime = lastComboTime or 0
             comboCooldown = comboCooldown or 1
 
