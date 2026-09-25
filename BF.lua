@@ -153,7 +153,7 @@ local windowSuccess, Window = pcall(function()
     Icon =  "rbxassetid://97596339693490",
     Author = "System Online • Access Granted",
     Folder = "Destiny Hub",
-    Size = UDim2.fromOffset(620, 500), -- window size
+    Size = UDim2.fromOffset(620, 520), -- window size
     Transparent = true, -- window transparency
     Theme = "Darker-Soft", -- library theme
     Resizable = true, -- the ability to rezize window
@@ -195,15 +195,19 @@ Window:Section({
 })
 
 local CombatTab = Window:Tab({
-    Title = "Combat",
+    Title = "Aimbot PvP",
     Icon = "swords"
 })
 
 local Visuals = Window:Tab({ 
-    Title = "Visuals ",
+    Title = "Visuals (ESP)",
     Icon = "crosshair" 
 })
 
+local System = Window:Tab({
+    Title = "System /Core",
+    Icon = "zap" -- ไอคอนสายฟ้า (พลังงาน/บูสต์)
+})
 
 
 
@@ -1031,32 +1035,57 @@ local function loadConfig()
 end
 
 loadConfig()
-
-
 do
     getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
-    getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255) -- ค่าเริ่มต้นเป็นสีขาว
+    getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
 
     local LocalPlayer = game:GetService("Players").LocalPlayer
 
-    -- ฟังก์ชันสำหรับเปลี่ยนสีเฉพาะ Particle, Trail และ Beam ของสกิลเท่านั้น
+    -- ฟังก์ชันเช็กวัตถุยอดฮิตที่ต้องยกเว้น (รวมถึง NPCs ด้วย)
+    local function isIgnored(item)
+        if not item then return true end
+        
+        -- ใช้พาร์ทเร่งด่วนเช็กโฟลเดอร์ที่ไม่ต้องการ
+        local p = item.Parent
+        while p and p ~= workspace do
+            if p.Name == "Map" or p.Name == "Characters" or p.Name == "Enemies" or p.Name == "NPCs" then
+                return true
+            end
+            p = p.Parent
+        end
+        return false
+    end
+
+    -- ฟังก์ชันตรวจสอบและเปลี่ยนสีแบบเจาะจงเฉพาะสิ่งที่ต้องการ
+    local function applyToItem(item)
+        if isIgnored(item) then return end
+        
+        pcall(function()
+            if item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") then
+                item.Color = ColorSequence.new(getgenv().SkillColor)
+            elseif item:IsA("BasePart") then
+                item.Color = getgenv().SkillColor
+            elseif item:IsA("Light") then
+                item.Color = getgenv().SkillColor
+            end
+        end)
+    end
+
     local function applySkillColorOnly(targetObj)
         if not targetObj or not getgenv().SkillColorChangerEnabled then return end
+        if isIgnored(targetObj) then return end
         
-        local function apply(item)
-            if item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") then
-                pcall(function()
-                    item.Color = ColorSequence.new(getgenv().SkillColor)
-                end)
-            end
-        end
-
+        applyToItem(targetObj)
+        
+        -- ใช้ table เก็บและเช็กเฉพาะคลาสที่จำเป็น เพื่อลดการวนลูปขยะ
         for _, descendant in ipairs(targetObj:GetDescendants()) do
-            apply(descendant)
+            if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("BasePart") or descendant:IsA("Light") then
+                applyToItem(descendant)
+            end
         end
     end
 
-    -- ฟังก์ชันเฝ้าระวังเอฟเฟกต์ใหม่ที่ตัวละคร
+    -- เฝ้าระวังตัวละคร
     local function hookCharacterEffects(character)
         if not character then return end
         applySkillColorOnly(character)
@@ -1064,7 +1093,7 @@ do
         character.DescendantAdded:Connect(function(descendant)
             if getgenv().SkillColorChangerEnabled then
                 task.defer(function()
-                    applySkillColorOnly(descendant)
+                    applyToItem(descendant)
                 end)
             end
         end)
@@ -1075,18 +1104,21 @@ do
     end
     LocalPlayer.CharacterAdded:Connect(hookCharacterEffects)
 
-    -- ดักจับเอฟเฟกต์สกิลที่ถูกปล่อยออกมาใน Workspace
+    -- ดักจับเฉพาะวัตถุใหม่ที่ถูกสร้างขึ้นใน Workspace (ลดการเช็กพาร์ทที่ไม่เกี่ยวข้อง)
     workspace.DescendantAdded:Connect(function(descendant)
-        if getgenv().SkillColorChangerEnabled and LocalPlayer.Character and descendant:IsDescendantOf(workspace) then
-            task.defer(function()
-                applySkillColorOnly(descendant)
-            end)
+        if getgenv().SkillColorChangerEnabled then
+            -- กรองให้ทำเฉพาะประเภทที่เกี่ยวข้องกับเอฟเฟกต์จริงๆ เท่านั้น เพื่อไม่ให้กินสเปคเครื่อง
+            if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("BasePart") or descendant:IsA("Light") then
+                task.defer(function()
+                    applyToItem(descendant)
+                end)
+            end
         end
     end)
 end
 
 
-CombatTab:Toggle({
+System:Toggle({
     Title = "Skill Color Changer",
     Desc = "Change skill effect colors only.",
     Flag = "skill_color_toggle",
@@ -1100,7 +1132,7 @@ CombatTab:Toggle({
     end,
 })
 
-CombatTab:Colorpicker({
+System:Colorpicker({
     Title = "Select Skill Color",
     Desc = "Choose your custom skill effect color.",
     Default = getgenv().SkillColor,
@@ -1305,6 +1337,36 @@ RunService.RenderStepped:Connect(function()
 end)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 local HideShowUI = Config:Section({ Title = "Settings" })
 
 
@@ -1471,6 +1533,9 @@ end)
 -- ==========================================
 -- SCOPE 1: Configuration & Colors
 -- ==========================================
+
+
+
 do
     getgenv().ESPConfig = getgenv().ESPConfig or {
         ShowName = true,
@@ -1843,6 +1908,7 @@ do
 end
 
 
+
 --วาปหาผู้เล่น (Improved Version)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -2032,19 +2098,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -2114,19 +2167,22 @@ local function SetFastAttack(state)
         task.wait()
     end)
 end
- 
+
+
+
 
 --  ปุ่มทั้งหมด=================================================================
 
+-- ==============================================================================
+-- 🚀 COMBAT TAB CONFIGURATION
+-- ==============================================================================
 
-
-local AimSection = CombatTab:Section({ Title = "Visual & Settings" })
-
+-- [ 1. Main Toggles ] ---------------------------------------------------------
 
 CombatTab:Toggle({
     Title = "CamLock (PC/Mobile)",
-    Desc = "Lock onto targets instantly.",
-    Flag = "camlock_toggle",
+    Desc  = "Lock onto targets instantly.",
+    Flag  = "camlock_toggle",
     Value = getgenv().CamlockEnabled,
     Callback = function(Value)
         getgenv().CamlockEnabled = Value
@@ -2136,29 +2192,31 @@ CombatTab:Toggle({
     end,
 })
 
-
-
 CombatTab:Toggle({
     Title = "Silent Aim",
-    Desc = "Hit shots without precise crosshairs.",
-    Flag = "silent_aim_toggle",
+    Desc  = "Hit shots without precise crosshairs.",
+    Flag  = "silent_aim_toggle",
     Value = getgenv().SilentAimEnabled,
     Callback = function(Value)
         getgenv().SilentAimEnabled = Value
         if not Value and not getgenv().CamlockEnabled then
             getgenv().CurrentTarget = nil
-            if Snapline then Snapline.Visible = false end
+            if Snapline then 
+                Snapline.Visible = false 
+            end
         end
     end,
 })
 
 
+-- [ 2. Targeting & FOV Settings ] ----------------------------------------------
+
 CombatTab:Dropdown({
     Title = "Silent Aim Mode",
-    Desc = "Switch targeting parameters.",
-    Flag = "silent_aim_mode_dropdown",
+    Desc  = "Switch targeting parameters.",
+    Flag  = "silent_aim_mode_dropdown",
     Values = { "FOV", "180°", "360°" },
-    Value = getgenv().SilentAimMode,
+    Value  = getgenv().SilentAimMode,
     Callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
         
@@ -2180,25 +2238,14 @@ CombatTab:Dropdown({
     end,
 })
 
-CombatTab:Toggle({
-    Title = "Show FOV Circle",
-    Desc = "Display FOV circle boundary.",
-    Flag = "show_fov_toggle",
-    Value = getgenv().ShowFOV,
-    Callback = function(Value)
-        getgenv().ShowFOV = Value
-        if FOVUI then FOVUI.Visible = Value end
-    end,
-})
-
 CombatTab:Slider({
     Title = "FOV Size",
-    Desc = "Scale FOV radius.",
-    Flag = "fov_size_slider",
+    Desc  = "Scale FOV radius.",
+    Flag  = "fov_size_slider",
     Increment = 1,
     Value = {
-        Min = 50,
-        Max = 1000,
+        Min     = 50,
+        Max     = 1000,
         Default = getgenv().FOVRadius
     },
     Callback = function(Value)
@@ -2211,10 +2258,38 @@ CombatTab:Slider({
     end,
 })
 
+CombatTab:Dropdown({
+    Title = "FOV Position",
+    Desc  = "Choose FOV center source.",
+    Flag  = "fov_position_dropdown",
+    Values = { "Mouse/Touch", "Middle" },
+    Value  = getgenv().FOVPositionMode,
+    Callback = function(selected)
+        local mode = type(selected) == "table" and selected[1] or selected
+        getgenv().FOVPositionMode = mode
+    end,
+})
+
+CombatTab:Toggle({
+    Title = "Show FOV Circle",
+    Desc  = "Display FOV circle boundary.",
+    Flag  = "show_fov_toggle",
+    Value = getgenv().ShowFOV,
+    Callback = function(Value)
+        getgenv().ShowFOV = Value
+        if FOVUI then 
+            FOVUI.Visible = Value 
+        end
+    end,
+})
+
+
+-- [ 3. Visuals & Filters ] ----------------------------------------------------
+
 CombatTab:Toggle({
     Title = "Show Red Snapline",
-    Desc = "Render line to active target.",
-    Flag = "show_snapline_toggle",
+    Desc  = "Render line to active target.",
+    Flag  = "show_snapline_toggle",
     Value = getgenv().ShowTracer,
     Callback = function(Value)
         getgenv().ShowTracer = Value
@@ -2224,16 +2299,14 @@ CombatTab:Toggle({
     end,
 })
 
-
-
 CombatTab:Slider({
     Title = "Max Distance",
-    Desc = "Set max distance threshold.",
-    Flag = "max_distance_slider",
+    Desc  = "Set max distance threshold.",
+    Flag  = "max_distance_slider",
     Increment = 1,
     Value = {
-        Min = 50,
-        Max = 1000,
+        Min     = 50,
+        Max     = 1000,
         Default = getgenv().MaxDistance
     },
     Callback = function(Value)
@@ -2241,30 +2314,17 @@ CombatTab:Slider({
     end,
 })
 
-
 getgenv().TargetMode = "Players Only" 
 
 CombatTab:Dropdown({
     Title = "Target Type",
-    Desc = "Choose targets.",
-    Flag = "target_type_dropdown",
-    Values = {"Players Only", "Enemies Only" },
-    Value = "Players Only",
+    Desc  = "Choose targets.",
+    Flag  = "target_type_dropdown",
+    Values = { "Players Only", "Enemies Only" },
+    Value  = "Players Only",
     Callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
         getgenv().TargetMode = mode
-    end,
-})
-
-CombatTab:Dropdown({
-    Title = "FOV Position",
-    Desc = "Choose FOV center source.",
-    Flag = "fov_position_dropdown",
-    Values = { "Mouse/Touch", "Middle" },
-    Value = getgenv().FOVPositionMode,
-    Callback = function(selected)
-        local mode = type(selected) == "table" and selected[1] or selected
-        getgenv().FOVPositionMode = mode
     end,
 })
 
@@ -2859,12 +2919,6 @@ Config:Toggle({
 
 
 
-
-
-
-
-
-
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -3241,6 +3295,9 @@ end
     
 
   
+
+
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then return end
@@ -3365,17 +3422,6 @@ local function findNearestTarget()
     return nearestTargetRoot, nearestTargetChar, shortestDistance
 end
 
--- ฟังก์ชันเช็คและยกเลิกการย้ายเซิร์ฟทันทีถ้าติดคอมแบท
-local function checkAndCancelIfCombat()
-    local currentCharacter = LocalPlayer.Character
-    if isPlayerInCombat(LocalPlayer, currentCharacter) then
-        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-        if browser then browser.Enabled = false end
-        return true
-    end
-    return false
-end
-
 -- เริ่มต้นกระบวนการหลัก
 if not autoBountyEnabled then return end
 
@@ -3390,31 +3436,62 @@ if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 
     return
 end
 
--- ถ้าติดคอมแบทตั้งแต่ก่อนย้ายเซิร์ฟ ให้ยกเลิกทันที
-if checkAndCancelIfCombat() then return end
+-- 2. ถ้าไม่เจอเป้าหมาย เริ่มนับถอยหลังย้ายเซิร์ฟ (เช็คทั้ง "ติดคอมแบท" และ "เจอเป้าหมาย" ตลอดเวลา)
+for i = 1, 50 do 
+    if not autoBountyEnabled then return end
+    
+    local currentCharacter = LocalPlayer.Character
+    
+    -- เช็ค: ถ้าติดคอมแบท ให้หยุดย้ายเซิร์ฟทันที
+    if isPlayerInCombat(LocalPlayer, currentCharacter) then
+        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+        if browser then browser.Enabled = false end
+        return 
+    end
+    
+    -- เช็ค: ระหว่างรอด้านนอก ถ้าเจอเป้าหมายโผล่มา ให้หยุดย้ายเซิร์ฟทันที
+    local nRoot, nChar, nDist = findNearestTarget()
+    if nRoot and nChar and nDist <= 10000 then
+        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+        if browser then browser.Enabled = false end
+        return 
+    end
+    
+    task.wait(0.1)
+end
+
 if not autoBountyEnabled then return end
 
--- เปิด Server Browser
+-- เช็คก่อนเปิด Server Browser อีกครั้ง
+local currentCharacter = LocalPlayer.Character
+if isPlayerInCombat(LocalPlayer, currentCharacter) then
+    local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+    if browser then browser.Enabled = false end
+    return 
+end
+
 local frame = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
 frame.Enabled = true 
 task.wait(1)
 
--- ค้นหาและกดปุ่ม Refresh (พร้อมเช็คคอมแบท)
-pcall(function()
-    for _, i in ipairs(frame.Frame:GetDescendants()) do
-        if checkAndCancelIfCombat() then return end
-        if i:IsA("TextButton") and (i.Text == "Refresh" or i.Name == "RefreshButton") then
-            if firesignal then firesignal(i.MouseButton1Click) end
-            break
-        end
+-- ค้นหาและกดปุ่ม Refresh
+for _, i in ipairs(frame.Frame:GetDescendants()) do
+    if i:IsA("TextButton") and (i.Text == "Refresh" or i.Name == "RefreshButton") then
+        if firesignal then firesignal(i.MouseButton1Click) end
+        task.wait(1)
+        break
     end
-end)
-task.wait(1.5)
+end
 
--- 3. วนลูปกดปุ่ม Join พร้อมเช็คคอมแบท ถ้าติดให้ยกเลิกทันที
+-- 3. วนลูปกดปุ่ม Join พร้อมระบบเช็คคอมแบทและเช็คเป้าหมายตลอดเวลา
 while autoBountyEnabled do
-    if checkAndCancelIfCombat() then return end
+    -- เช็ค: ถ้าติดคอมแบท ให้ปิด UI และหยุดทันที
+    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+        frame.Enabled = false
+        return
+    end
     
+    -- เช็ค: ระหว่างหาเซิร์ฟ ถ้าเจอเป้าหมายเข้ามาใกล้ ให้ปิด UI และหยุดทันที
     local nRoot, nChar, nDist = findNearestTarget()
     if nRoot and nChar and nDist <= 10000 then
         frame.Enabled = false
@@ -3425,7 +3502,12 @@ while autoBountyEnabled do
     
     for _, i in ipairs(frame.Frame:GetDescendants()) do
         if not autoBountyEnabled then return end
-        if checkAndCancelIfCombat() then return end
+        
+        -- เช็คซ้ำระหว่างกดปุ่ม
+        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+            frame.Enabled = false
+            return
+        end
         
         local subRoot, subChar, subDist = findNearestTarget()
         if subRoot and subChar and subDist <= 10000 then
@@ -3438,16 +3520,14 @@ while autoBountyEnabled do
                 firesignal(i.MouseButton1Click) 
                 joined = true
             end
-            task.wait(0.2)
-            break
+            task.wait(0.1)
         elseif i:IsA("ScrollingFrame") then
             i.CanvasPosition += Vector2.new(0, 150)
-            task.wait(0.1)
         end
     end
     
     if not joined then
-        task.wait(0.5)
+        task.wait(0.1)
     else
         break 
     end
