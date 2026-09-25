@@ -25,7 +25,7 @@ end
 pcall(function()
   WindUI:AddTheme({
     Name = "Darker-Soft",
-    Primary = Color3.fromHex("#3b82f6"),
+   Primary = Color3.fromHex("#3b82f6"),
     
     White = Color3.new(1,1,1),
     Black = Color3.new(0,0,0),
@@ -69,25 +69,25 @@ pcall(function()
 
     ElementBackground = Color3.fromHex("#18181f"),
     ElementBackgroundTransparency = .5,
-    ElementBackgroundHover = WindUI.Creator:AddColor("ElementBackground", "#272730", 1),
+    ElementBackgroundHover = Color3.fromHex("#272730"), -- แก้ไขจาก WindUI.Creator:AddColor เป็น Color3.fromHex ปกติ
     ElementTitle = Color3.fromHex("#FFFFFF"),
     ElementDesc = Color3.fromHex("#cbd5e1"),
     ElementIcon = Color3.fromHex("#FFFFFF"),
     
     PopupBackground = Color3.fromHex("#18181f"),
-    PopupBackgroundTransparency = "BackgroundTransparency",
+    PopupBackgroundTransparency = 0, -- ปรับเป็นตัวเลขเพื่อป้องกัน Error กรณีตัวแปรสตริง
     PopupTitle = Color3.fromHex("#FFFFFF"),
     PopupContent = Color3.fromHex("#cbd5e1"),
     PopupIcon = Color3.fromHex("#FFFFFF"),
     
     DialogBackground = Color3.fromHex("#18181f"),
-    DialogBackgroundTransparency = "BackgroundTransparency",
+    DialogBackgroundTransparency = 0, -- ปรับเป็นตัวเลข
     DialogTitle = Color3.fromHex("#FFFFFF"),
     DialogContent = Color3.fromHex("#cbd5e1"),
     DialogIcon = Color3.fromHex("#FFFFFF"),
     
     -- ปรับสีปุ่มเปิดปิด (Toggle)
-    Toggle = Color3.fromHex("#3b82f6"), -- เปลี่ยนเป็นสีฟ้าเมื่อเปิด (หรือปรับตามต้องการ)
+    Toggle = Color3.fromHex("#3b82f6"), 
     ToggleBar = Color3.fromHex("#FFFFFF"),
     
     Checkbox = Color3.fromHex("#FFFFFF"),
@@ -97,8 +97,8 @@ pcall(function()
     
     SliderIcon = Color3.fromHex("#FFFFFF"),
 
-    Slider = Color3.fromHex("#3b82f6"),       -- สีหลอด Slider
-    SliderThumb = Color3.fromHex("#FFFFFF"),  -- สีปุ่มลาก Slider
+    Slider = Color3.fromHex("#3b82f6"),      
+    SliderThumb = Color3.fromHex("#FFFFFF"),  
     SliderIconFrom = Color3.fromHex("#FFFFFF"),
     SliderIconTo = Color3.fromHex("#FFFFFF"),
     
@@ -177,13 +177,13 @@ Window:Section({
 })
 
 local Home = Window:Tab({
-    Title = "Changelog",
+    Title = "Changelog !!",
     Icon = "clipboard-list"
 })
 
 
 local GeneralTab = Window:Tab({
-    Title = "General",
+    Title = "General Main",
     Icon = "gauge"
 })
 
@@ -910,28 +910,28 @@ local function isSkillRemote(self)
     return true
 end
 
--- ระบบดึงตำแหน่งเป้าหมายล่วงหน้า (Caching Head เพื่อความลื่นไหล)
-local cachedHead = nil
+-- ระบบดึง CFrame ตัวละครเป้าหมาย (HumanoidRootPart CFrame)
+local cachedPart = nil
 local lastTarget = nil
 
-local function getTargetHead()
+local function getTargetCFrame()
     local target = getgenv().CurrentTarget
     if not target or not target.Parent then 
-        cachedHead = nil
+        cachedPart = nil
         lastTarget = nil
         return nil 
     end
     
     if target ~= lastTarget then
         lastTarget = target
-        cachedHead = target.Parent:FindFirstChild("Head") or target.Parent:FindFirstChild("HumanoidRootPart")
+        cachedPart = target.Parent:FindFirstChild("HumanoidRootPart")
     end
     
-    return cachedHead
+    return cachedPart
 end
 
 task.spawn(function()
-    -- ** เพิ่มการหน่วงเวลา 2 วินาทีก่อนรันระบบหลัก **
+    -- หน่วงเวลาก่อนรันระบบหลัก
     task.wait(5)
 
     local success, Mouse = pcall(function()
@@ -939,48 +939,57 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-    -- Hook __index เพื่อหลอกตำแหน่ง Mouse.Hit / Mouse.Target ให้สกิลพุ่งไปหาเป้าหมาย
+
+-- Hook __index แบบใช้ CFrame ของเป้าหมายตรงๆ
+-- Hook __index คืนค่า CFrame ของเป้าหมายตรงๆ
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SkillRedirectEnabled and self == Mouse then
-            local head = getTargetHead()
-            if head then
+            local rootPart = getTargetCFrame()
+            if rootPart then
                 if idx == "Hit" then 
-                    return head.CFrame
+                    -- ส่งค่า CFrame ของเป้าหมายไปแบบตรงๆ
+                    return rootPart.CFrame
                 elseif idx == "Target" then 
-                    return head
+                    -- ส่งค่า Part ของเป้าหมายตรงๆ
+                    return rootPart
                 elseif idx == "X" or idx == "Y" then 
-                    return Camera:WorldToScreenPoint(head.Position)[idx]
+                    -- แปลงตำแหน่งเป็นพิกัดหน้าจอเพื่อไม่ให้เกมเอออร์
+                    local screenPoint = Camera:WorldToScreenPoint(rootPart.Position)
+                    return screenPoint[idx]
                 end
             end
         end
         return oldIndex(self, idx)
     end))
 
-    -- Hook __namecall เพื่อเปลี่ยนพิกัด Vector3 หรือ CFrame ใน Arguments ของรีโมทสกิล
+    -- Hook __namecall เพื่อเปลี่ยนพิกัด CFrame หรือ Vector3 ในรีโมทให้ใช้ CFrame ของเป้าหมาย
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
         local enabled = getgenv().SkillRedirectEnabled
-        local head = getTargetHead()
+        local rootPart = getTargetCFrame()
 
-        if enabled and head and (method == "FireServer" or method == "InvokeServer") then
+        if enabled and rootPart and (method == "FireServer" or method == "InvokeServer") then
             if isSkillRemote(self) then
-                local targetPos = head.Position
+                local targetCFrame = rootPart.CFrame
+                local targetPos = targetCFrame.Position
                 local args = { ... }
                 
-                -- วนลูปเปลี่ยนค่าพิกัด Vector3 หรือ CFrame ในรีโมทให้เป็นตำแหน่งเป้าหมาย
+                -- วนลูปเปลี่ยนค่าพิกัดให้เป็น CFrame / Vector3 ของเป้าหมาย
                 for i = 1, #args do
                     local arg = args[i]
                     local argType = typeof(arg)
-                    if argType == "Vector3" then
+                    if argType == "CFrame" then
+                        args[i] = targetCFrame
+                    elseif argType == "Vector3" then
                         args[i] = targetPos
-                    elseif argType == "CFrame" then
-                        args[i] = CFrame.new(arg.Position, targetPos) -- หันหน้าไปหาเป้าหมาย
                     elseif argType == "table" then
-                        -- รองรับกรณีที่ข้อมูลพิกัดถูกเก็บไว้ใน Table ของสกิลนั้นๆ
                         for k, v in pairs(arg) do
-                            if typeof(v) == "Vector3" then
+                            local vType = typeof(v)
+                            if vType == "CFrame" then
+                                arg[k] = targetCFrame
+                            elseif vType == "Vector3" then
                                 arg[k] = targetPos
                             end
                         end
@@ -994,8 +1003,6 @@ task.spawn(function()
         return oldNamecall(self, ...)
     end))
 end)
-
-
 
 
 
@@ -1316,7 +1323,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 6
+getgenv().HitboxSize = 12
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
