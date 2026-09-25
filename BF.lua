@@ -3240,8 +3240,7 @@ if safeModeActive and humanoid.Health > 0 then
 end
     
 
-  
-local Players = game:GetService("Players")
+  local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then return end
 
@@ -3379,20 +3378,15 @@ if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 
     return
 end
 
--- 2. ฟังก์ชันตรวจสอบความปลอดภัย (รอนานเท่าที่จำเป็นจนกว่าจะหลุดคอมแบทจริง ๆ ป้องกันแลค)
+-- 2. ฟังก์ชันตรวจสอบความปลอดภัยและความแม่นยำในการหลุด Combat (เช็คซ้ำหลายรอบ)
 local function waitForSafeToHop()
+    local safeStreak = 0
+    local requiredStreak = 5 -- ต้องเช็คผ่านติดต่อกัน 5 ครั้ง (รวม ~3 วินาที) ถึงจะมั่นใจว่าหลุดจริง
+    
     while autoBountyEnabled do
         local currentCharacter = LocalPlayer.Character
         
-        -- ถ้ายังติดคอมแบท ให้วนรอไปเรื่อยๆ จนกว่าจะหลุด (ใช้ task.wait 0.5 เพื่อลดการกินทรัพยากร)
-        if isPlayerInCombat(LocalPlayer, currentCharacter) then
-            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-            if browser then browser.Enabled = false end
-            task.wait(0.5)
-            continue
-        end
-        
-        -- ระหว่างรอด้านนอก ถ้ามีเป้าหมายโผล่มาใกล้ ให้ยกเลิกการย้ายเซิร์ฟทันที
+        -- ถ้ามีเป้าหมายโผล่มาใกล้ระหว่างรอ ให้ยกเลิกการย้ายเซิร์ฟทันที
         local nRoot, nChar, nDist = findNearestTarget()
         if nRoot and nChar and nDist <= 10000 then
             local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
@@ -3400,8 +3394,25 @@ local function waitForSafeToHop()
             return false
         end
         
-        break
+        -- ถ้ายังติดคอมแบท ให้รีเซ็ตจำนวนรอบที่เช็คปลอดภัยเป็น 0
+        if isPlayerInCombat(LocalPlayer, currentCharacter) then
+            safeStreak = 0
+            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+            if browser then browser.Enabled = false end
+            task.wait(0.6)
+            continue
+        end
+        
+        -- ถ้าไม่ติดคอมแบท ให้เพิ่มจำนวนรอบความปลอดภัยขึ้นทีละ 1
+        safeStreak = safeStreak + 1
+        
+        if safeStreak >= requiredStreak then
+            break
+        end
+        
+        task.wait(0.6)
     end
+    
     return true
 end
 
@@ -3424,7 +3435,7 @@ pcall(function()
 end)
 task.wait(1.5)
 
--- 3. วนลูปกดปุ่ม Join พร้อมระบบป้องกันแลคและเช็คคอมแบทตลอดเวลา
+-- 3. วนลูปกดปุ่ม Join พร้อมระบบเช็คคอมแบทแบบละเอียดตลอดเวลา
 while autoBountyEnabled do
     if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
         frame.Enabled = false
