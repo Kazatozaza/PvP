@@ -153,7 +153,7 @@ local windowSuccess, Window = pcall(function()
     Icon =  "rbxassetid://97596339693490",
     Author = "System Online • Access Granted",
     Folder = "Destiny Hub",
-    Size = UDim2.fromOffset(620, 508), -- window size
+    Size = UDim2.fromOffset(620, 500), -- window size
     Transparent = true, -- window transparency
     Theme = "Darker-Soft", -- library theme
     Resizable = true, -- the ability to rezize window
@@ -3056,7 +3056,7 @@ local function equipToolByType(toolType)
 end
 
 
-local flySpeed = 220
+local flySpeed = 210
 
 -- ฟังก์ชันช่วยตรวจสอบและใช้งานสกิลแบบลื่นไหล
 local function executeSkills(skillTable, toolType)
@@ -3163,7 +3163,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         -- ถ้านอกระยะ MaxDistance ให้บินพุ่งเข้าหาแบบควบคุมความเร็วด้วย AssemblyLinearVelocity
         local direction = (targetPos - currentPos).Unit
         local currentSpeed = speed or flySpeed
-        local clampedSpeed = math.min(currentSpeed, 220)
+        local clampedSpeed = math.min(currentSpeed, 210)
         
         myRoot.AssemblyLinearVelocity = direction * clampedSpeed
         myRoot.AssemblyAngularVelocity = Vector3.zero
@@ -3242,16 +3242,14 @@ end
 
   
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer or localPlayer
+local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then return end
 
--- ฟังก์ชันดึงเลเวลจาก Player หรือ Character (รองรับทั้ง 2 แบบเพื่อความปลอดภัย)
+-- ฟังก์ชันดึงเลเวลจาก Player หรือ Character
 local function getPlayerLevel(player)
     local success, lvl = pcall(function()
-        -- ลองเช็กในตัว Player ก่อน
         if player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") then
             return player.Data.Level.Value
-        -- ถ้าไม่เจอ ลองเช็กใน Character
         elseif player.Character and player.Character:FindFirstChild("Data") and player.Character.Data:FindFirstChild("Level") then
             return player.Character.Data.Level.Value
         end
@@ -3260,123 +3258,39 @@ local function getPlayerLevel(player)
     return success and lvl or nil
 end
 
--- ดึงเลเวลของผู้เล่นหลัก (LocalPlayer)
-local myLevel = getPlayerLevel(LocalPlayer)
-
--- ตัวแปรสำหรับเก็บเป้าหมายที่ใกล้ที่สุด
-local nearestTargetRoot = nil
-local nearestTargetChar = nil
-local shortestDistance = math.huge
-
--- ตรวจสอบความพร้อมเบื้องต้นของตัวละครผู้เล่นหลัก
-if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-    return
-end
-local myRoot = LocalPlayer.Character.HumanoidRootPart
-local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-
-for _, targetPlayer in ipairs(Players:GetPlayers()) do
-    if targetPlayer ~= LocalPlayer then
-        
-        -- **เพิ่มเงื่อนไขตรวจสอบทีม Marines:** ถ้าตัวเองอยู่ทีม Marines และเป้าหมายอยู่ทีมเดียวกัน จะข้ามทันที
-        if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
-            if targetPlayer.Team and targetPlayer.Team == LocalPlayer.Team then 
-                continue 
-            end
-        end
-
-        local char = targetPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            local targetHum = char:FindFirstChildOfClass("Humanoid")
-            local targetRoot = char:FindFirstChild("HumanoidRootPart")
-
-            if targetHum and targetHum.Health > 0 and targetRoot then
-                if not shouldSkipTarget or not shouldSkipTarget(targetPlayer, char) then
-                    local inCombat = false 
-                    local inSafeZone = false
-                    
-                    pcall(function()
-                        if isPlayerInCombat then inCombat = isPlayerInCombat(targetPlayer, char) end
-                        if isPlayerInSafeZone then inSafeZone = isPlayerInSafeZone(targetPlayer, char) end
-                    end)
-
-                    if not inSafeZone then
-                        local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled")
-                        
-                        if char:GetAttribute("PvpDisabled") ~= nil then
-                            pvpDisabled = char:GetAttribute("PvpDisabled")
-                        end
-
-                        if pvpDisabled ~= true then
-                            -- ใช้ฟังก์ชันดึงเลเวลแบบใหม่
-                            local targetLevel = getPlayerLevel(targetPlayer)
-                            local isLevelValid = true
-                            
-                            -- ถ้าดึงเลเวลได้ และเลเวลต่างกันเกิน 800 จะถูกข้าม
-                            if type(myLevel) == "number" and type(targetLevel) == "number" then
-                                local diff = math.abs(myLevel - targetLevel)
-                                if diff > 800 then
-                                    isLevelValid = false
-                                end
-                            end
-
-                            if isLevelValid then
-                                local distance = (targetRoot.Position - myRoot.Position).Magnitude
-                                if distance < shortestDistance then
-                                    shortestDistance = distance
-                                    nearestTargetRoot = targetRoot
-                                    nearestTargetChar = char
-                                end
-                            end
-                        end 
-                    end 
-                end 
-            end 
-        end 
-    end 
-end
-
-
-
-local Players = game:GetService("Players")
-local localPlayer = Players.LocalPlayer
-
--- ฟังก์ชันเช็กสถานะ InCombat
+-- ฟังก์ชันเช็คสถานะ InCombat แบบครอบคลุม
 local function isPlayerInCombat(player, character)
     if not player then return false end
     
-    -- 1. เช็ค Attribute ในตัว Player
-    local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag")
+    local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag") or player:GetAttribute("PvpMode")
     if pCombat == true or pCombat == 1 or pCombat == "1" then
         return true
     end
     
-    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
+    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime") or player:GetAttribute("SafeZoneTimer")
     if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
         return true
     end
 
-    -- 2. เช็คในส่วนของ Character
     if character then
         local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
         if cCombat == true or cCombat == 1 or cCombat == "1" then
             return true
         end
 
-        local combatObj = character:FindFirstChild("InCombat") 
-            or character:FindFirstChild("Combat") 
-            or character:FindFirstChild("CombatTag")
-            or character:FindFirstChild("PvpTag")
-
-        if combatObj then
-            if combatObj:IsA("BoolValue") and combatObj.Value == true then
-                return true
-            elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
-                return true
-            elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" then
-                return true
-            elseif combatObj:IsA("ValueBase") then
-                return true
+        local combatObjNames = {"InCombat", "Combat", "CombatTag", "PvpTag", "SafeZone", "Attacking"}
+        for _, name in ipairs(combatObjNames) do
+            local combatObj = character:FindFirstChild(name)
+            if combatObj then
+                if combatObj:IsA("BoolValue") and combatObj.Value == true then
+                    return true
+                elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
+                    return true
+                elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" and combatObj.Value ~= "None" then
+                    return true
+                elseif combatObj:IsA("ValueBase") and combatObj.Value then
+                    return true
+                end
             end
         end
     end
@@ -3385,83 +3299,140 @@ local function isPlayerInCombat(player, character)
 end
 
 -- ฟังก์ชันเช็กเงื่อนไขการข้ามเป้าหมาย
-local function shouldSkipTarget(targetChar, targetPlayer)
-    if not targetPlayer then return false end
-    if targetPlayer == localPlayer then return true end
+local function shouldSkipTarget(targetPlayer)
+    if not targetPlayer or targetPlayer == LocalPlayer then return true end
     
-    if localPlayer.Team and localPlayer.Team.Name == "Marines" then
+    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
         if targetPlayer.Team and targetPlayer.Team.Name == "Marines" then 
             return true 
         end
     end
-    
     return false
 end
 
--- ดึงข้อมูล Player จาก Character ของเป้าหมาย
-local targetPlayer = game:GetService("Players"):GetPlayerFromCharacter(nearestTargetChar)
+-- ฟังก์ชันค้นหาเป้าหมายที่ใกล้ที่สุด
+local function findNearestTarget()
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil, nil, math.huge end
+    
+    local myRoot = myChar.HumanoidRootPart
+    local myLevel = getPlayerLevel(LocalPlayer)
+    
+    local nearestTargetRoot = nil
+    local nearestTargetChar = nil
+    local shortestDistance = math.huge
 
--- ตรวจสอบเป้าหมาย, เลเวล และทีม (ทำงานตามปกติ ไม่ติดเงื่อนไข Combat)
-local isTargetValid = false
-if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 then
-    if not shouldSkipTarget(nearestTargetChar, targetPlayer) then
-        local success, targetLevel = pcall(function()
-            return nearestTargetChar.Data.Level.Value 
-        end)
-        local myLevel = pcall(function() return localPlayer.Data.Level.Value end) and localPlayer.Data.Level.Value or 0
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if not shouldSkipTarget(targetPlayer) then
+            local char = targetPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local targetHum = char:FindFirstChildOfClass("Humanoid")
+                local targetRoot = char:FindFirstChild("HumanoidRootPart")
 
-        local isLevelValid = true
-        if success and type(myLevel) == "number" and type(targetLevel) == "number" then
-            if math.abs(myLevel - targetLevel) > 800 then
-                isLevelValid = false
+                if targetHum and targetHum.Health > 0 and targetRoot then
+                    local inSafeZone = false
+                    pcall(function()
+                        if isPlayerInSafeZone then inSafeZone = isPlayerInSafeZone(targetPlayer, char) end
+                    end)
+
+                    if not inSafeZone then
+                        local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled") or char:GetAttribute("PvpDisabled")
+                        if pvpDisabled ~= true then
+                            local targetLevel = getPlayerLevel(targetPlayer)
+                            local isLevelValid = true
+                            
+                            if type(myLevel) == "number" and type(targetLevel) == "number" then
+                                if math.abs(myLevel - targetLevel) > 800 then
+                                    isLevelValid = false
+                                end
+                            end
+
+                            if isLevelValid then
+                                local distance = (targetRoot.Position - myRoot.Position).Magnitude
+                                if distance <= 10000 and distance < shortestDistance then
+                                    shortestDistance = distance
+                                    nearestTargetRoot = targetRoot
+                                    nearestTargetChar = char
+                                end
+                            end
+                        end
+                    end
+                end
             end
         end
-
-        if isLevelValid then
-            isTargetValid = true
-            pcall(function()
-                smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
-            end)
-            return
-        end
     end
+    
+    return nearestTargetRoot, nearestTargetChar, shortestDistance
 end
 
--- ถ้าไม่มีเป้าหมาย, เลเวลห่างเกิน 800, หรืออยู่ทีม Marines เหมือนกัน ให้เข้าสู่กระบวนการ Server Hop
+-- เริ่มต้นกระบวนการหลัก
 if not autoBountyEnabled then return end
 
-for i = 1, 50 do 
-    if not autoBountyEnabled then return end
-    task.wait(0.1)
+-- 1. ค้นหาเป้าหมายรอบแรกก่อน
+local nearestTargetRoot, nearestTargetChar, shortestDistance = findNearestTarget()
+local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 and shortestDistance <= 10000 then
+    pcall(function()
+        smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
+    end)
+    return
 end
 
+-- 2. ฟังก์ชันตรวจสอบความปลอดภัย (รอนานเท่าที่จำเป็นจนกว่าจะหลุดคอมแบทจริง ๆ ป้องกันแลค)
+local function waitForSafeToHop()
+    while autoBountyEnabled do
+        local currentCharacter = LocalPlayer.Character
+        
+        -- ถ้ายังติดคอมแบท ให้วนรอไปเรื่อยๆ จนกว่าจะหลุด (ใช้ task.wait 0.5 เพื่อลดการกินทรัพยากร)
+        if isPlayerInCombat(LocalPlayer, currentCharacter) then
+            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+            if browser then browser.Enabled = false end
+            task.wait(0.5)
+            continue
+        end
+        
+        -- ระหว่างรอด้านนอก ถ้ามีเป้าหมายโผล่มาใกล้ ให้ยกเลิกการย้ายเซิร์ฟทันที
+        local nRoot, nChar, nDist = findNearestTarget()
+        if nRoot and nChar and nDist <= 10000 then
+            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+            if browser then browser.Enabled = false end
+            return false
+        end
+        
+        break
+    end
+    return true
+end
+
+if not waitForSafeToHop() then return end
 if not autoBountyEnabled then return end
 
--- 🔴 [จุดที่เพิ่ม] ก่อนจะเริ่มเปิดหน้าต่าง Server Browser เพื่อย้ายเซิร์ฟ ให้เช็กว่าเราติด Combat อยู่หรือไม่
-local currentCharacter = localPlayer.Character
-if isPlayerInCombat(localPlayer, currentCharacter) then
-    print("[Server Hop] 🔴 กำลังติด Combat อยู่ ยกเลิกการย้ายเซิร์ฟเพื่อความปลอดภัย!")
-    return -- ถ้าติดคอมแابتอยู่ จะหยุดกระบวนการย้ายเซิร์ฟทันที
-end
-
-local frame = localPlayer.PlayerGui:WaitForChild("ServerBrowser")
+-- เปิด Server Browser
+local frame = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
 frame.Enabled = true 
 task.wait(1)
 
--- ค้นหาและกดปุ่ม Refresh ก่อน
-for _, i in ipairs(frame.Frame:GetDescendants()) do
-    if i:IsA("TextButton") and (i.Text == "Refresh" or i.Name == "RefreshButton") then
-        if firesignal then firesignal(i.MouseButton1Click) end
-        task.wait(1)
-        break
+-- ค้นหาและกดปุ่ม Refresh
+pcall(function()
+    for _, i in ipairs(frame.Frame:GetDescendants()) do
+        if i:IsA("TextButton") and (i.Text == "Refresh" or i.Name == "RefreshButton") then
+            if firesignal then firesignal(i.MouseButton1Click) end
+            break
+        end
     end
-end
+end)
+task.wait(1.5)
 
--- วนลูปกดปุ่ม Join ทุกๆ 0.1 วินาที และเลื่อนหน้าจอ
+-- 3. วนลูปกดปุ่ม Join พร้อมระบบป้องกันแลคและเช็คคอมแบทตลอดเวลา
 while autoBountyEnabled do
-    -- เช็กซ้ำอีกรอบระหว่างกำลังกดเปลี่ยนเซิร์ฟ
-    if isPlayerInCombat(localPlayer, localPlayer.Character) then
-        print("[Server Hop] 🔴 ติด Combat ระหว่างกดหาเซิร์ฟ ยกเลิกการย้าย!")
+    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+        frame.Enabled = false
+        return
+    end
+    
+    local nRoot, nChar, nDist = findNearestTarget()
+    if nRoot and nChar and nDist <= 10000 then
         frame.Enabled = false
         return
     end
@@ -3471,19 +3442,32 @@ while autoBountyEnabled do
     for _, i in ipairs(frame.Frame:GetDescendants()) do
         if not autoBountyEnabled then return end
         
+        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+            frame.Enabled = false
+            return
+        end
+        
+        local subRoot, subChar, subDist = findNearestTarget()
+        if subRoot and subChar and subDist <= 10000 then
+            frame.Enabled = false
+            return
+        end
+        
         if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
             if firesignal then 
                 firesignal(i.MouseButton1Click) 
                 joined = true
             end
-            task.wait(0.1)
+            task.wait(0.2)
+            break
         elseif i:IsA("ScrollingFrame") then
             i.CanvasPosition += Vector2.new(0, 150)
+            task.wait(0.1)
         end
     end
     
     if not joined then
-        task.wait(0.1)
+        task.wait(0.5)
     else
         break 
     end
