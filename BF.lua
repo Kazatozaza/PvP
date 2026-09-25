@@ -3375,14 +3375,7 @@ local function runAutoBounty(deltaTime)
             myRoot.AssemblyLinearVelocity = Vector3.zero
             myRoot.AssemblyAngularVelocity = Vector3.zero
 
-            -- แจ้งเตือนเมื่อเข้า Safe Mode
-            pcall(function()
-                WindUI:Notify({
-                    Title = "Safe Mode",
-                    Content = "Critical HP! Emergency flight activated!",
-                    Duration = 3
-                })
-            end)
+            if notify then notify("Safe Mode", "Critical HP! Emergency flight activated!") end
 
             local targetCFrame = myRoot.CFrame + Vector3.new(0, 700, 0)
             local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -3409,15 +3402,7 @@ local function runAutoBounty(deltaTime)
                 humanoid.PlatformStand = false
                 setSafeNoclip(false)
                 myRoot.AssemblyLinearVelocity = Vector3.zero
-                
-                -- แจ้งเตือนเมื่อหลุดจาก Safe Mode
-                pcall(function()
-                    WindUI:Notify({
-                        Title = "Safe Mode",
-                        Content = "Area clear / Safe. Resuming normal operations.",
-                        Duration = 3
-                    })
-                end)
+                if notify then notify("Safe Mode", "Resuming normal operations.") end
             end
             
             return 
@@ -3440,13 +3425,6 @@ local function runAutoBounty(deltaTime)
 
     -- 3. ถ้าไม่เจอเป้าหมาย เช็คว่าติดคอมแบทไหม
     if isPlayerInCombat(LocalPlayer, myChar) then
-        pcall(function()
-            WindUI:Notify({
-                Title = "Combat Status",
-                Content = "You are in combat! Server hop cancelled.",
-                Duration = 3
-            })
-        end)
         return
     end
 
@@ -3460,13 +3438,6 @@ local function runAutoBounty(deltaTime)
         if not autoBountyEnabled then return end
         
         if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-            pcall(function()
-                WindUI:Notify({
-                    Title = "Combat Status",
-                    Content = "In combat detected during countdown! Aborting...",
-                    Duration = 3
-                })
-            end)
             local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
             if browser then browser.Enabled = false end
             return 
@@ -3486,26 +3457,10 @@ local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
 
     if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-        pcall(function()
-            WindUI:Notify({
-                Title = "Combat Status",
-                Content = "In combat! Cannot open Server Browser.",
-                Duration = 3
-            })
-        end)
         local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
         if browser then browser.Enabled = false end
         return 
     end
-
-    -- แจ้งเตือนเมื่อกำลังจะเปิดหน้าต่างย้ายเซิร์ฟ
-    pcall(function()
-        WindUI:Notify({
-            Title = "Server Hop",
-            Content = "No targets found. Opening Server Browser...",
-            Duration = 3
-        })
-    end)
 
     local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
     browserGui.Enabled = true 
@@ -3523,13 +3478,6 @@ local function runAutoBounty(deltaTime)
     -- 6. วนลูปกดปุ่ม Join เพื่อย้ายเซิร์ฟ
     while autoBountyEnabled do
         if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-            pcall(function()
-                WindUI:Notify({
-                    Title = "Combat Status",
-                    Content = "Combat detected! Closing UI and aborting hop.",
-                    Duration = 3
-                })
-            end)
             browserGui.Enabled = false
             return
         end
@@ -3547,13 +3495,6 @@ local function runAutoBounty(deltaTime)
             if not autoBountyEnabled then return end
             
             if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-                pcall(function()
-                    WindUI:Notify({
-                        Title = "Combat Status",
-                        Content = "Combat detected! Aborting join.",
-                        Duration = 3
-                    })
-                end)
                 browserGui.Enabled = false
                 return
             end
@@ -3562,15 +3503,6 @@ local function runAutoBounty(deltaTime)
                 if firesignal then 
                     firesignal(i.MouseButton1Click) 
                     joined = true
-                    
-                    -- แจ้งเตือนเมื่อกดปุ่ม Join สำเร็จ
-                    pcall(function()
-                        WindUI:Notify({
-                            Title = "Success",
-                            Content = "Joining new server...",
-                            Duration = 3
-                        })
-                    end)
                 end
                 task.wait(0.1)
             elseif i:IsA("ScrollingFrame") then
