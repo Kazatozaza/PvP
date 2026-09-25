@@ -3231,185 +3231,131 @@ end
 
 
 local function runAutoBounty(deltaTime)
-  if not autoBountyEnabled then return end
+    if not autoBountyEnabled then return end
 
-local myChar = localPlayer.Character
-if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
-local myRoot = myChar.HumanoidRootPart
-local humanoid = myChar:FindFirstChildOfClass("Humanoid")
+    local myChar = localPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
+    local myRoot = myChar.HumanoidRootPart
+    local humanoid = myChar:FindFirstChildOfClass("Humanoid")
 
--- Services สำหรับทำ Smooth Tween
-local TweenService = game:GetService("TweenService")
+    -- Services สำหรับทำ Smooth Tween
+    local TweenService = game:GetService("TweenService")
 
--- คำนวณเปอร์เซ็นต์เลือดปัจจุบัน
-local currentHpPercent = (humanoid.Health / humanoid.MaxHealth) * 100
+    -- คำนวณเปอร์เซ็นต์เลือดปัจจุบัน
+    local currentHpPercent = (humanoid.Health / humanoid.MaxHealth) * 100
 
--- 1. ระบบ Safe Mode (เช็คและบังคับหนีทันทีเมื่อเลือดต่ำกว่าเกณฑ์)
-if safeModeActive and humanoid.Health > 0 then
-    -- เริ่มกระบวนการหนีฉุกเฉิน
-    if currentHpPercent <= safeModePercent and not isSafeEscaping then
-        isSafeEscaping = true
-        setSafeNoclip(true)
-        humanoid.PlatformStand = true
+    -- ฟังก์ชันเช็คสถานะ InCombat แบบครอบคลุม (ประกาศไว้ข้างบนเพื่อให้เรียกใช้ได้ทันที)
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    
+    local function isPlayerInCombat(player, character)
+        if not player then return false end
         
-        -- ล็อกการเคลื่อนไหวทางฟิสิกส์เบื้องต้น
-        myRoot.AssemblyLinearVelocity = Vector3.zero
-        myRoot.AssemblyAngularVelocity = Vector3.zero
-
-        if notify then notify("Safe Mode", "Critical HP! Smooth emergency flight activated!") end
-
-        -- ใช้ Tween วาร์ปและลอยขึ้นฟ้าอย่างนุ่มนวล (ใช้เวลา 0.5 วินาที ไม่กระตุก)
-        local targetCFrame = myRoot.CFrame + Vector3.new(0, 700, 0)
-        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        local tween = TweenService:Create(myRoot, tweenInfo, {CFrame = targetCFrame})
-        tween:Play()
-    end
-
-    -- ขณะกำลังหนี (ล็อกตำแหน่งให้อยู่บนฟ้า และป้องกันการวาปกลับด้วยการบังคับ CFrame / Velocity)
-    if isSafeEscaping then
-        humanoid.PlatformStand = true
-        setSafeNoclip(true)
-        
-        -- ล็อกความเร็วให้ลอยนิ่งๆ อยู่บนฟ้า (ป้องกัน Server หรือผู้เล่นอื่นดึงกลับลงมา)
-        myRoot.AssemblyLinearVelocity = Vector3.new(0, flySpeed, 0)
-        myRoot.AssemblyAngularVelocity = Vector3.zero
-        
-        -- ป้องกันการถูกดึงตำแหน่ง (Anti-Desync: บังคับรักษาความสูงถ้าเผลอโดนดึงร่วงลงมา)
-        if myRoot.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
-            myRoot.CFrame = myRoot.CFrame + Vector3.new(0, 100, 0)
+        local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag") or player:GetAttribute("PvpMode")
+        if pCombat == true or pCombat == 1 or pCombat == "1" then
+            return true
         end
         
-        -- หยุดหนีเมื่อเลือดฟื้นกลับมาถึงเกณฑ์ปลอดภัย (safeStopPercent)
-        if currentHpPercent >= safeStopPercent then
-            isSafeEscaping = false
-            humanoid.PlatformStand = false
-            setSafeNoclip(false)
-            myRoot.AssemblyLinearVelocity = Vector3.zero
-            if notify then notify("Safe Mode", "HP fully restored. Resuming normal operations.") end
-        end
-        
-        -- ตัดจบการทำงานในรอบนี้ทันที ไม่ให้ไปทำระบบล่าต่อขณะกำลังหนี
-        return 
-    end
-end
-    
-
-  
-
-
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-if not LocalPlayer then return end
-
--- ฟังก์ชันดึงเลเวลจาก Player หรือ Character
-local function getPlayerLevel(player)
-    local success, lvl = pcall(function()
-        if player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") then
-            return player.Data.Level.Value
-        elseif player.Character and player.Character:FindFirstChild("Data") and player.Character.Data:FindFirstChild("Level") then
-            return player.Character.Data.Level.Value
-        end
-        return nil
-    end)
-    return success and lvl or nil
-end
-
--- ฟังก์ชันเช็คสถานะ InCombat แบบครอบคลุม
-local function isPlayerInCombat(player, character)
-    if not player then return false end
-    
-    local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag") or player:GetAttribute("PvpMode")
-    if pCombat == true or pCombat == 1 or pCombat == "1" then
-        return true
-    end
-    
-    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime") or player:GetAttribute("SafeZoneTimer")
-    if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
-        return true
-    end
-
-    if character then
-        local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
-        if cCombat == true or cCombat == 1 or cCombat == "1" then
+        local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime") or player:GetAttribute("SafeZoneTimer")
+        if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
             return true
         end
 
-        local combatObjNames = {"InCombat", "Combat", "CombatTag", "PvpTag", "SafeZone", "Attacking"}
-        for _, name in ipairs(combatObjNames) do
-            local combatObj = character:FindFirstChild(name)
-            if combatObj then
-                if combatObj:IsA("BoolValue") and combatObj.Value == true then
-                    return true
-                elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
-                    return true
-                elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" and combatObj.Value ~= "None" then
-                    return true
-                elseif combatObj:IsA("ValueBase") and combatObj.Value then
-                    return true
+        if character then
+            local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
+            if cCombat == true or cCombat == 1 or cCombat == "1" then
+                return true
+            end
+
+            local combatObjNames = {"InCombat", "Combat", "CombatTag", "PvpTag", "SafeZone", "Attacking"}
+            for _, name in ipairs(combatObjNames) do
+                local combatObj = character:FindFirstChild(name)
+                if combatObj then
+                    if combatObj:IsA("BoolValue") and combatObj.Value == true then
+                        return true
+                    elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
+                        return true
+                    elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" and combatObj.Value ~= "None" then
+                        return true
+                    elseif combatObj:IsA("ValueBase") and combatObj.Value then
+                        return true
+                    end
                 end
             end
         end
+
+        return false
     end
 
-    return false
-end
+    -- ฟังก์ชันดึงเลเวลจาก Player หรือ Character
+    local function getPlayerLevel(player)
+        local success, lvl = pcall(function()
+            if player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") then
+                return player.Data.Level.Value
+            elseif player.Character and player.Character:FindFirstChild("Data") and player.Character.Data:FindFirstChild("Level") then
+                return player.Character.Data.Level.Value
+            end
+            return nil
+        end)
+        return success and lvl or nil
+    end
 
--- ฟังก์ชันเช็กเงื่อนไขการข้ามเป้าหมาย
-local function shouldSkipTarget(targetPlayer)
-    if not targetPlayer or targetPlayer == LocalPlayer then return true end
-    
-    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
-        if targetPlayer.Team and targetPlayer.Team.Name == "Marines" then 
-            return true 
+    -- ฟังก์ชันเช็กเงื่อนไขการข้ามเป้าหมาย
+    local function shouldSkipTarget(targetPlayer)
+        if not targetPlayer or targetPlayer == LocalPlayer then return true end
+        
+        if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
+            if targetPlayer.Team and targetPlayer.Team.Name == "Marines" then 
+                return true 
+            end
         end
+        return false
     end
-    return false
-end
 
--- ฟังก์ชันค้นหาเป้าหมายที่ใกล้ที่สุด
-local function findNearestTarget()
-    local myChar = LocalPlayer.Character
-    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil, nil, math.huge end
-    
-    local myRoot = myChar.HumanoidRootPart
-    local myLevel = getPlayerLevel(LocalPlayer)
-    
-    local nearestTargetRoot = nil
-    local nearestTargetChar = nil
-    local shortestDistance = math.huge
+    -- ฟังก์ชันค้นหาเป้าหมายที่ใกล้ที่สุด
+    local function findNearestTarget()
+        local myChar = LocalPlayer.Character
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil, nil, math.huge end
+        
+        local myRoot = myChar.HumanoidRootPart
+        local myLevel = getPlayerLevel(LocalPlayer)
+        
+        local nearestTargetRoot = nil
+        local nearestTargetChar = nil
+        local shortestDistance = math.huge
 
-    for _, targetPlayer in ipairs(Players:GetPlayers()) do
-        if not shouldSkipTarget(targetPlayer) then
-            local char = targetPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local targetHum = char:FindFirstChildOfClass("Humanoid")
-                local targetRoot = char:FindFirstChild("HumanoidRootPart")
+        for _, targetPlayer in ipairs(Players:GetPlayers()) do
+            if not shouldSkipTarget(targetPlayer) then
+                local char = targetPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local targetHum = char:FindFirstChildOfClass("Humanoid")
+                    local targetRoot = char:FindFirstChild("HumanoidRootPart")
 
-                if targetHum and targetHum.Health > 0 and targetRoot then
-                    local inSafeZone = false
-                    pcall(function()
-                        if isPlayerInSafeZone then inSafeZone = isPlayerInSafeZone(targetPlayer, char) end
-                    end)
+                    if targetHum and targetHum.Health > 0 and targetRoot then
+                        local inSafeZone = false
+                        pcall(function()
+                            if isPlayerInSafeZone then inSafeZone = isPlayerInSafeZone(targetPlayer, char) end
+                        end)
 
-                    if not inSafeZone then
-                        local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled") or char:GetAttribute("PvpDisabled")
-                        if pvpDisabled ~= true then
-                            local targetLevel = getPlayerLevel(targetPlayer)
-                            local isLevelValid = true
-                            
-                            if type(myLevel) == "number" and type(targetLevel) == "number" then
-                                if math.abs(myLevel - targetLevel) > 800 then
-                                    isLevelValid = false
+                        if not inSafeZone then
+                            local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled") or char:GetAttribute("PvpDisabled")
+                            if pvpDisabled ~= true then
+                                local targetLevel = getPlayerLevel(targetPlayer)
+                                local isLevelValid = true
+                                
+                                if type(myLevel) == "number" and type(targetLevel) == "number" then
+                                    if math.abs(myLevel - targetLevel) > 800 then
+                                        isLevelValid = false
+                                    end
                                 end
-                            end
 
-                            if isLevelValid then
-                                local distance = (targetRoot.Position - myRoot.Position).Magnitude
-                                if distance <= 10000 and distance < shortestDistance then
-                                    shortestDistance = distance
-                                    nearestTargetRoot = targetRoot
-                                    nearestTargetChar = char
+                                if isLevelValid then
+                                    local distance = (targetRoot.Position - myRoot.Position).Magnitude
+                                    if distance <= 10000 and distance < shortestDistance then
+                                        shortestDistance = distance
+                                        nearestTargetRoot = targetRoot
+                                        nearestTargetChar = char
+                                    end
                                 end
                             end
                         end
@@ -3417,122 +3363,182 @@ local function findNearestTarget()
                 end
             end
         end
+        
+        return nearestTargetRoot, nearestTargetChar, shortestDistance
     end
-    
-    return nearestTargetRoot, nearestTargetChar, shortestDistance
-end
 
--- เริ่มต้นกระบวนการหลัก
-if not autoBountyEnabled then return end
+    -- 1. ระบบ Safe Mode (เช็คและบังคับหนีทันทีเมื่อเลือดต่ำกว่าเกณฑ์)
+    if safeModeActive and humanoid.Health > 0 then
+        -- เริ่มกระบวนการหนีฉุกเฉิน
+        if currentHpPercent <= safeModePercent and not isSafeEscaping then
+            isSafeEscaping = true
+            setSafeNoclip(true)
+            humanoid.PlatformStand = true
+            
+            myRoot.AssemblyLinearVelocity = Vector3.zero
+            myRoot.AssemblyAngularVelocity = Vector3.zero
 
--- 1. ค้นหาเป้าหมายรอบแรกก่อน
-local nearestTargetRoot, nearestTargetChar, shortestDistance = findNearestTarget()
-local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if notify then notify("Safe Mode", "Critical HP! Smooth emergency flight activated!") end
 
-if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 and shortestDistance <= 10000 then
-    pcall(function()
-        smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
-    end)
-    return
-end
+            local targetCFrame = myRoot.CFrame + Vector3.new(0, 700, 0)
+            local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local tween = TweenService:Create(myRoot, tweenInfo, {CFrame = targetCFrame})
+            tween:Play()
+        end
 
--- 2. ถ้าไม่เจอเป้าหมาย เริ่มนับถอยหลังย้ายเซิร์ฟ (เช็คทั้ง "ติดคอมแบท" และ "เจอเป้าหมาย" ตลอดเวลา)
-for i = 1, 50 do 
+        -- ขณะกำลังหนี
+        if isSafeEscaping then
+            humanoid.PlatformStand = true
+            setSafeNoclip(true)
+            
+            myRoot.AssemblyLinearVelocity = Vector3.new(0, flySpeed, 0)
+            myRoot.AssemblyAngularVelocity = Vector3.zero
+            
+            if myRoot.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
+                myRoot.CFrame = myRoot.CFrame + Vector3.new(0, 100, 0)
+            end
+            
+            -- ปรับปรุงใหม่ตามที่คุณต้องการ: 
+            -- ถ้าไม่พบเป้าหมายรอบตัว และ ไม่ได้ติดคอมแบท สามารถหลุดจาก Safe Mode ได้ทันทีโดยไม่ต้องรอเลือดเต็ม
+            local tempRoot, tempChar, tempDist = findNearestTarget()
+            local inCombatNow = isPlayerInCombat(LocalPlayer, myChar)
+            
+            local targetNotFoundOrFar = (not tempRoot or tempDist > 10000)
+            
+            if (targetNotFoundOrFar and not inCombatNow) or (currentHpPercent >= safeStopPercent) then
+                isSafeEscaping = false
+                humanoid.PlatformStand = false
+                setSafeNoclip(false)
+                myRoot.AssemblyLinearVelocity = Vector3.zero
+                if notify then notify("Safe Mode", "Area clear / HP safe. Resuming normal operations.") end
+            end
+            
+            return 
+        end
+    end
+
+    if not LocalPlayer then return end
+
+    -- เริ่มต้นกระบวนการหลัก
     if not autoBountyEnabled then return end
-    
+
+    -- 1. ค้นหาเป้าหมายรอบแรกก่อน
+    local nearestTargetRoot, nearestTargetChar, shortestDistance = findNearestTarget()
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+    if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 and shortestDistance <= 10000 then
+        pcall(function()
+            smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
+        end)
+        return
+    end
+
+    -- 2. ถ้าไม่เจอเป้าหมาย เริ่มนับถอยหลังย้ายเซิร์ฟ (เช็คทั้ง "ติดคอมแบท" และ "เจอเป้าหมาย" ตลอดเวลา)
+    for i = 1, 50 do 
+        if not autoBountyEnabled then return end
+        
+        local currentCharacter = LocalPlayer.Character
+        
+        -- เช็ค: ถ้าติดคอมแบท ให้หยุดย้ายเซิร์ฟทันที
+        if isPlayerInCombat(LocalPlayer, currentCharacter) then
+            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+            if browser then browser.Enabled = false end
+            return 
+        end
+        
+        -- เช็ค: ระหว่างรอด้านนอก ถ้าเจอเป้าหมายโผล่มา ให้หยุดย้ายเซิร์ฟทันที
+        local nRoot, nChar, nDist = findNearestTarget()
+        if nRoot and nChar and nDist <= 10000 then
+            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+            if browser then browser.Enabled = false end
+            return 
+        end
+        
+        task.wait(0.1)
+    end
+
+    if not autoBountyEnabled then return end
+
+    -- เช็คก่อนเปิด Server Browser อีกครั้ง (ป้องการเปิด UI ตอนติดคอมแบท)
     local currentCharacter = LocalPlayer.Character
-    
-    -- เช็ค: ถ้าติดคอมแบท ให้หยุดย้ายเซิร์ฟทันที
     if isPlayerInCombat(LocalPlayer, currentCharacter) then
         local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
         if browser then browser.Enabled = false end
         return 
     end
+
+    local frame = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
     
-    -- เช็ค: ระหว่างรอด้านนอก ถ้าเจอเป้าหมายโผล่มา ให้หยุดย้ายเซิร์ฟทันที
-    local nRoot, nChar, nDist = findNearestTarget()
-    if nRoot and nChar and nDist <= 10000 then
-        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-        if browser then browser.Enabled = false end
-        return 
-    end
-    
-    task.wait(0.1)
-end
-
-if not autoBountyEnabled then return end
-
--- เช็คก่อนเปิด Server Browser อีกครั้ง
-local currentCharacter = LocalPlayer.Character
-if isPlayerInCombat(LocalPlayer, currentCharacter) then
-    local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-    if browser then browser.Enabled = false end
-    return 
-end
-
-local frame = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
-frame.Enabled = true 
-task.wait(1)
-
--- ค้นหาและกดปุ่ม Refresh
-for _, i in ipairs(frame.Frame:GetDescendants()) do
-    if i:IsA("TextButton") and (i.Text == "Refresh" or i.Name == "RefreshButton") then
-        if firesignal then firesignal(i.MouseButton1Click) end
-        task.wait(1)
-        break
-    end
-end
-
--- 3. วนลูปกดปุ่ม Join พร้อมระบบเช็คคอมแบทและเช็คเป้าหมายตลอดเวลา
-while autoBountyEnabled do
-    -- เช็ค: ถ้าติดคอมแบท ให้ปิด UI และหยุดทันที
-    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+    -- เช็คความปลอดภัยรอบสุดท้ายก่อนเปิด UI จริงๆ
+    if isPlayerInCombat(LocalPlayer, currentCharacter) then
         frame.Enabled = false
         return
     end
-    
-    -- เช็ค: ระหว่างหาเซิร์ฟ ถ้าเจอเป้าหมายเข้ามาใกล้ ให้ปิด UI และหยุดทันที
-    local nRoot, nChar, nDist = findNearestTarget()
-    if nRoot and nChar and nDist <= 10000 then
-        frame.Enabled = false
-        return
-    end
-    
-    local joined = false
-    
+
+    frame.Enabled = true 
+    task.wait(1)
+
+    -- ค้นหาและกดปุ่ม Refresh
     for _, i in ipairs(frame.Frame:GetDescendants()) do
-        if not autoBountyEnabled then return end
-        
-        -- เช็คซ้ำระหว่างกดปุ่ม
+        if i:IsA("TextButton") and (i.Text == "Refresh" or i.Name == "RefreshButton") then
+            if firesignal then firesignal(i.MouseButton1Click) end
+            task.wait(1)
+            break
+        end
+    end
+
+    -- 3. วนลูปกดปุ่ม Join พร้อมระบบเช็คคอมแบทและเช็คเป้าหมายตลอดเวลา
+    while autoBountyEnabled do
+        -- เช็ค: ถ้าติดคอมแบท ให้ปิด UI และหยุดทันที
         if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
             frame.Enabled = false
             return
         end
         
-        local subRoot, subChar, subDist = findNearestTarget()
-        if subRoot and subChar and subDist <= 10000 then
+        -- เช็ค: ระหว่างหาเซิร์ฟ ถ้าเจอเป้าหมายเข้ามาใกล้ ให้ปิด UI และหยุดทันที
+        local nRoot, nChar, nDist = findNearestTarget()
+        if nRoot and nChar and nDist <= 10000 then
             frame.Enabled = false
             return
         end
         
-        if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
-            if firesignal then 
-                firesignal(i.MouseButton1Click) 
-                joined = true
+        local joined = false
+        
+        for _, i in ipairs(frame.Frame:GetDescendants()) do
+            if not autoBountyEnabled then return end
+            
+            -- เช็คซ้ำระหว่างกดปุ่ม
+            if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+                frame.Enabled = false
+                return
             end
+            
+            local subRoot, subChar, subDist = findNearestTarget()
+            if subRoot and subChar and subDist <= 10000 then
+                frame.Enabled = false
+                return
+            end
+            
+            if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
+                if firesignal then 
+                    firesignal(i.MouseButton1Click) 
+                    joined = true
+                end
+                task.wait(0.1)
+            elseif i:IsA("ScrollingFrame") then
+                i.CanvasPosition += Vector2.new(0, 150)
+            end
+        end
+        
+        if not joined then
             task.wait(0.1)
-        elseif i:IsA("ScrollingFrame") then
-            i.CanvasPosition += Vector2.new(0, 150)
+        else
+            break 
         end
     end
-    
-    if not joined then
-        task.wait(0.1)
-    else
-        break 
-    end
 end
-end
+
+
 
 
 local Toggle = Bounty:Toggle({
