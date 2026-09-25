@@ -3229,11 +3229,18 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
 end
 
 
+-- สร้างตัวแปรเก็บเวลาล่าสุดที่เคยเจอเป้าหมาย
+local lastTargetSeenTime = 0
+local SEARCH_COOLDOWN = 4 -- หน่วงเวลาก่อนย้ายเซิร์ฟ (วินาที)
 
 local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
 
-    local myChar = localPlayer.Character
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    if not LocalPlayer then return end
+
+    local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
     local myRoot = myChar.HumanoidRootPart
     local humanoid = myChar:FindFirstChildOfClass("Humanoid")
@@ -3244,30 +3251,37 @@ local function runAutoBounty(deltaTime)
     -- คำนวณเปอร์เซ็นต์เลือดปัจจุบัน
     local currentHpPercent = (humanoid.Health / humanoid.MaxHealth) * 100
 
-    -- ฟังก์ชันเช็คสถานะ InCombat แบบครอบคลุม (ประกาศไว้ข้างบนเพื่อให้เรียกใช้ได้ทันที)
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
-    
+    -- ฟังก์ชันเช็คสถานะ InCombat แบบครอบคลุมขั้นสุด (เช็คทั้ง Attribute, ค่าในตัวละคร, และ GUI เตือนภัยคอมแบท)
     local function isPlayerInCombat(player, character)
         if not player then return false end
         
-        local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag") or player:GetAttribute("PvpMode")
-        if pCombat == true or pCombat == 1 or pCombat == "1" then
-            return true
-        end
-        
-        local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime") or player:GetAttribute("SafeZoneTimer")
-        if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
-            return true
-        end
-
-        if character then
-            local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
-            if cCombat == true or cCombat == 1 or cCombat == "1" then
+        -- 1. เช็ค Attribute ยอดฮิตทั้งหมด
+        local combatAttributes = {"InCombat", "Combat", "CombatTag", "PvpMode", "InPvp", "BountyCooldown"}
+        for _, attr in ipairs(combatAttributes) do
+            local val = player:GetAttribute(attr)
+            if val == true or val == 1 or val == "1" or val == "True" then
                 return true
             end
+            if character then
+                local cVal = character:GetAttribute(attr)
+                if cVal == true or cVal == 1 or cVal == "1" or cVal == "True" then
+                    return true
+                end
+            end
+        end
+        
+        -- 2. เช็ค Timer คอมแบท
+        local combatTimeKeys = {"CombatTimer", "InCombatTime", "SafeZoneTimer", "PvpTimer"}
+        for _, key in ipairs(combatTimeKeys) do
+            local timerVal = player:GetAttribute(key) or (character and character:GetAttribute(key))
+            if type(timerVal) == "number" and timerVal > workspace:GetServerTimeNow() then
+                return true
+            end
+        end
 
-            local combatObjNames = {"InCombat", "Combat", "CombatTag", "PvpTag", "SafeZone", "Attacking"}
+        -- 3. เช็ค Object / Values ข้างใน Character
+        if character then
+            local combatObjNames = {"InCombat", "Combat", "CombatTag", "PvpTag", "SafeZone", "Attacking", "Stun"}
             for _, name in ipairs(combatObjNames) do
                 local combatObj = character:FindFirstChild(name)
                 if combatObj then
@@ -3283,6 +3297,29 @@ local function runAutoBounty(deltaTime)
                 end
             end
         end
+
+        -- 4. เช็คจาก PlayerGui เพิ่มเติม (กรณีมี UI ขึ้นเตือนว่าคุณติดคอมแบทอยู่)
+        local success, err = pcall(function()
+            local playerGui = player:FindFirstChild("PlayerGui")
+            if playerGui then
+                -- เช็ค UI ทั่วไปที่มักจะแสดงผลเวลาติดสู้ เช่น SafeZone หรือ Combat Text
+                for _, gui in ipairs(playerGui:GetChildren()) do
+                    if gui.Name:lower():find("combat") or gui.Name:lower():find("pvp") then
+                        if gui:IsA("ScreenGui") and gui.Enabled then
+                            -- เช็คว่ามี Text ด้านในบอกว่ากำลังติดคอมแบทไหม
+                            for _, desc in ipairs(gui:GetDescendants()) do
+                                if desc:IsA("TextLabel") and desc.Visible then
+                                    local txt = desc.Text:lower()
+                                    if txt:find("combat") or txt:find("in combat") or txt:find("safe zone") then
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
 
         return false
     end
@@ -3303,7 +3340,6 @@ local function runAutoBounty(deltaTime)
     -- ฟังก์ชันเช็กเงื่อนไขการข้ามเป้าหมาย
     local function shouldSkipTarget(targetPlayer)
         if not targetPlayer or targetPlayer == LocalPlayer then return true end
-        
         if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
             if targetPlayer.Team and targetPlayer.Team.Name == "Marines" then 
                 return true 
@@ -3367,9 +3403,15 @@ local function runAutoBounty(deltaTime)
         return nearestTargetRoot, nearestTargetChar, shortestDistance
     end
 
-    -- 1. ระบบ Safe Mode (เช็คและบังคับหนีทันทีเมื่อเลือดต่ำกว่าเกณฑ์)
+    -- [บล็อกพิเศษ] เช็คก่อนเริ่มทำงานทุกอย่าง: ถ้าติดคอมแบท ห้ามทำอะไรทั้งสิ้นเกี่ยวกับระบบย้ายเซิร์ฟหรือหนีมั่วซั่ว ให้สู้ต่อทันที
+    if isPlayerInCombat(LocalPlayer, myChar) then
+        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+        if browser then browser.Enabled = false end
+        -- ปล่อยให้ระบบโจมตีปกติทำงาน (ถ้ามี) หรือข้ามการย้ายเซิร์ฟไปเลย
+    end
+
+    -- 1. ระบบ Safe Mode
     if safeModeActive and humanoid.Health > 0 then
-        -- เริ่มกระบวนการหนีฉุกเฉิน
         if currentHpPercent <= safeModePercent and not isSafeEscaping then
             isSafeEscaping = true
             setSafeNoclip(true)
@@ -3386,7 +3428,6 @@ local function runAutoBounty(deltaTime)
             tween:Play()
         end
 
-        -- ขณะกำลังหนี
         if isSafeEscaping then
             humanoid.PlatformStand = true
             setSafeNoclip(true)
@@ -3398,11 +3439,8 @@ local function runAutoBounty(deltaTime)
                 myRoot.CFrame = myRoot.CFrame + Vector3.new(0, 100, 0)
             end
             
-            -- ปรับปรุงใหม่ตามที่คุณต้องการ: 
-            -- ถ้าไม่พบเป้าหมายรอบตัว และ ไม่ได้ติดคอมแบท สามารถหลุดจาก Safe Mode ได้ทันทีโดยไม่ต้องรอเลือดเต็ม
             local tempRoot, tempChar, tempDist = findNearestTarget()
             local inCombatNow = isPlayerInCombat(LocalPlayer, myChar)
-            
             local targetNotFoundOrFar = (not tempRoot or tempDist > 10000)
             
             if (targetNotFoundOrFar and not inCombatNow) or (currentHpPercent >= safeStopPercent) then
@@ -3417,38 +3455,48 @@ local function runAutoBounty(deltaTime)
         end
     end
 
-    if not LocalPlayer then return end
-
-    -- เริ่มต้นกระบวนการหลัก
     if not autoBountyEnabled then return end
 
-    -- 1. ค้นหาเป้าหมายรอบแรกก่อน
+    -- 2. ค้นหาเป้าหมายรอบแรก
     local nearestTargetRoot, nearestTargetChar, shortestDistance = findNearestTarget()
-    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 
     if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 and shortestDistance <= 10000 then
+        lastTargetSeenTime = tick() -- บันทึกเวลาว่าเจอเป้าหมาย
+        
         pcall(function()
             smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
         end)
         return
     end
 
-    -- 2. ถ้าไม่เจอเป้าหมาย เริ่มนับถอยหลังย้ายเซิร์ฟ (เช็คทั้ง "ติดคอมแบท" และ "เจอเป้าหมาย" ตลอดเวลา)
-    for i = 1, 50 do 
+    -- ถ้าระหว่างนี้ผู้เล่นติดคอมแบทอยู่ ห้ามย้ายเซิร์ฟเด็ดขาด!
+    if isPlayerInCombat(LocalPlayer, myChar) then
+        return
+    end
+
+    -- 3. ระบบหน่วงเวลาก่อนย้ายเซิร์ฟ (ป้องกันกรณีฆ่าตายแล้วรีบย้ายทันที)
+    if (tick() - lastTargetSeenTime) < SEARCH_COOLDOWN then
+        return
+    end
+
+    -- 4. เช็คความพร้อมก่อนเปิด Server Browser (เช็คคอมแบทซ้ำหลายรอบมาก)
+    if isPlayerInCombat(LocalPlayer, myChar) then
+        return
+    end
+
+    for i = 1, 30 do 
         if not autoBountyEnabled then return end
         
-        local currentCharacter = LocalPlayer.Character
-        
-        -- เช็ค: ถ้าติดคอมแบท ให้หยุดย้ายเซิร์ฟทันที
-        if isPlayerInCombat(LocalPlayer, currentCharacter) then
+        -- ถ้าจังหวะรอนี้ ดันติดคอมแบทขึ้นมา -> ยกเลิกทันที
+        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
             local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
             if browser then browser.Enabled = false end
             return 
         end
         
-        -- เช็ค: ระหว่างรอด้านนอก ถ้าเจอเป้าหมายโผล่มา ให้หยุดย้ายเซิร์ฟทันที
         local nRoot, nChar, nDist = findNearestTarget()
         if nRoot and nChar and nDist <= 10000 then
+            lastTargetSeenTime = tick()
             local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
             if browser then browser.Enabled = false end
             return 
@@ -3459,9 +3507,8 @@ local function runAutoBounty(deltaTime)
 
     if not autoBountyEnabled then return end
 
-    -- เช็คก่อนเปิด Server Browser อีกครั้ง (ป้องการเปิด UI ตอนติดคอมแบท)
-    local currentCharacter = LocalPlayer.Character
-    if isPlayerInCombat(LocalPlayer, currentCharacter) then
+    -- เช็คคอมแบทอีกทีก่อนเปิด UI จริง
+    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
         local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
         if browser then browser.Enabled = false end
         return 
@@ -3469,8 +3516,7 @@ local function runAutoBounty(deltaTime)
 
     local frame = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
     
-    -- เช็คความปลอดภัยรอบสุดท้ายก่อนเปิด UI จริงๆ
-    if isPlayerInCombat(LocalPlayer, currentCharacter) then
+    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
         frame.Enabled = false
         return
     end
@@ -3487,17 +3533,16 @@ local function runAutoBounty(deltaTime)
         end
     end
 
-    -- 3. วนลูปกดปุ่ม Join พร้อมระบบเช็คคอมแบทและเช็คเป้าหมายตลอดเวลา
+    -- 5. วนลูปกดปุ่ม Join (พร้อมระบบดักคอมแบทแบบเรียลไทม์)
     while autoBountyEnabled do
-        -- เช็ค: ถ้าติดคอมแบท ให้ปิด UI และหยุดทันที
         if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
             frame.Enabled = false
             return
         end
         
-        -- เช็ค: ระหว่างหาเซิร์ฟ ถ้าเจอเป้าหมายเข้ามาใกล้ ให้ปิด UI และหยุดทันที
         local nRoot, nChar, nDist = findNearestTarget()
         if nRoot and nChar and nDist <= 10000 then
+            lastTargetSeenTime = tick()
             frame.Enabled = false
             return
         end
@@ -3507,7 +3552,6 @@ local function runAutoBounty(deltaTime)
         for _, i in ipairs(frame.Frame:GetDescendants()) do
             if not autoBountyEnabled then return end
             
-            -- เช็คซ้ำระหว่างกดปุ่ม
             if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
                 frame.Enabled = false
                 return
@@ -3515,11 +3559,18 @@ local function runAutoBounty(deltaTime)
             
             local subRoot, subChar, subDist = findNearestTarget()
             if subRoot and subChar and subDist <= 10000 then
+                lastTargetSeenTime = tick()
                 frame.Enabled = false
                 return
             end
             
             if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
+                -- เช็คคอมแบทครั้งสุดท้ายก่อนกดปุ่ม Join เซิร์ฟอื่น
+                if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+                    frame.Enabled = false
+                    return
+                end
+
                 if firesignal then 
                     firesignal(i.MouseButton1Click) 
                     joined = true
