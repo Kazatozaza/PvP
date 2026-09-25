@@ -3126,7 +3126,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local distance = (targetPos - currentPos).Magnitude
     
     -- ดึงค่าระยะจาก Settings/Flags
-    local maxDistance = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 300
+    local maxDistance = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 200
     local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
     
     -- ถ้าอยู่ในระยะ MaxDistance ให้ "วาปแปะล็อกติดตัวเป้าหมายทันที" (Instant Teleport & Lock)
@@ -3144,7 +3144,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         myRoot.AssemblyAngularVelocity = Vector3.zero
 
         -- หากอยู่ในระยะโจมตี (<= 25 studs) ทำคอมโบ
-        if distance <= 250 then
+        if distance <= 200 then
             lastComboTime = lastComboTime or 0
             comboCooldown = comboCooldown or 1
 
@@ -3240,7 +3240,8 @@ if safeModeActive and humanoid.Health > 0 then
 end
     
 
-  local Players = game:GetService("Players")
+  
+local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then return end
 
@@ -3364,6 +3365,17 @@ local function findNearestTarget()
     return nearestTargetRoot, nearestTargetChar, shortestDistance
 end
 
+-- ฟังก์ชันเช็คและยกเลิกการย้ายเซิร์ฟทันทีถ้าติดคอมแบท
+local function checkAndCancelIfCombat()
+    local currentCharacter = LocalPlayer.Character
+    if isPlayerInCombat(LocalPlayer, currentCharacter) then
+        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+        if browser then browser.Enabled = false end
+        return true
+    end
+    return false
+end
+
 -- เริ่มต้นกระบวนการหลัก
 if not autoBountyEnabled then return end
 
@@ -3378,45 +3390,8 @@ if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 
     return
 end
 
--- 2. ฟังก์ชันตรวจสอบความปลอดภัยและความแม่นยำในการหลุด Combat (เช็คซ้ำหลายรอบ)
-local function waitForSafeToHop()
-    local safeStreak = 0
-    local requiredStreak = 5 -- ต้องเช็คผ่านติดต่อกัน 5 ครั้ง (รวม ~3 วินาที) ถึงจะมั่นใจว่าหลุดจริง
-    
-    while autoBountyEnabled do
-        local currentCharacter = LocalPlayer.Character
-        
-        -- ถ้ามีเป้าหมายโผล่มาใกล้ระหว่างรอ ให้ยกเลิกการย้ายเซิร์ฟทันที
-        local nRoot, nChar, nDist = findNearestTarget()
-        if nRoot and nChar and nDist <= 10000 then
-            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-            if browser then browser.Enabled = false end
-            return false
-        end
-        
-        -- ถ้ายังติดคอมแบท ให้รีเซ็ตจำนวนรอบที่เช็คปลอดภัยเป็น 0
-        if isPlayerInCombat(LocalPlayer, currentCharacter) then
-            safeStreak = 0
-            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-            if browser then browser.Enabled = false end
-            task.wait(0.6)
-            continue
-        end
-        
-        -- ถ้าไม่ติดคอมแบท ให้เพิ่มจำนวนรอบความปลอดภัยขึ้นทีละ 1
-        safeStreak = safeStreak + 1
-        
-        if safeStreak >= requiredStreak then
-            break
-        end
-        
-        task.wait(0.6)
-    end
-    
-    return true
-end
-
-if not waitForSafeToHop() then return end
+-- ถ้าติดคอมแบทตั้งแต่ก่อนย้ายเซิร์ฟ ให้ยกเลิกทันที
+if checkAndCancelIfCombat() then return end
 if not autoBountyEnabled then return end
 
 -- เปิด Server Browser
@@ -3424,9 +3399,10 @@ local frame = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
 frame.Enabled = true 
 task.wait(1)
 
--- ค้นหาและกดปุ่ม Refresh
+-- ค้นหาและกดปุ่ม Refresh (พร้อมเช็คคอมแบท)
 pcall(function()
     for _, i in ipairs(frame.Frame:GetDescendants()) do
+        if checkAndCancelIfCombat() then return end
         if i:IsA("TextButton") and (i.Text == "Refresh" or i.Name == "RefreshButton") then
             if firesignal then firesignal(i.MouseButton1Click) end
             break
@@ -3435,12 +3411,9 @@ pcall(function()
 end)
 task.wait(1.5)
 
--- 3. วนลูปกดปุ่ม Join พร้อมระบบเช็คคอมแบทแบบละเอียดตลอดเวลา
+-- 3. วนลูปกดปุ่ม Join พร้อมเช็คคอมแบท ถ้าติดให้ยกเลิกทันที
 while autoBountyEnabled do
-    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-        frame.Enabled = false
-        return
-    end
+    if checkAndCancelIfCombat() then return end
     
     local nRoot, nChar, nDist = findNearestTarget()
     if nRoot and nChar and nDist <= 10000 then
@@ -3452,11 +3425,7 @@ while autoBountyEnabled do
     
     for _, i in ipairs(frame.Frame:GetDescendants()) do
         if not autoBountyEnabled then return end
-        
-        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-            frame.Enabled = false
-            return
-        end
+        if checkAndCancelIfCombat() then return end
         
         local subRoot, subChar, subDist = findNearestTarget()
         if subRoot and subChar and subDist <= 10000 then
@@ -3486,10 +3455,6 @@ end
 end
 
 
-
-
-
-
 local Toggle = Bounty:Toggle({
     Title = "Auto Bounty",
     Desc = "Automatically hunt bounty for you",
@@ -3516,6 +3481,7 @@ local Toggle = Bounty:Toggle({
         end
     end
 })
+
 
 Bounty:Slider({
     Title = "Safe Mode ",
