@@ -1,6 +1,29 @@
 local _version = "1.6.66"
 
--- 1. เคลียร์หน้าต่างเก่า (ถ้ามี)
+if getgenv().DestinyHub_IsLoading then
+    warn("[DestinyHub]: สคริปต์กำลังโหลดอยู่แล้ว กรุณารอสักครู่...")
+    
+    -- เพิ่มแจ้งเตือนกรณีที่สคริปต์กำลังโหลดอยู่แล้ว (ถ้า WindUI เคยถูกโหลดไว้ก่อนหน้า)
+    pcall(function()
+        if WindUI and typeof(WindUI.Notify) == "function" then
+            WindUI:Notify({
+                Title = "DestinyHub Warning",
+                Content = "สคริปต์กำลังโหลดอยู่แล้ว กรุณารอสักครู่...",
+                Duration = 3
+            })
+        end
+    end)
+    
+    return
+end
+getgenv().DestinyHub_IsLoading = true
+
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+repeat task.wait() until game:GetService("Players").LocalPlayer
+
 if getgenv().DestinyHubWindow then
     pcall(function()
         if typeof(getgenv().DestinyHubWindow.Destroy) == "function" then
@@ -10,29 +33,35 @@ if getgenv().DestinyHubWindow then
     getgenv().DestinyHubWindow = nil
 end
 
--- 2. โหลด WindUI แบบปลอดภัยและมีระบบพยายามโหลดซ้ำ (Retry) หากอินเทอร์เน็ตช้า
-local WindUI
-local maxAttempts = 5
-local attempt = 0
+local success, result = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
+end)
 
-repeat
-    attempt = attempt + 1
-    local success, result = pcall(function()
-        return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
+if success and result then
+    WindUI = result
+    
+    WindUI:Notify({
+        Title = "DestinyHub Success",
+        Content = "โหลด WindUI สำเร็จแล้ว!",
+        Duration = 3
+    })
+else
+    warn("[DestinyHub]: ไม่สามารถโหลด WindUI ได้ กรุณาตรวจสอบอินเทอร์เน็ตหรือลิงก์เวอร์ชัน")
+    
+    pcall(function()
+        if WindUI and typeof(WindUI.Notify) == "function" then
+            WindUI:Notify({
+                Title = "DestinyHub Error",
+                Content = "ไม่สามารถโหลด WindUI ได้!",
+                Duration = 4
+            })
+        end
     end)
     
-    if success and result then
-        WindUI = result
-        break
-    else
-        task.wait(1) -- รอ 1 วิแล้วลองใหม่
-    end
-until attempt >= maxAttempts
-
-if not WindUI then
-    warn("[DestinyHub]: ไม่สามารถโหลด WindUI ได้ กรุณาตรวจสอบอินเทอร์เน็ตหรือลิงก์เวอร์ชัน")
+    getgenv().DestinyHub_IsLoading = nil 
     return
 end
+
 
 pcall(function()
   WindUI:AddTheme({
@@ -366,17 +395,21 @@ Home:Paragraph({
 })
 
 
-local FPS = Home:Input({
-    Title = "FPS Unlocker ",
-    Icon = "user",
-    Desc = "Enter your desired max FPS ",
-    Flag = "FPSUnlocker",
-    Default = "60",
-    Placeholder = "Enter max FPS...",
+
+local MyConfig = Window.ConfigManager:Config("DestinyConfig")
+
+
+local Input = Home:Input({
+    Title = "FPS Unlocker",
+    Desc = "Enter your desired max FPS", -- optional
+    Type = "Default", -- "Default" or "Textarea". optional
+    Placeholder = "Enter max FPS...", -- placeholder text. optional
+    Value = "9999", -- initial value. optional
+    Locked = false, -- disable input. optional
+    Flag = "FPSUnlocker", -- for config saving. optional
     Callback = function(text)
-        local num = tonumber(text)
+         local num = tonumber(text)
         if num then
-            -- กำหนดขอบเขตความปลอดภัย (เช่น ไม่ต่ำกว่า 1 และไม่เกิน 9999)
             if num < 1 then
                 num = 1
             elseif num > 9999 then
@@ -393,7 +426,6 @@ local FPS = Home:Input({
     end
 })
 
-local MyConfig = Window.ConfigManager:Config("DestinyConfig")
 
 Config:Button({
     Title = "Save Configuration",
@@ -865,6 +897,12 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
+-- ตรวจสอบว่าเคยรันสคริปต์นี้ไปแล้วหรือยัง
+if getgenv().SkillRedirectLoaded then
+    warn("[SkillRedirect] Script is already running!")
+    return
+end
+getgenv().SkillRedirectLoaded = true
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -942,20 +980,16 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SkillRedirectEnabled and self == Mouse then
             local rootPart = getTargetCFrame()
             if rootPart then
                 if idx == "Hit" then 
-                    -- ส่งค่า CFrame ของเป้าหมายไปแบบตรงๆ
                     return rootPart.CFrame
                 elseif idx == "Target" then 
-                    -- ส่งค่า Part ของเป้าหมายตรงๆ
                     return rootPart
                 elseif idx == "X" or idx == "Y" then 
-                    -- แปลงตำแหน่งเป็นพิกัดหน้าจอเพื่อไม่ให้เกมเอออร์
                     local screenPoint = Camera:WorldToScreenPoint(rootPart.Position)
                     return screenPoint[idx]
                 end
@@ -964,7 +998,6 @@ task.spawn(function()
         return oldIndex(self, idx)
     end))
 
-    -- Hook __namecall เพื่อเปลี่ยนพิกัด CFrame หรือ Vector3 ในรีโมทให้ใช้ CFrame ของเป้าหมาย
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
@@ -977,7 +1010,6 @@ task.spawn(function()
                 local targetPos = targetCFrame.Position
                 local args = { ... }
                 
-                -- วนลูปเปลี่ยนค่าพิกัดให้เป็น CFrame / Vector3 ของเป้าหมาย
                 for i = 1, #args do
                     local arg = args[i]
                     local argType = typeof(arg)
@@ -1152,8 +1184,6 @@ System:Colorpicker({
     Callback = function(color)
         if not getgenv().RainbowModeEnabled then
             getgenv().SkillColor = color
-            
-            -- บันทึกค่าสีลงไฟล์ทันทีเมื่อมีการเปลี่ยนสี
             saveConfig()
 
             if getgenv().SkillColorChangerEnabled and LocalPlayer.Character then
@@ -1347,8 +1377,13 @@ RunService.RenderStepped:Connect(function()
 end)
 
 
+-- ==================== ระบบป้องกันการรันซ้ำ ====================
+if getgenv().BloxFruitsHelperLoaded then
+    warn("[BloxFruitsHelper] Script is already running!")
+    return
+end
+getgenv().BloxFruitsHelperLoaded = true
 
--- ==================== รวมตัวแปรหลัก (ประกาศครั้งเดียวจบ) ====================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -3023,11 +3058,10 @@ local safeModePercent = 20
 local safeStopPercent = 100
 
 
--- เก็บค่าเป็น Table สำหรับรองรับการเลือกหลายสกิล
-local selectedMeleeSkills = {"Z"}
-local selectedSwordSkills = {"Z"}
-local selectedFruitSkills = {"Z"}
-local selectedGunSkills = {"Z"}
+local selectedMeleeSkills = {"None"}
+local selectedSwordSkills = {"None"}
+local selectedFruitSkills = {"None"}
+local selectedGunSkills = {"None"}
 
 
 local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") 
@@ -3592,10 +3626,6 @@ local function runAutoBounty(deltaTime)
     end
 end
 
-
-
-
-
 local Toggle = Bounty:Toggle({
     Title = "Auto Bounty",
     Desc = "Automatically hunt bounty for you",
@@ -3622,8 +3652,6 @@ local Toggle = Bounty:Toggle({
         end
     end
 })
-
-
 
 local Toggle = Bounty:Toggle({
     Title = "Enable PvP",
@@ -3682,7 +3710,7 @@ local DropdownMelee = Bounty:Dropdown({
     Title = "Melee",
     Desc = "Select Melee skills (Supports all fighting styles in the game)",
     Values = {"Z", "X", "C", "None"},
-    Value = {"Z"},
+    Value = {"None"},
     Multi = true,
     Locked = false,
     Flag = "melee_skill_multi",
@@ -3696,7 +3724,7 @@ local DropdownSword = Bounty:Dropdown({
     Title = "Sword",
     Desc = "Select Sword skills (Supports all swords in the game)",
     Values = {"Z", "X", "None"},
-    Value = {"Z"},
+    Value = {"None"},
     Multi = true,
     Locked = false,
     Flag = "sword_skill_multi",
@@ -3710,7 +3738,7 @@ local DropdownFruit = Bounty:Dropdown({
     Title = "Blox Fruit",
     Desc = "Select Blox Fruit skills (Supports all fruits in the game)",
     Values = {"Z", "X", "C", "V", "F", "None"},
-    Value = {"Z"},
+    Value = {"None"},
     Multi = true,
     Locked = false,
     Flag = "fruit_skill_multi",
@@ -3719,12 +3747,12 @@ local DropdownFruit = Bounty:Dropdown({
     end
 })
 
--- UI Dropdown Gun
+-- UI Dropdown Gun (แก้ตรง Value เป็น None)
 local DropdownGun = Bounty:Dropdown({
     Title = "Gun",
     Desc = "Select Gun skills (Supports all guns in the game)",
     Values = {"Z", "X", "None"},
-    Value = {"Z"},
+    Value = {"None"}, -- เปลี่ยนจาก {"Z"} เป็น {"None"}
     Multi = true,
     Locked = false,
     Flag = "gun_skill_multi",
