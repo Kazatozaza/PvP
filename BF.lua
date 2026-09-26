@@ -60,6 +60,8 @@ else
     return
 end
 
+
+
 pcall(function()
   WindUI:AddTheme({
     Name = "Darker-Soft",
@@ -2159,71 +2161,7 @@ local Toggle = System:Toggle({
 
 
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
 
-local netModule = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
-local registerHit = netModule:WaitForChild("RE/RegisterHit")
-local registerAttack = netModule:WaitForChild("RE/RegisterAttack")
-
-local fastAttackConnection = nil
-
-local function SetFastAttack(state)
-    _G.FastAttackRunning = state
-    
-    if not state then
-        if fastAttackConnection then
-            fastAttackConnection:Disconnect()
-            fastAttackConnection = nil
-        end
-        return
-    end
-    
-    fastAttackConnection = RunService.Heartbeat:Connect(function()
-        if not _G.FastAttackRunning then return end
-        
-        pcall(function()
-            local char = player.Character
-            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-            local rootPart = char.HumanoidRootPart
-            
-            local function attackTarget(targetRoot)
-                if targetRoot then
-                    registerHit:FireServer(targetRoot, {}, "211ee8ef")
-                    registerAttack:FireServer(0.4000000059604645, 1)
-                end
-            end
-            
-            local enemiesFolder = workspace:FindFirstChild("Enemies")
-            if enemiesFolder then
-                for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-                    local eRoot = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
-                    local hum = enemy:FindFirstChildOfClass("Humanoid")
-                    if eRoot and hum and hum.Health > 0 and (rootPart.Position - eRoot.Position).Magnitude <= 60 then
-                        attackTarget(eRoot)
-                    end
-                end
-            end
-            
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= player then
-                    local tChar = p.Character
-                    if tChar and tChar:FindFirstChild("HumanoidRootPart") then
-                        local tRoot = tChar.HumanoidRootPart
-                        local hum = tChar:FindFirstChildOfClass("Humanoid")
-                        if hum and hum.Health > 0 and (rootPart.Position - tRoot.Position).Magnitude <= 60 then
-                            attackTarget(tRoot)
-                        end
-                    end
-                end
-            end
-        end)
-        
-        task.wait()
-    end)
-end
 
 CombatTab:Toggle({
     Title = "CamLock (PC/Mobile)",
@@ -2381,6 +2319,78 @@ CombatTab:Dropdown({
 
 
 
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+
+local netModule = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
+local registerHit = netModule:WaitForChild("RE/RegisterHit")
+local registerAttack = netModule:WaitForChild("RE/RegisterAttack")
+
+local fastAttackConnection = nil
+local lastAttackTime = 0
+_G.AttackSpeed = 0.1
+
+local function SetFastAttack(state)
+    _G.FastAttackRunning = state
+    
+    if not state then
+        if fastAttackConnection then
+            fastAttackConnection:Disconnect()
+            fastAttackConnection = nil
+        end
+        return
+    end
+    
+    fastAttackConnection = RunService.Heartbeat:Connect(function()
+        if not _G.FastAttackRunning then return end
+        
+        pcall(function()
+            local currentTime = tick()
+            if currentTime - lastAttackTime < _G.AttackSpeed then return end
+            
+            local char = player.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local rootPart = char.HumanoidRootPart
+            
+            local function attackTarget(targetRoot)
+                if targetRoot then
+                    registerHit:FireServer(targetRoot, {}, "211ee8ef")
+                    registerAttack:FireServer(0.4000000059604645, 1)
+                    lastAttackTime = currentTime
+                end
+            end
+            
+            local enemiesFolder = workspace:FindFirstChild("Enemies")
+            if enemiesFolder then
+                for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+                    local eRoot = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
+                    local hum = enemy:FindFirstChildOfClass("Humanoid")
+                    if eRoot and hum and hum.Health > 0 and (rootPart.Position - eRoot.Position).Magnitude <= 60 then
+                        attackTarget(eRoot)
+                        return
+                    end
+                end
+            end
+            
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= player then
+                    local tChar = p.Character
+                    if tChar and tChar:FindFirstChild("HumanoidRootPart") then
+                        local tRoot = tChar.HumanoidRootPart
+                        local hum = tChar:FindFirstChildOfClass("Humanoid")
+                        if hum and hum.Health > 0 and (rootPart.Position - tRoot.Position).Magnitude <= 60 then
+                            attackTarget(tRoot)
+                            return
+                        end
+                    end
+                end
+            end
+        end)
+    end)
+end
+
 local FastAttackToggle = GeneralTab:Toggle({
     Title = "Fast Attack",
     Desc = "Increases your attack speed automatically",
@@ -2390,6 +2400,25 @@ local FastAttackToggle = GeneralTab:Toggle({
         SetFastAttack(state)
     end,
 })
+
+
+
+local Slider = GeneralTab:Slider({
+    Title = "Attack Speed",
+    Desc = "Speed (not long = fastest)",
+    Value = {
+        Min = 0,
+        Max = 0.7,
+        Default = 0.1
+    },
+    Step = 0.01,
+    Locked = false,
+    Flag = "attack_speed_slider",
+    Callback = function(value)
+        _G.AttackSpeed = value
+    end
+})
+
 
 GeneralTab:Toggle({
     Title = "Auto Buso",
