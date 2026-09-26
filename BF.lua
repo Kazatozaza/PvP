@@ -1,5 +1,4 @@
 local _version = "1.6.66"
-
 if getgenv().DestinyHub_IsLoading then
     warn("[DestinyHub]: สคริปต์กำลังโหลดอยู่แล้ว กรุณารอสักครู่...")
     
@@ -31,6 +30,18 @@ if getgenv().DestinyHubWindow then
     getgenv().DestinyHubWindow = nil
 end
 
+for i = 7, 1, -1 do
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "DestinyHub Countdown",
+            Text = "กำลังโหลดในอีก " .. i .. " วินาที...",
+            Duration = 0.9, -- ให้แจ้งเตือนแสดงผลสั้นๆ วนไปแต่ละวิ
+            Icon = "rbxassetid://97596339693490"
+        })
+    end)
+    task.wait(1)
+end
+
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 end)
@@ -59,7 +70,6 @@ else
     getgenv().DestinyHub_IsLoading = nil 
     return
 end
-
 
 pcall(function()
   WindUI:AddTheme({
@@ -322,7 +332,7 @@ task.spawn(function()
 end)
 
 
--- ตรวจสอบฟังก์ชันพื้นฐานเพื่อความปลอดภัย
+
 local executorName = (identifyexecutor and identifyexecutor()) or (getexecutorname and getexecutorname()) or "Unknown Executor"
 local safeClipboard = setclipboard or toclipboard or (syn and syn.write_clipboard)
 
@@ -1283,7 +1293,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 9
+getgenv().HitboxSize = 14
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
@@ -2133,6 +2143,32 @@ RunService.RenderStepped:Connect(function()
         executeDefenseProtocol(humanoid, rootPart)
     end
 end)
+
+
+local Toggle = System:Toggle({
+    Title = "Fast Mode",
+    Desc = "Enables high-speed mode to reduce lag and improve smoothness.",
+    Icon = "rocket",
+    Flag = "FastMode123",
+    Callback = function(state)
+        local btnPath = game:GetService("Players").LocalPlayer.PlayerGui.Main.SettingsMenu.Content.ScrollingFrame.FastMode
+        local btn = state and btnPath.FirstButton or btnPath.SecondButton
+        
+        if btn then
+            if firesignal then
+                firesignal(btn.MouseButton1Click)
+                firesignal(btn.Activated)
+            elseif fireclickdetector then
+                fireclickdetector(btn)
+            else
+                -- Fallback in case firesignal is not supported
+                for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
+                    connection:Fire()
+                end
+            end
+        end
+    end
+})
 
 
 
