@@ -31,6 +31,8 @@ if getgenv().DestinyHubWindow then
     getgenv().DestinyHubWindow = nil
 end
 
+task.wait(13)
+
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 end)
@@ -59,7 +61,6 @@ else
     getgenv().DestinyHub_IsLoading = nil 
     return
 end
-
 
 
 pcall(function()
@@ -513,7 +514,6 @@ getgenv().LockedPartName = "HumanoidRootPart"
 getgenv().PredictionEnabled = getgenv().PredictionEnabled ~= false and true
 getgenv().PredictionFactor = getgenv().PredictionFactor or 0.135
 getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
-
 ---------------------------------------------------------------------------------------
 
 local Players = game:GetService("Players")
@@ -962,134 +962,6 @@ task.spawn(function()
     end))
 end)
 
-
-
-
-
-local HttpService = game:GetService("HttpService")
-local FileName = "SkillColorConfig.json"
-
--- ฟังก์ชันเซฟสี
-local function saveConfig()
-    local success, err = pcall(function()
-        local data = {
-            R = getgenv().SkillColor.R,
-            G = getgenv().SkillColor.G,
-            B = getgenv().SkillColor.B
-        }
-        writefile(FileName, HttpService:JSONEncode(data))
-    end)
-    if not success then
-        warn("Failed to save color config: " .. tostring(err))
-    end
-end
-
--- ฟังก์ชันโหลดสี
-local function loadConfig()
-    if pcall(function() readfile(FileName) end) then
-        local success, err = pcall(function()
-            local content = readfile(FileName)
-            local data = HttpService:JSONDecode(content)
-            if data and data.R and data.G and data.B then
-                getgenv().SkillColor = Color3.new(data.R, data.G, data.B)
-            end
-        end)
-        if not success then
-            warn("Failed to load color config: " .. tostring(err))
-        end
-    end
-end
-
-loadConfig()
-
-
-task.spawn(function()
-    task.wait(5)
-getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
-getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
-
-local LocalPlayer = game:GetService("Players").LocalPlayer
-
--- ฟังก์ชันเปลี่ยนสีเฉพาะ Object ที่รองรับ (ตัดฟังก์ชันเช็กโฟลเดอร์ทิ้ง เพื่อความเร็วสูงสุด)
-local function applyColor(item)
-    pcall(function()
-        if item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") then
-            item.Color = ColorSequence.new(getgenv().SkillColor)
-        elseif item:IsA("BasePart") or item:IsA("Light") then
-            item.Color = getgenv().SkillColor
-        end
-    end)
-end
-
--- ฟังก์ชันเริ่มแรกตอนตัวละครเกิด (เปลี่ยนเฉพาะสิ่งที่มีอยู่แล้วแบบรวดเร็ว)
-local function onCharacterAdded(character)
-    if not character then return end
-    
-    for _, descendant in ipairs(character:GetDescendants()) do
-        if getgenv().SkillColorChangerEnabled then
-            applyColor(descendant)
-        end
-    end
-    
-    -- ดักจับเฉพาะ Object ใหม่ที่เพิ่มเข้ามาในตัวละคร
-    character.DescendantAdded:Connect(function(descendant)
-        if getgenv().SkillColorChangerEnabled then
-            task.defer(function()
-                applyColor(descendant)
-            end)
-        end
-    end)
-end
-
-if LocalPlayer.Character then
-    onCharacterAdded(LocalPlayer.Character)
-end
-LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
-
--- ดักจับเฉพาะเอฟเฟกต์ใหม่ที่ถูกสร้างขึ้นใน Workspace (กรองเฉพาะคลาสที่ต้องเปลี่ยนสีทันที)
-workspace.DescendantAdded:Connect(function(descendant)
-    if getgenv().SkillColorChangerEnabled then
-        if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("BasePart") or descendant:IsA("Light") then
-            task.defer(function()
-                applyColor(descendant)
-            end)
-        end
-    end
-end)
-end)
-
-
-System:Toggle({
-    Title = "Skill Color Changer",
-    Desc = "Change skill effect colors only.",
-    Flag = "skill_color_toggle",
-    Value = getgenv().SkillColorChangerEnabled,
-    Callback = function(Value)
-        getgenv().SkillColorChangerEnabled = Value
-        if Value and LocalPlayer.Character then
-            applySkillColorOnly(LocalPlayer.Character)
-        else
-        end
-    end,
-})
-
-System:Colorpicker({
-    Title = "Select Skill Color",
-    Desc = "Choose your custom skill effect color.",
-    Default = getgenv().SkillColor,
-    Callback = function(color)
-        if not getgenv().RainbowModeEnabled then
-            getgenv().SkillColor = color
-            saveConfig()
-
-            if getgenv().SkillColorChangerEnabled and LocalPlayer.Character then
-                applySkillColorOnly(LocalPlayer.Character)
-            end
-        end
-    end
-})
-
-
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
@@ -1247,8 +1119,40 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 14
+getgenv().HitboxSize = 16
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
@@ -1271,6 +1175,149 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+local HttpService = game:GetService("HttpService")
+local FileName = "SkillColorConfig.json"
+
+-- ฟังก์ชันเซฟสี
+local function saveConfig()
+    local success, err = pcall(function()
+        local data = {
+            R = getgenv().SkillColor.R,
+            G = getgenv().SkillColor.G,
+            B = getgenv().SkillColor.B
+        }
+        writefile(FileName, HttpService:JSONEncode(data))
+    end)
+    if not success then
+        warn("Failed to save color config: " .. tostring(err))
+    end
+end
+
+-- ฟังก์ชันโหลดสี
+local function loadConfig()
+    if pcall(function() readfile(FileName) end) then
+        local success, err = pcall(function()
+            local content = readfile(FileName)
+            local data = HttpService:JSONDecode(content)
+            if data and data.R and data.G and data.B then
+                getgenv().SkillColor = Color3.new(data.R, data.G, data.B)
+            end
+        end)
+        if not success then
+            warn("Failed to load color config: " .. tostring(err))
+        end
+    end
+end
+
+loadConfig()
+
+
+task.spawn(function()
+    task.wait(5)
+getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
+getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
+
+local LocalPlayer = game:GetService("Players").LocalPlayer
+
+-- ฟังก์ชันเปลี่ยนสีเฉพาะ Object ที่รองรับ (ตัดฟังก์ชันเช็กโฟลเดอร์ทิ้ง เพื่อความเร็วสูงสุด)
+local function applyColor(item)
+    pcall(function()
+        if item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") then
+            item.Color = ColorSequence.new(getgenv().SkillColor)
+        elseif item:IsA("BasePart") or item:IsA("Light") then
+            item.Color = getgenv().SkillColor
+        end
+    end)
+end
+
+-- ฟังก์ชันเริ่มแรกตอนตัวละครเกิด (เปลี่ยนเฉพาะสิ่งที่มีอยู่แล้วแบบรวดเร็ว)
+local function onCharacterAdded(character)
+    if not character then return end
+    
+    for _, descendant in ipairs(character:GetDescendants()) do
+        if getgenv().SkillColorChangerEnabled then
+            applyColor(descendant)
+        end
+    end
+    
+    -- ดักจับเฉพาะ Object ใหม่ที่เพิ่มเข้ามาในตัวละคร
+    character.DescendantAdded:Connect(function(descendant)
+        if getgenv().SkillColorChangerEnabled then
+            task.defer(function()
+                applyColor(descendant)
+            end)
+        end
+    end)
+end
+
+if LocalPlayer.Character then
+    onCharacterAdded(LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+
+-- ดักจับเฉพาะเอฟเฟกต์ใหม่ที่ถูกสร้างขึ้นใน Workspace (กรองเฉพาะคลาสที่ต้องเปลี่ยนสีทันที)
+workspace.DescendantAdded:Connect(function(descendant)
+    if getgenv().SkillColorChangerEnabled then
+        if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("BasePart") or descendant:IsA("Light") then
+            task.defer(function()
+                applyColor(descendant)
+            end)
+        end
+    end
+end)
+end)
+
+
+System:Toggle({
+    Title = "Skill Color Changer",
+    Desc = "Change skill effect colors only.",
+    Flag = "skill_color_toggle",
+    Value = getgenv().SkillColorChangerEnabled,
+    Callback = function(Value)
+        getgenv().SkillColorChangerEnabled = Value
+        if Value and LocalPlayer.Character then
+            applySkillColorOnly(LocalPlayer.Character)
+        else
+        end
+    end,
+})
+
+System:Colorpicker({
+    Title = "Select Skill Color",
+    Desc = "Choose your custom skill effect color.",
+    Default = getgenv().SkillColor,
+    Callback = function(color)
+        if not getgenv().RainbowModeEnabled then
+            getgenv().SkillColor = color
+            saveConfig()
+
+            if getgenv().SkillColorChangerEnabled and LocalPlayer.Character then
+                applySkillColorOnly(LocalPlayer.Character)
+            end
+        end
+    end
+})
 
 
 -- ==================== ระบบป้องกันการรันซ้ำ ====================
@@ -1813,9 +1860,14 @@ do
             end
         end)
 
+
         player.Destroying:Connect(function()
-            CleanupGui()
-            ActiveESPs[player] = nil
+            if ActiveESPs[player] then
+                if ActiveESPs[player].Gui then
+                    ActiveESPs[player].Gui:Destroy()
+                end
+                ActiveESPs[player] = nil  -- ลบอ้างอิง
+            end
         end)
     end
 
@@ -2199,6 +2251,9 @@ local FOVSection = CombatTab:Section({
     Icon = "crosshair" 
 })
 
+-- ตัวแปรป้องกัน Callback รันตอนสร้าง UI ครั้งแรก
+local isInitializing = true
+
 CombatTab:Dropdown({
     Title = "Silent Aim Mode",
     Desc  = "Switch targeting parameters.",
@@ -2206,6 +2261,8 @@ CombatTab:Dropdown({
     Values = { "FOV", "180°", "360°" },
     Value  = getgenv().SilentAimMode,
     Callback = function(selected)
+        if isInitializing then return end -- ข้ามการทำงานตอนโหลด UI
+        
         local mode = type(selected) == "table" and selected[1] or selected
         
         if getgenv().SilentAimMode == "FOV" and mode ~= "FOV" then
@@ -2235,6 +2292,8 @@ CombatTab:Slider({
         Default = getgenv().FOVRadius
     },
     Callback = function(Value)
+        if isInitializing then return end -- ข้ามการทำงานตอนโหลด UI
+        
         getgenv().FOVRadius = Value
         
         if getgenv().SilentAimMode == "FOV" then
@@ -2242,6 +2301,9 @@ CombatTab:Slider({
         end
     end,
 })
+
+-- ปิดสถานะการโหลด เพื่อให้ Callback ทำงานปกติเมื่อผู้ใช้กดใช้งานจริง
+isInitializing = false
 
 CombatTab:Dropdown({
     Title = "FOV Position",
@@ -3008,7 +3070,7 @@ local selectedSwordSkills = {"None"}
 local selectedFruitSkills = {"None"}
 local selectedGunSkills = {"None"}
 
-local flySpeed = 200
+local flySpeed = 220
 
 -- ✅ แคชเป้าหมายเพื่อไม่ให้ค้นหาทุก Heartbeat
 local cachedNearestTarget = nil
@@ -3211,7 +3273,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     elseif distance > maxDistance then
         local direction = (targetPos - currentPos).Unit
         local currentSpeed = speed or flySpeed
-        local clampedSpeed = math.min(currentSpeed, 200)
+        local clampedSpeed = math.min(currentSpeed, 220)
         
         myRoot.AssemblyLinearVelocity = direction * clampedSpeed
         myRoot.AssemblyAngularVelocity = Vector3.zero
