@@ -1,6 +1,5 @@
 local _version = "1.6.66"
 
--- ป้องกันหน้าต่างซ้ำซ้อนและเคลียร์ค่าเก่าอย่างปลอดภัย
 if getgenv().DestinyHubWindow then
     pcall(function()
         if typeof(getgenv().DestinyHubWindow.Destroy) == "function" then
@@ -10,22 +9,14 @@ if getgenv().DestinyHubWindow then
     getgenv().DestinyHubWindow = nil
 end
 
--- โหลด WindUI พร้อมระบบป้องกัน Error หากดึงข้อมูลไม่สำเร็จ
 local success, WindUI = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 end)
 
-if not success or not WindUI then
-    warn("Destiny Hub: ไม่สามารถโหลด WindUI ได้ กรุณาตรวจสอบอินเทอร์เน็ตหรือเวอร์ชัน")
-    return
-end
-
-
-
 pcall(function()
   WindUI:AddTheme({
     Name = "Darker-Soft",
-   Primary = Color3.fromHex("#3b82f6"),
+    Primary = Color3.fromHex("#3b82f6"),
     
     White = Color3.new(1,1,1),
     Black = Color3.new(0,0,0),
@@ -206,7 +197,7 @@ local Visuals = Window:Tab({
 
 local System = Window:Tab({
     Title = "System /Core",
-    Icon = "zap" -- ไอคอนสายฟ้า (พลังงาน/บูสต์)
+    Icon = "package" 
 })
 
 
@@ -860,17 +851,14 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- Global States สำหรับควบคุมระบบ
 getgenv().SkillRedirectEnabled = getgenv().SkillRedirectEnabled or true
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- Caching & References
 local type = type
 local typeof = typeof
 local unpack = unpack
 local pairs = pairs
 
--- คีย์เวิร์ดของรีโมทสกิลใน Blox Fruits (เน้นรีโมทที่ใช้ยิงสกิล/คลิกซ้าย)
 local allowedSkillRemotes = {
     toMouse = true, castskill = true, useability = true, 
     attack = true, combat = true, skill = true, shoot = true,
@@ -884,7 +872,6 @@ local blockedRemotes = {
 
 local remoteCache = {}
 
--- ฟังก์ชันตรวจสอบรีโมทแบบรวดเร็วผ่าน Cache ป้องกันอาการแลค
 local function isSkillRemote(self)
     local name = self.Name
     local cached = remoteCache[name]
@@ -905,12 +892,10 @@ local function isSkillRemote(self)
         end
     end
 
-    -- อนุญาตให้ผ่านได้ถ้าเป็น RemoteEvent ทั่วไปในเกม Blox Fruits ที่ใช้ส่งพิกัด
     remoteCache[name] = true 
     return true
 end
 
--- ระบบดึง CFrame ตัวละครเป้าหมาย (HumanoidRootPart CFrame)
 local cachedPart = nil
 local lastTarget = nil
 
@@ -931,9 +916,6 @@ local function getTargetCFrame()
 end
 
 task.spawn(function()
-    -- หน่วงเวลาก่อนรันระบบหลัก
-    task.wait(5)
-
     local success, Mouse = pcall(function()
         return LocalPlayer:GetMouse()
     end)
@@ -1001,6 +983,8 @@ task.spawn(function()
         return oldNamecall(self, ...)
     end))
 end)
+
+
 
 
 
@@ -1318,9 +1302,8 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 
-
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 8
+getgenv().HitboxSize = 7
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
@@ -1344,39 +1327,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 local HideShowUI = Config:Section({ Title = "Settings" })
-
 
 
 -- ==================== รวมตัวแปรหลัก (ประกาศครั้งเดียวจบ) ====================
@@ -3602,6 +3553,7 @@ local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
 
 -- ตรวจสอบสถานะการต่อสู้ก่อนเริ่ม
+-- เช็คคอมแบทแค่รอบเดียวก่อนเริ่มทำงาน
 if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
     local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
     if browser then browser.Enabled = false end
@@ -3612,24 +3564,7 @@ local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
 browserGui.Enabled = true 
 task.wait(1)
 
--- ฟังก์ชันช่วยค้นหาปุ่มแบบปลอดภัย
-local function findButton(parent, textName, buttonName)
-    for _, i in ipairs(parent:GetDescendants()) do
-        if i:IsA("TextButton") and (i.Text == textName or i.Name == buttonName) then
-            return i
-        end
-    end
-    return nil
-end
-
--- กดปุ่ม Refresh
-local refreshBtn = findButton(browserGui.Frame, "Refresh", "RefreshButton")
-if refreshBtn and firesignal then
-    firesignal(refreshBtn.MouseButton1Click)
-    task.wait(1)
-end
-
--- 6. วนลูปกดปุ่ม Join เพื่อย้ายเซิร์ฟ (เอา break ออกเพื่อให้เช็คปุ่มถัดไปถ้าเซิร์ฟเต็ม)
+-- วนลูปกดปุ่ม Join เพื่อย้ายเซิร์ฟ
 while autoBountyEnabled do
     if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
         browserGui.Enabled = false
@@ -3650,18 +3585,12 @@ while autoBountyEnabled do
         for _, i in ipairs(frame:GetDescendants()) do
             if not autoBountyEnabled then return end
             
-            if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-                browserGui.Enabled = false
-                return
-            end
-            
             if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
                 if firesignal then 
                     firesignal(i.MouseButton1Click) 
                     joined = true
-                    -- เอา break ออก ตรงนี้จะปล่อยให้มันกดปุ่มอื่นเผื่อเซิร์ฟนี้เต็ม
                 end
-                task.wait(0.2) -- หน่วงสั้นๆ ระหว่างกดแต่ละปุ่ม ป้องกันตัวรันรับคำสั่งไม่ทัน
+                task.wait(0.2)
             elseif i:IsA("ScrollingFrame") then
                 i.CanvasPosition = i.CanvasPosition + Vector2.new(0, 150)
             end
@@ -3669,9 +3598,10 @@ while autoBountyEnabled do
     end
     
     if not joined then
-        task.wait(0.5) 
+        -- ถ้ายังหาปุ่ม Join ไม่เจอ (อาจจะเพราะยังโหลดไม่เสร็จ) ให้รอนานขึ้นอีกนิดนึงก่อนวนรอบใหม่
+        task.wait(2) 
     else
-        task.wait(1) -- ถ้าระบบกดปุ่ม Join ไปแล้ว ให้รอแป๊บนึงดูว่าเข้าเซิร์ฟไหม ถ้ายังไม่ออกให้วนหาใหม่
+        task.wait(1)
     end
 end
 end
@@ -3731,8 +3661,7 @@ local Toggle = Bounty:Toggle({
                     else
                         warn("Failed to enable PvP: " .. tostring(err))
                     end
-                    
-                    -- หน่วงเวลา 5 วินาทีต่อรอบ (สามารถปรับลดหรือเพิ่มเวลาได้ตามต้องการ เช่น 3 หรือ 10)
+                
                     task.wait(2)
                 end
             end)
