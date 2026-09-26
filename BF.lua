@@ -3417,6 +3417,8 @@ local function isPlayerInCombat(player, character)
 
     return false
 end
+
+
 local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
 
@@ -3426,12 +3428,11 @@ local function runAutoBounty(deltaTime)
 
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
-    
-    local rootPart = myChar.HumanoidRootPart
-    local charHumanoid = myChar:FindFirstChildOfClass("Humanoid")
+    local myRoot = myChar.HumanoidRootPart
+    local humanoid = myChar:FindFirstChildOfClass("Humanoid")
+
     local TweenService = game:GetService("TweenService")
-    
-    local currentHpPercent = (charHumanoid.Health / charHumanoid.MaxHealth) * 100
+    local currentHpPercent = (humanoid.Health / humanoid.MaxHealth) * 100
 
     local function getPlayerLevel(player)
         local success, lvl = pcall(function()
@@ -3454,10 +3455,10 @@ local function runAutoBounty(deltaTime)
     end
 
     local function findNearestTarget()
-        local currentTeamChar = LocalPlayer.Character
-        if not currentTeamChar or not currentTeamChar:FindFirstChild("HumanoidRootPart") then return nil, nil, math.huge end
+        local myChar = LocalPlayer.Character
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil, nil, math.huge end
         
-        local currentRoot = currentTeamChar.HumanoidRootPart
+        local myRoot = myChar.HumanoidRootPart
         local myLevel = getPlayerLevel(LocalPlayer)
         
         local nearestTargetRoot = nil
@@ -3490,7 +3491,7 @@ local function runAutoBounty(deltaTime)
                                 end
 
                                 if isLevelValid then
-                                    local distance = (targetRoot.Position - currentRoot.Position).Magnitude
+                                    local distance = (targetRoot.Position - myRoot.Position).Magnitude
                                     if distance <= 10000 and distance < shortestDistance then
                                         shortestDistance = distance
                                         nearestTargetRoot = targetRoot
@@ -3507,7 +3508,7 @@ local function runAutoBounty(deltaTime)
         return nearestTargetRoot, nearestTargetChar, shortestDistance
     end
 
-    -- Defense Protocol Check
+   -- Defense Protocol Check
     if defenseProtocolEnabled and charHumanoid and charHumanoid.Health > 0 and rootPart then
         local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
         local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
@@ -3552,12 +3553,14 @@ local function runAutoBounty(deltaTime)
         end
     end
 
+
+
     if not autoBountyEnabled then return end
 
     -- 2. ค้นหาเป้าหมายรอบแรก
     local nearestTargetRoot, nearestTargetChar, shortestDistance = findNearestTarget()
 
-    if nearestTargetRoot and nearestTargetChar and charHumanoid and charHumanoid.Health > 0 and shortestDistance <= 10000 then
+    if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 and shortestDistance <= 10000 then
         lastTargetSeenTime = tick() -- รีเซ็ตเวลาว่าเจอเป้าหมายล่าสุด
         
         pcall(function()
@@ -3571,7 +3574,7 @@ local function runAutoBounty(deltaTime)
         return
     end
 
-    -- 4. ระบบหน่วงเวลาก่อนย้ายเซิร์ฟ (รอหลังเป้าหมายหายไป)
+    -- 4. ระบบหน่วงเวลาก่อนย้ายเซิร์ฟ (รอ 4 วินาทีหลังเป้าหมายหายไป)
     if (tick() - lastTargetSeenTime) < SEARCH_COOLDOWN then
         return
     end
@@ -3660,6 +3663,8 @@ local function runAutoBounty(deltaTime)
         end
     end
 end
+
+
 
 
 local Toggle = Bounty:Toggle({
