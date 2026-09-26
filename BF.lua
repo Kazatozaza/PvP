@@ -715,14 +715,19 @@ local function ShouldIgnoreTarget(targetCharacter)
     return false
 end
 
-local function GetAllValidTargets()
-    local targets = {}
+
+local cachedValidTargets = {}
+local lastTargetUpdate = 0
+local targetUpdateInterval = 0.15  
+
+local function UpdateValidTargets()
+    table.clear(cachedValidTargets)  -- ล้างตารางเดิม ไม่ได้สร้างใหม่
     local mode = getgenv().TargetMode or "Both"
 
     if mode == "Both" or mode == "Players Only" then
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character then
-                table.insert(targets, player.Character)
+                table.insert(cachedValidTargets, player.Character)
             end
         end
     end
@@ -732,13 +737,24 @@ local function GetAllValidTargets()
         if enemiesFolder then
             for _, enemyModel in ipairs(enemiesFolder:GetChildren()) do
                 if enemyModel:IsA("Model") then
-                    table.insert(targets, enemyModel)
+                    table.insert(cachedValidTargets, enemyModel)
                 end
             end
         end
     end
+end
 
-    return targets
+-- ฟังก์ชันดึงข้อมูล (ใช้แคช)
+local function GetAllValidTargets()
+    local now = tick()
+    
+    -- อัปเดตแคชทุก 0.15 วินาที เท่านั้น
+    if now - lastTargetUpdate >= targetUpdateInterval then
+        lastTargetUpdate = now
+        UpdateValidTargets()
+    end
+    
+    return cachedValidTargets
 end
 
 
@@ -768,6 +784,8 @@ for _, player in ipairs(Players:GetPlayers()) do
         local statusText = getPlayerStatus(player)
     end
 end
+
+
 
 -- กำหนดจุดอ้างอิง (กลางจอ หรือ ตามนิ้ว)
 local function GetReferencePosition()
@@ -1420,7 +1438,6 @@ end)
 
 
 
-
 do
     getgenv().ESPConfig = getgenv().ESPConfig or {
         ShowName = true,
@@ -1449,15 +1466,27 @@ do
         SafeZoneOff = Color3.fromRGB(255, 120, 0),
     }
 end
+
 local isInSafeZoneRadius, GetTeamInfo, GetLevel, GetBounty, GetDetailedStatus, FormatNumber
 do
     local Players = game:GetService("Players")
     local Workspace = game:GetService("Workspace")
+    
+    -- แคชโซน Safe Zone เพื่อไม่ต้องค้นหาซ้ำ
+    local safeZoneCache = nil
+    local lastSafeZoneCacheTime = 0
 
     local function getSafeZonesFolder()
+        local now = tick()
+        if safeZoneCache and (now - lastSafeZoneCacheTime) < 5 then
+            return safeZoneCache
+        end
+        
         local origin = Workspace:FindFirstChild("_WorldOrigin")
         if origin then
-            return origin:FindFirstChild("SafeZones")
+            safeZoneCache = origin:FindFirstChild("SafeZones")
+            lastSafeZoneCacheTime = now
+            return safeZoneCache
         end
         return nil
     end
@@ -1559,13 +1588,17 @@ do
 end
 
 -- ==========================================
--- SCOPE 3: ESP Rendering & Connection Handler
+-- SCOPE 3: ESP Rendering & Connection Handler - ปรับปรุงประสิทธิภาพ
 -- ==========================================
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local LocalPlayer = Players.LocalPlayer
     local ActiveESPs = {}
+    
+    -- ตัวตั้งเวลา ESP
+    local espUpdateTimer = 0
+    local espUpdateInterval = 0.2 -- อัปเดตทุก 0.2 วินาที แทนทุกเฟรม
 
     local function CreateGuiElement(className, parent, name, size, position)
         local element = Instance.new(className)
@@ -1647,7 +1680,10 @@ do
         local connectionHealth
 
         local function CleanupGui()
-            if connectionHealth then connectionHealth:Disconnect(); connectionHealth = nil end
+            if connectionHealth then 
+                connectionHealth:Disconnect()
+                connectionHealth = nil 
+            end
             if ActiveESPs[player] and ActiveESPs[player].Gui then
                 ActiveESPs[player].Gui:Destroy()
                 ActiveESPs[player].Gui = nil
@@ -1689,7 +1725,16 @@ do
                 hp.Size = UDim2.new(math.clamp(value / maxHealth, 0, 1), 0, 1, 0)
             end
 
+            local lastDynamicUpdate = 0
             local function UpdateDynamicInfo()
+                local now = tick()
+                
+                -- ไม่อัปเดตข้อมูล dynamic ทุกครั้ง แต่อัปเดตแบบประหยัด
+                if now - lastDynamicUpdate < 0.1 then
+                    return
+                end
+                lastDynamicUpdate = now
+
                 _, teamColor, teamEnabled = GetTeamInfo(player)
                 
                 nameLabel.Visible = ESPConfig.ShowName
@@ -1730,8 +1775,6 @@ do
 
             connectionHealth = humanoid.HealthChanged:Connect(UpdateHealth)
         end
-
-        
 
         if player.Character then
             task.spawn(function()
@@ -1774,7 +1817,16 @@ do
         end)
     end
 
-    RunService.RenderStepped:Connect(function()
+    -- ✅ เปลี่ยนเป็นอัปเดตทุก 0.2 วินาที แทนทุกเฟรม
+    RunService.RenderStepped:Connect(function(dt)
+        espUpdateTimer = espUpdateTimer + dt
+        
+        if espUpdateTimer < espUpdateInterval then
+            return
+        end
+        
+        espUpdateTimer = 0
+
         for _, data in pairs(ActiveESPs) do
             if data and data.Update and data.Head and data.Head.Parent then
                 data.Update()
@@ -2912,6 +2964,8 @@ if typeof(Config) == "table" then
 end
 
 
+
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -2927,42 +2981,39 @@ local selectedGunSkills = {"None"}
 
 local flySpeed = 200
 
+-- ✅ แคชเป้าหมายเพื่อไม่ให้ค้นหาทุก Heartbeat
+local cachedNearestTarget = nil
+local lastTargetSearchTime = 0
+local targetSearchInterval = 0.3  -- ค้นหาเป้าหมายทุก 0.3 วินาที
+
 local function checkAndSwitchTeam()
-    -- รอ 2 วินาทีก่อนเริ่มทำงานตามที่ต้องการ
     task.wait(2)
     
     local players = game:GetService("Players")
     local player = players.LocalPlayer
     
-    -- ตรวจสอบว่าตัวแปร selectedFaction มีค่าหรือไม่
     if not selectedFaction then
         warn("[Auto Team] เกิดข้อผิดพลาด: ยังไม่ได้กำหนดค่า selectedFaction")
         return
     end
     
-    -- ตรวจสอบว่าผู้เล่นมีทีมหรือไม่
     if player.Team then
-        
-        -- ตรวจสอบว่าอยู่ทีมเดียวกับที่ต้องการเลือกแล้วหรือยัง
         if player.Team.Name == selectedFaction then
             return
         end
-    else
     end
-    
     
     local args = {
         "SetTeam2",
         selectedFaction
     }
     
-    local success, err = pcall(function()
+    pcall(function()
         game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
     end)
 end
 
-
--- ฟังก์ชันจำลองการกดปุ่มสกิล (ปรับลดเวลาหน่วงเพื่อให้กดติดง่ายขึ้น)
+-- ✅ ปรับปรุง: ลดการหน่วงเวลา
 local function pressKey(keyName)
     pcall(function()
         if type(keyName) == "table" then
@@ -2972,7 +3023,7 @@ local function pressKey(keyName)
                     local keyCode = Enum.KeyCode[targetKey]
                     if keyCode then
                         VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-                        task.wait(0.05)
+                        task.wait(0.02)  -- ลดจาก 0.05 เป็น 0.02
                         VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
                     end
                 end
@@ -2981,7 +3032,7 @@ local function pressKey(keyName)
             local keyCode = Enum.KeyCode[keyName]
             if keyCode then
                 VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-                task.wait(0.05)
+                task.wait(0.02)  -- ลดจาก 0.05 เป็น 0.02
                 VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
             end
         end
@@ -2996,7 +3047,6 @@ local function equipToolByType(toolType)
     local humanoid = myChar:FindFirstChildOfClass("Humanoid")
     local currentTool = myChar:FindFirstChildOfClass("Tool")
 
-    -- ถ้าไม่ระบุ toolType ให้เก็บอาวุธทั้งหมด
     if not toolType or toolType == "" then
         if currentTool and backpack and humanoid then
             humanoid:UnequipTools()
@@ -3004,7 +3054,6 @@ local function equipToolByType(toolType)
         return
     end
 
-    -- ฟังก์ชันช่วยตรวจสอบประเภทของ Tool
     local function checkMatch(tool, typeName)
         local name = tool.Name:lower()
         local tooltip = tool.ToolTip
@@ -3032,19 +3081,16 @@ local function equipToolByType(toolType)
         return false
     end
 
-    -- ถ้าถืออาวุธประเภทที่ต้องการอยู่แล้ว ให้ข้าม
     if currentTool and checkMatch(currentTool, toolType) then
         return
     end
 
-    -- รวบรวมไอเทมทั้งหมด (Backpack + Character)
     local itemsToCheck = {}
     if backpack then
         for _, item in ipairs(backpack:GetChildren()) do table.insert(itemsToCheck, item) end
     end
     for _, item in ipairs(myChar:GetChildren()) do table.insert(itemsToCheck, item) end
 
-    -- ค้นหาและหยิบอาวุธ
     for _, tool in ipairs(itemsToCheck) do
         if tool:IsA("Tool") and checkMatch(tool, toolType) then
             if humanoid then
@@ -3068,11 +3114,11 @@ local function executeSkills(skillTable, toolType)
     
     if hasValid then
         equipToolByType(toolType)
-        task.wait(0.1)
+        task.wait(0.05)  -- ลดจาก 0.1 เป็น 0.05
         for _, skill in ipairs(skillTable) do
             if skill ~= "None" then
                 pressKey(skill)
-                task.wait()
+                task.wait(0.01)  -- ลด delay ระหว่าง skill
             end
         end
     end
@@ -3084,7 +3130,6 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
     local myRoot = myChar.HumanoidRootPart
 
-    -- ดึงข้อมูลผู้เล่นเป้าหมาย
     local targetPlayer = game:GetService("Players"):GetPlayerFromCharacter(targetChar)
     local myLevel = GetLevel(localPlayer)
     local targetLevel = targetPlayer and GetLevel(targetPlayer) or "?"
@@ -3101,15 +3146,12 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     end
 
     local targetPos = targetCFrame.Position
-    
     local currentPos = myRoot.Position
     local distance = (targetPos - currentPos).Magnitude
     
-    -- ดึงค่าระยะจาก Settings/Flags
     local maxDistance = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 150
     local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
     
-    -- ถ้าอยู่ในระยะ MaxDistance ให้ "วาปแปะล็อกติดตัวเป้าหมายทันที" (Instant Teleport & Lock)
     if distance <= maxDistance then
         if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
             local targetRoot = targetChar.HumanoidRootPart
@@ -3118,7 +3160,6 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
             myRoot.CFrame = CFrame.new(myRoot.Position, targetPos) * CFrame.new(0, 3, enemyDistanceOffset)
         end
         
-        -- ล้างค่าความเร็วเพื่อกันตัวละครดีดหรือไถลหลังวาป
         myRoot.Velocity = Vector3.zero
         myRoot.AssemblyLinearVelocity = Vector3.zero
         myRoot.AssemblyAngularVelocity = Vector3.zero
@@ -3139,7 +3180,6 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         return
         
     elseif distance > maxDistance then
-        -- ถ้านอกระยะ MaxDistance ให้บินพุ่งเข้าหาแบบควบคุมความเร็วด้วย AssemblyLinearVelocity
         local direction = (targetPos - currentPos).Unit
         local currentSpeed = speed or flySpeed
         local clampedSpeed = math.min(currentSpeed, 200)
@@ -3153,6 +3193,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     end
 end
 
+-- ✅ ปรับปรุง: ลดความถี่การค้นหาเป้าหมาย
 local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
 
@@ -3166,7 +3207,6 @@ local function runAutoBounty(deltaTime)
     local charHumanoid = myChar:FindFirstChildOfClass("Humanoid")
 
     local TweenService = game:GetService("TweenService")
-    local currentHpPercent = (charHumanoid.Health / charHumanoid.MaxHealth) * 100
 
     local function getPlayerLevel(player)
         local success, lvl = pcall(function()
@@ -3188,9 +3228,22 @@ local function runAutoBounty(deltaTime)
         return false
     end
 
+    -- ✅ ค้นหาเป้าหมายเพียงทุก 0.3 วินาที
     local function findNearestTarget()
+        local now = tick()
+        
+        -- ถ้ายังไม่ถึงเวลา ให้ใช้เป้าหมายที่แคชไว้
+        if now - lastTargetSearchTime < targetSearchInterval then
+            return cachedNearestTarget
+        end
+        
+        lastTargetSearchTime = now
+        
         local myChar = LocalPlayer.Character
-        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil, nil, math.huge end
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then 
+            cachedNearestTarget = nil
+            return nil
+        end
         
         local myRoot = myChar.HumanoidRootPart
         local myLevel = getPlayerLevel(LocalPlayer)
@@ -3239,15 +3292,14 @@ local function runAutoBounty(deltaTime)
             end
         end
         
-        return nearestTargetRoot, nearestTargetChar, shortestDistance
+        cachedNearestTarget = {root = nearestTargetRoot, char = nearestTargetChar, distance = shortestDistance}
+        return cachedNearestTarget
     end
 
-    -- 1. ระบบ Safe Mode (เช็คและทำงานก่อนระบบค้นหาเป้าหมาย)
     if defenseProtocolEnabled and charHumanoid and charHumanoid.Health > 0 and rootPart then
         local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
         local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
 
-        -- ถ้าเลือดต่ำกว่ากำหนด และยังไม่ได้อยู่ในสถานะบินหนี
         if currentHpRatio <= healthTriggerThreshold and not isEmergencyAscending then
             isEmergencyAscending = true
             if setSafeNoclip then setSafeNoclip(true) end
@@ -3263,7 +3315,6 @@ local function runAutoBounty(deltaTime)
             riseTween:Play()
         end
 
-        -- ขณะกำลังบินหนีขึ้นฟ้า (ให้หยุดการทำงานทั้งหมดตรงนี้ทันที)
         if isEmergencyAscending then
             charHumanoid.PlatformStand = true
             if setSafeNoclip then setSafeNoclip(true) end
@@ -3288,22 +3339,22 @@ local function runAutoBounty(deltaTime)
 
     if not autoBountyEnabled then return end
 
-    local nearestTargetRoot, nearestTargetChar, shortestDistance = findNearestTarget()
+    local targetData = findNearestTarget()
+    local nearestTargetRoot = targetData and targetData.root
+    local nearestTargetChar = targetData and targetData.char
+    local shortestDistance = targetData and targetData.distance or math.huge
 
     if nearestTargetRoot and nearestTargetChar and charHumanoid and charHumanoid.Health > 0 and shortestDistance <= 10000 then
-        
         pcall(function()
             smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
         end)
         return
     end
 
-    -- 3. ถ้าไม่เจอเป้าหมาย เช็คว่าติดคอมแบทไหม
     if isPlayerInCombat(LocalPlayer, myChar) then
         return
     end
 
-    -- 5. เริ่มกระบวนการนับถอยหลังเพื่อย้ายเซิร์ฟ
     for i = 1, 30 do 
         if not autoBountyEnabled then return end
         
@@ -3313,8 +3364,8 @@ local function runAutoBounty(deltaTime)
             return 
         end
         
-        local nRoot, nChar, nDist = findNearestTarget()
-        if nRoot and nChar and nDist <= 10000 then
+        local nData = findNearestTarget()
+        if nData and nData.root and nData.distance <= 10000 then
             local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
             if browser then browser.Enabled = false end
             return 
@@ -3341,8 +3392,8 @@ local function runAutoBounty(deltaTime)
             return
         end
         
-        local nRoot, nChar, nDist = findNearestTarget()
-        if nRoot and nChar and nDist <= 10000 then
+        local nData = findNearestTarget()
+        if nData and nData.root and nData.distance <= 10000 then
             browserGui.Enabled = false
             return
         end
@@ -3374,7 +3425,6 @@ local function runAutoBounty(deltaTime)
     end
 end
 
-
 local Toggle = Bounty:Toggle({
     Title = "Auto Bounty",
     Desc = "Automatically hunt bounty for you",
@@ -3388,6 +3438,8 @@ local Toggle = Bounty:Toggle({
         end
 
         if autoBountyEnabled then
+            lastTargetSearchTime = 0  -- รีเซ็ตตัวจับเวลา
+            cachedNearestTarget = nil  -- ล้างแคช
             
             bountyConnection = RunService.Heartbeat:Connect(function(deltaTime)
                 runAutoBounty(deltaTime)
@@ -3407,7 +3459,6 @@ local Toggle = Bounty:Toggle({
     Flag = "Toggle_EnablePvP",
     Default = false,
     Callback = function(state)
-        -- เก็บสถานะการทำงานของลูป
         _G.EnablePvPLoop = state
         
         if state then
@@ -3420,42 +3471,32 @@ local Toggle = Bounty:Toggle({
                         game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
                     end)
                     
-                    if success then
-                    else
-                        warn("Failed to enable PvP: " .. tostring(err))
-                    end
-                
                     task.wait(2)
                 end
             end)
-        else
         end
     end
 })
-
 
 local DropdownMyFaction = Bounty:Dropdown({
     Title = "Auto Team",
     Desc = "Select your faction. The system will check and switch automatically.",
     Values = {"Marines", "Pirates"},
-    Value = "Pirates", -- ค่าเริ่มต้นหน้า UI
+    Value = "Pirates",
     Multi = false,
     Locked = false,
     Flag = "my_faction_select",
     Callback = function(selected)
         selectedFaction = selected
-        
         checkAndSwitchTeam()
     end
 })
 
 local function setupSkillSettings()
-
     local UtilitySection = Bounty:Section({ 
-    Title = "Settings Skills", 
-    Icon = "settings" 
-})
-
+        Title = "Settings Skills", 
+        Icon = "settings" 
+    })
 
     local DropdownMelee = Bounty:Dropdown({
         Title = "Melee",
