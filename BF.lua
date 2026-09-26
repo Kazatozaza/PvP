@@ -3552,8 +3552,6 @@ local function runAutoBounty(deltaTime)
 
     if not autoBountyEnabled then return end
 
--- ตรวจสอบสถานะการต่อสู้ก่อนเริ่ม
--- เช็คคอมแบทแค่รอบเดียวก่อนเริ่มทำงาน
 if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
     local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
     if browser then browser.Enabled = false end
