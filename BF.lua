@@ -1303,7 +1303,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 7
+getgenv().HitboxSize = 12
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
@@ -1328,7 +1328,6 @@ RunService.RenderStepped:Connect(function()
 end)
 
 local HideShowUI = Config:Section({ Title = "Settings" })
-
 
 -- ==================== รวมตัวแปรหลัก (ประกาศครั้งเดียวจบ) ====================
 local Players = game:GetService("Players")
@@ -2120,7 +2119,7 @@ local HPRestoreSlider = System:Slider({
     Value = {
         Min = 20,
         Max = 80,
-        Default = 20
+        Default = 30
     },
     Step = 1,
     Locked = false,
@@ -3202,7 +3201,7 @@ local function equipToolByType(toolType)
 end
 
 
-local flySpeed = 210
+local flySpeed = 228
 
 -- ฟังก์ชันช่วยตรวจสอบและใช้งานสกิลแบบลื่นไหล
 local function executeSkills(skillTable, toolType)
@@ -3272,7 +3271,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local distance = (targetPos - currentPos).Magnitude
     
     -- ดึงค่าระยะจาก Settings/Flags
-    local maxDistance = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 200
+    local maxDistance = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 150
     local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
     
     -- ถ้าอยู่ในระยะ MaxDistance ให้ "วาปแปะล็อกติดตัวเป้าหมายทันที" (Instant Teleport & Lock)
@@ -3290,7 +3289,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         myRoot.AssemblyAngularVelocity = Vector3.zero
 
         -- หากอยู่ในระยะโจมตี (<= 25 studs) ทำคอมโบ
-        if distance <= 200 then
+        if distance <= 120 then
             lastComboTime = lastComboTime or 0
             comboCooldown = comboCooldown or 1
 
@@ -3309,7 +3308,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         -- ถ้านอกระยะ MaxDistance ให้บินพุ่งเข้าหาแบบควบคุมความเร็วด้วย AssemblyLinearVelocity
         local direction = (targetPos - currentPos).Unit
         local currentSpeed = speed or flySpeed
-        local clampedSpeed = math.min(currentSpeed, 210)
+        local clampedSpeed = math.min(currentSpeed, 228)
         
         myRoot.AssemblyLinearVelocity = direction * clampedSpeed
         myRoot.AssemblyAngularVelocity = Vector3.zero
@@ -3321,15 +3320,13 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
 end
 
 
--- สร้างตัวแปรเก็บเวลาและสถานะ
 local lastTargetSeenTime = tick()
-local SEARCH_COOLDOWN = 4 -- หน่วงเวลาก่อนย้ายเซิร์ฟ (วินาที)
+local SEARCH_COOLDOWN = 4 
 
 -- ฟังก์ชันเช็คสถานะ InCombat ตามที่คุณต้องการ
 local function isPlayerInCombat(player, character)
     if not player then return false end
     
-    -- เช็ค Attribute ใน Player (รองรับ Boolean, Number, String, และ Combat Timer)
     local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag")
     if pCombat == true or pCombat == 1 or pCombat == "1" then
         return true
@@ -3340,14 +3337,12 @@ local function isPlayerInCombat(player, character)
         return true
     end
 
-    -- เช็คใน Character
     if character then
         local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
         if cCombat == true or cCombat == 1 or cCombat == "1" then
             return true
         end
 
-        -- เช็ค Value Object ชั่วคราวในตัวละคร (BoolValue, NumberValue, StringValue)
         local combatObj = character:FindFirstChild("InCombat") 
             or character:FindFirstChild("Combat") 
             or character:FindFirstChild("CombatTag")
@@ -3369,7 +3364,6 @@ local function isPlayerInCombat(player, character)
     return false
 end
 
-
 local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
 
@@ -3379,11 +3373,11 @@ local function runAutoBounty(deltaTime)
 
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
-    local myRoot = myChar.HumanoidRootPart
-    local humanoid = myChar:FindFirstChildOfClass("Humanoid")
+    local rootPart = myChar.HumanoidRootPart
+    local charHumanoid = myChar:FindFirstChildOfClass("Humanoid")
 
     local TweenService = game:GetService("TweenService")
-    local currentHpPercent = (humanoid.Health / humanoid.MaxHealth) * 100
+    local currentHpPercent = (charHumanoid.Health / charHumanoid.MaxHealth) * 100
 
     local function getPlayerLevel(player)
         local success, lvl = pcall(function()
@@ -3459,7 +3453,7 @@ local function runAutoBounty(deltaTime)
         return nearestTargetRoot, nearestTargetChar, shortestDistance
     end
 
-    -- 1. ระบบ Safe Mode
+    -- 1. ระบบ Safe Mode (เช็คและทำงานก่อนระบบค้นหาเป้าหมาย)
     if defenseProtocolEnabled and charHumanoid and charHumanoid.Health > 0 and rootPart then
         local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
         local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
@@ -3480,7 +3474,7 @@ local function runAutoBounty(deltaTime)
             riseTween:Play()
         end
 
-        -- ขณะกำลังบินหนีขึ้นฟ้า
+        -- ขณะกำลังบินหนีขึ้นฟ้า (ให้หยุดการทำงานทั้งหมดตรงนี้ทันที)
         if isEmergencyAscending then
             charHumanoid.PlatformStand = true
             if setSafeNoclip then setSafeNoclip(true) end
@@ -3500,17 +3494,16 @@ local function runAutoBounty(deltaTime)
                 if notify then notify("Emergency Defense", "Resuming normal operations.") end
             end
             
-            return 
+            return -- **หยุดการทำงานของฟังก์ชันทันที ไม่ให้ไปค้นหาหรือโจมตีเป้าหมายต่อ**
         end
     end
-
 
     if not autoBountyEnabled then return end
 
     -- 2. ค้นหาเป้าหมายรอบแรก
     local nearestTargetRoot, nearestTargetChar, shortestDistance = findNearestTarget()
 
-    if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 and shortestDistance <= 10000 then
+    if nearestTargetRoot and nearestTargetChar and charHumanoid and charHumanoid.Health > 0 and shortestDistance <= 10000 then
         lastTargetSeenTime = tick() -- รีเซ็ตเวลาว่าเจอเป้าหมายล่าสุด
         
         pcall(function()
@@ -3552,57 +3545,57 @@ local function runAutoBounty(deltaTime)
 
     if not autoBountyEnabled then return end
 
-if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-    local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-    if browser then browser.Enabled = false end
-    return 
-end
-
-local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
-browserGui.Enabled = true 
-task.wait(1)
-
--- วนลูปกดปุ่ม Join เพื่อย้ายเซิร์ฟ
-while autoBountyEnabled do
     if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-        browserGui.Enabled = false
-        return
+        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+        if browser then browser.Enabled = false end
+        return 
     end
-    
-    local nRoot, nChar, nDist = findNearestTarget()
-    if nRoot and nChar and nDist <= 10000 then
-        lastTargetSeenTime = tick()
-        browserGui.Enabled = false
-        return
-    end
-    
-    local joined = false
-    local frame = browserGui:FindFirstChild("Frame", true)
-    
-    if frame then
-        for _, i in ipairs(frame:GetDescendants()) do
-            if not autoBountyEnabled then return end
-            
-            if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
-                if firesignal then 
-                    firesignal(i.MouseButton1Click) 
-                    joined = true
+
+    local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
+    browserGui.Enabled = true 
+    task.wait(1)
+
+    -- วนลูปกดปุ่ม Join เพื่อย้ายเซิร์ฟ
+    while autoBountyEnabled do
+        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+            browserGui.Enabled = false
+            return
+        end
+        
+        local nRoot, nChar, nDist = findNearestTarget()
+        if nRoot and nChar and nDist <= 10000 then
+            lastTargetSeenTime = tick()
+            browserGui.Enabled = false
+            return
+        end
+        
+        local joined = false
+        local frame = browserGui:FindFirstChild("Frame", true)
+        
+        if frame then
+            for _, i in ipairs(frame:GetDescendants()) do
+                if not autoBountyEnabled then return end
+                
+                if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
+                    if firesignal then 
+                        firesignal(i.MouseButton1Click) 
+                        joined = true
+                    end
+                    task.wait(0.2)
+                elseif i:IsA("ScrollingFrame") then
+                    i.CanvasPosition = i.CanvasPosition + Vector2.new(0, 150)
                 end
-                task.wait(0.2)
-            elseif i:IsA("ScrollingFrame") then
-                i.CanvasPosition = i.CanvasPosition + Vector2.new(0, 150)
             end
         end
-    end
-    
-    if not joined then
-        -- ถ้ายังหาปุ่ม Join ไม่เจอ (อาจจะเพราะยังโหลดไม่เสร็จ) ให้รอนานขึ้นอีกนิดนึงก่อนวนรอบใหม่
-        task.wait(2) 
-    else
-        task.wait(1)
+        
+        if not joined then
+            task.wait(2) 
+        else
+            task.wait(1)
+        end
     end
 end
-end
+
 
 
 
