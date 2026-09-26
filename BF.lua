@@ -2058,32 +2058,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 local SafetyMode = System:Section({ Title = "Safety Mode" })
 
-
--- Configuration & State Variables
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -2128,7 +2104,6 @@ local HPRestoreSlider = System:Slider({
         healthTriggerThreshold = val
     end
 })
-
 
 local function executeDefenseProtocol(charHumanoid, rootPart)
     if not defenseProtocolEnabled or not charHumanoid or charHumanoid.Health <= 0 or not rootPart then 
@@ -2195,9 +2170,6 @@ end)
 
 
 
-
-
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -2209,7 +2181,6 @@ local registerAttack = netModule:WaitForChild("RE/RegisterAttack")
 
 local fastAttackConnection = nil
 
--- ฟังก์ชันหลักสำหรับเปิด-ปิดระบบโจมตีออร์โต้ (เฉพาะโจมตีปกติและรีโมทหลัก)
 local function SetFastAttack(state)
     _G.FastAttackRunning = state
     
@@ -2268,9 +2239,6 @@ local function SetFastAttack(state)
     end)
 end
 
-
-
-
 CombatTab:Toggle({
     Title = "CamLock (PC/Mobile)",
     Desc  = "Lock onto targets instantly.",
@@ -2300,7 +2268,6 @@ CombatTab:Toggle({
         end
     end,
 })
-
 
 -- [ 2. TARGETING & FOV SETTINGS ] -----------------------------------------------
 local FOVSection = CombatTab:Section({ Title = "Targeting & FOV" })
