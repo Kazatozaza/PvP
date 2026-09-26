@@ -3522,7 +3522,6 @@ local function runAutoBounty(deltaTime)
     browserGui.Enabled = true 
     task.wait(1)
 
-    -- วนลูปกดปุ่ม Join เพื่อย้ายเซิร์ฟ
     while autoBountyEnabled do
         if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
             browserGui.Enabled = false
