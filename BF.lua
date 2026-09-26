@@ -1,4 +1,5 @@
 local _version = "1.6.66"
+
 if getgenv().DestinyHub_IsLoading then
     warn("[DestinyHub]: สคริปต์กำลังโหลดอยู่แล้ว กรุณารอสักครู่...")
     
@@ -30,18 +31,6 @@ if getgenv().DestinyHubWindow then
     getgenv().DestinyHubWindow = nil
 end
 
-for i = 7, 1, -1 do
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "DestinyHub Countdown",
-            Text = "กำลังโหลดในอีก " .. i .. " วินาที...",
-            Duration = 0.9, -- ให้แจ้งเตือนแสดงผลสั้นๆ วนไปแต่ละวิ
-            Icon = "rbxassetid://97596339693490"
-        })
-    end)
-    task.wait(1)
-end
-
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 end)
@@ -61,7 +50,7 @@ else
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "DestinyHub Error",
-            Text = "ไม่สามารถโหลด WindUI ได้!",
+            Text = "ไม่สามารถโหลด Destiny Hub ได้!",
             Duration = 4,
             Icon = "rbxassetid://97596339693490"
         })
@@ -277,60 +266,6 @@ local Config = Window:Tab({
 })
 
 GeneralTab:Select()
-
--- Minimalist Monochrome Status Tags with Lucide String Icons
-local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats")
-
--- FPS Counter Setup
-local FPSTag = Window:Tag({
-    Title = "FPS: --",
-    Icon = "gauge",
-    Color = Color3.fromRGB(240, 240, 240),
-})
-
-local frameCount, lastUpdate = 0, os.clock()
-
-RunService.RenderStepped:Connect(function()
-frameCount = frameCount + 1
-    local now = os.clock()
-    local elapsed = now - lastUpdate
-    
-    if elapsed >= 0.5 then
-        local fps = math.floor(frameCount / elapsed)
-        FPSTag:SetTitle(string.format("FPS: %d", fps))
-        
-        frameCount = 0
-        lastUpdate = now
-    end
-end)
-
--- Ping Counter Setup
-local PingTag = Window:Tag({
-    Title = "Ping: --ms",
-    Icon = "wifi",
-    Color = Color3.fromRGB(180, 180, 180),
-})
-
-task.spawn(function()
-    local dataPing = Stats.Network.ServerStatsItem:FindFirstChild("Data Ping")
-    
-    while true do
-        local success, ping = pcall(function()
-            if dataPing then
-                return math.floor(dataPing:GetValue())
-            end
-            return math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-        end)
-        
-        if success and ping then
-            PingTag:SetTitle(string.format("Ping: %dms", ping))
-        end
-        
-        task.wait(1)
-    end
-end)
-
 
 
 local executorName = (identifyexecutor and identifyexecutor()) or (getexecutorname and getexecutorname()) or "Unknown Executor"
@@ -3167,22 +3102,6 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
 
     local targetPos = targetCFrame.Position
     
-    -- ระบบดักทางเป้าหมาย (Prediction)
-    if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-        local targetRoot = targetChar.HumanoidRootPart
-        targetPos = targetRoot.Position
-        
-        local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-        local targetVelocity = targetRoot.AssemblyLinearVelocity
-        local predictionMultiplier = 0.2
-        
-        local predictedPos = targetPos + (targetVelocity * predictionMultiplier)
-        if targetHum and targetHum.MoveDirection.Magnitude > 0 then
-            predictedPos = predictedPos + (targetHum.MoveDirection * 3)
-        end
-        targetPos = predictedPos
-    end
-
     local currentPos = myRoot.Position
     local distance = (targetPos - currentPos).Magnitude
     
