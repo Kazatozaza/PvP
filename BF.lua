@@ -1323,7 +1323,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 12
+getgenv().HitboxSize = 8
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
@@ -2107,6 +2107,120 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
     end
 end)
+
+
+
+
+
+
+
+
+
+getgenv().OptimizeEffectsEnabled = getgenv().OptimizeEffectsEnabled or false
+
+local LocalPlayer = game:GetService("Players").LocalPlayer
+
+-- ฟังก์ชันเช็กวัตถุที่ต้องยกเว้น
+local function isIgnored(item)
+    if not item then return true end
+    local p = item.Parent
+    while p and p ~= workspace do
+        if p.Name == "Map" or p.Name == "Characters" or p.Name == "Enemies" or p.Name == "NPCs" then
+            return true
+        end
+        p = p.Parent
+    end
+    return false
+end
+
+-- ฟังก์ชันสำหรับลบหรือปิดการใช้งานเอฟเฟคเพื่อเพิ่ม FPS
+local function removeOrDisableEffect(item)
+    if isIgnored(item) then return end
+    
+    pcall(function()
+        if item:IsA("ParticleEmitter") then
+            -- ปิดการปล่อยอนุภาค หรือจะใช้ item:Destroy() เพื่อลบออกเลยก็ได้
+            item.Enabled = false
+            item.Rate = 0
+        elseif item:IsA("Trail") or item:IsA("Beam") then
+            item.Enabled = false
+        elseif item:IsA("Light") then
+            item.Enabled = false
+        -- หากต้องการลดภาระ BasePart ที่เป็นเอฟเฟคใสๆ (Transparent) หรือเอฟเฟคสกิล
+        elseif item:IsA("BasePart") and not item.Anchored then
+            -- สามารถเลือกทำลายพาร์ทเอฟเฟคชั่วคราวได้ถ้าไม่ใช่ตัวละครหลัก
+            -- item:Destroy()
+        end
+    end)
+end
+
+local function optimizeTarget(targetObj)
+    if not targetObj or not getgenv().OptimizeEffectsEnabled then return end
+    if isIgnored(targetObj) then return end
+    
+    removeOrDisableEffect(targetObj)
+    
+    for _, descendant in ipairs(targetObj:GetDescendants()) do
+        if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("Light") then
+            removeOrDisableEffect(descendant)
+        end
+    end
+end
+
+-- เฝ้าระวังตัวละคร
+local function hookCharacterEffects(character)
+    if not character then return end
+    optimizeTarget(character)
+    
+    character.DescendantAdded:Connect(function(descendant)
+        if getgenv().OptimizeEffectsEnabled then
+            task.defer(function()
+                removeOrDisableEffect(descendant)
+            end)
+        end
+    end)
+end
+
+if LocalPlayer.Character then
+    hookCharacterEffects(LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(hookCharacterEffects)
+
+-- ดักจับวัตถุใหม่ใน Workspace เพื่อเคลียร์เอฟเฟคสกิลทิ้งทันที
+workspace.DescendantAdded:Connect(function(descendant)
+    if getgenv().OptimizeEffectsEnabled then
+        if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("Light") then
+            task.defer(function()
+                removeOrDisableEffect(descendant)
+            end)
+        end
+    end
+end)
+
+
+local SystemFPS = System:Section({ Title = "Boost FPS" })
+
+-- ส่วนของ Toggle UI
+local Toggle = System:Toggle({
+    Title = "Optimize FPS (Remove Effects)",
+    Desc = "ปิดเอฟเฟคสกิลและแสงต่างๆ เพื่อเพิ่ม FPS",
+    Icon = "zap",
+    Value = false,
+    Type = "Toggle",
+    Locked = false,
+    Flag = "fps_boost_toggle",
+    Callback = function(state)
+        getgenv().OptimizeEffectsEnabled = state
+        print("FPS Boost State:", state)
+        
+        -- ถ้ากดเปิด ให้จัดการเคลียร์เอฟเฟคที่มีอยู่แล้วทันที
+        if state and LocalPlayer.Character then
+            optimizeTarget(LocalPlayer.Character)
+        end
+    end
+})
+
+
 
 
 local Players = game:GetService("Players")
@@ -3126,7 +3240,7 @@ local function executeSkills(skillTable, toolType)
     
     if hasValid then
         equipToolByType(toolType)
-        task.wait()
+        task.wait(0.1)
         for _, skill in ipairs(skillTable) do
             if skill ~= "None" then
                 pressKey(skill)
