@@ -2761,49 +2761,6 @@ local UIKeybind = Config:Keybind({
     end
 })
 
-
-
-local antiAfkConnection
-
-Config:Toggle({
-    Title = "Anti-AFK",
-    Desc = "Prevents you from being kicked due to inactivity.",
-    Flag = "AntiAFK_Toggle",
-    Value = false,
-    Callback = function(Value)
-        pcall(function()
-            if Value then
-                local vu = game:GetService("VirtualUser")
-                antiAfkConnection = LocalPlayer.Idled:Connect(function()
-                    vu:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-                    task.wait(1)
-                    vu:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-                end)
-                
-                WindUI:Notify({ 
-                    Title = "Anti-AFK Active", 
-                    Content = "You will no longer be idle-kicked.", 
-                    Icon = "shield", 
-                    Duration = 3 
-                })
-            else
-                if antiAfkConnection then
-                    antiAfkConnection:Disconnect()
-                    antiAfkConnection = nil
-                end
-                
-                WindUI:Notify({ 
-                    Title = "Anti-AFK Inactive", 
-                    Content = "Anti-AFK has been disabled.", 
-                    Icon = "shield-off", 
-                    Duration = 3 
-                })
-            end
-        end)
-    end,
-})
-
--- ประกาศใช้บริการ RunService ของ Roblox
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -2842,10 +2799,10 @@ Config:Toggle({
 
 
 
-
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
-local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CustomMobileTogglesStyle"
@@ -2853,27 +2810,17 @@ screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local container = Instance.new("Frame")
-container.Size = UDim2.new(0, 120, 0, 144) 
-container.Position = UDim2.new(0, 20, 0, 20)
-container.BackgroundTransparency = 1
-container.Parent = screenGui
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Parent = container
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 10)
-
-local function createButton(text, accentColor, order, callback)
+local function createDraggableButton(text, accentColor, defaultPosition, callback)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(0, 120, 0, 38)
+    button.Position = defaultPosition
     button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
     button.BackgroundTransparency = 0.15
     button.BorderSizePixel = 0
-    button.LayoutOrder = order
     button.AutoButtonColor = false
     button.Text = ""
-    button.Parent = container
+    button.Active = true
+    button.Parent = screenGui
 
     local uiCorner = Instance.new("UICorner")
     uiCorner.CornerRadius = UDim.new(0, 10)
@@ -2916,64 +2863,107 @@ local function createButton(text, accentColor, order, callback)
     indCorner.CornerRadius = UDim.new(1, 0)
     indCorner.Parent = indicator
 
+    -- ระบบลากปุ่มแบบรวบรัดตัวแปร
+    local dragging, dragInput, dragStart, startPos, isDragging = false, nil, nil, nil, false
+
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging, dragStart, startPos, isDragging = true, input.Position, button.AbsolutePosition, false
+            
+            TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 114, 0, 35)
+            }):Play()
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    TweenService:Create(button, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(0, 120, 0, 38)
+                    }):Play()
+                end
+            end)
+        end
+    end)
+
+    button.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            if math.abs(delta.X) > 5 or math.abs(delta.Y) > 5 then
+                isDragging = true
+            end
+            
+            local screenSize = Camera.ViewportSize
+            local newX = math.clamp(startPos.X + delta.X, 0, screenSize.X - button.AbsoluteSize.X)
+            local newY = math.math and math.clamp(startPos.Y + delta.Y, 0, screenSize.Y - button.AbsoluteSize.Y) or math.clamp(startPos.Y + delta.Y, 0, screenSize.Y - button.AbsoluteSize.Y)
+            
+            button.Position = UDim2.new(0, newX, 0, newY)
+        end
+    end)
+
     local activeState = false
-    
     button.MouseButton1Click:Connect(function()
+        if isDragging then return end
         activeState = not activeState
         
-        local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-        
+        local tInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
         if activeState then
-            TweenService:Create(button, tweenInfo, {BackgroundColor3 = Color3.fromRGB(28, 28, 36)}):Play()
-            TweenService:Create(uiStroke, tweenInfo, {Color = accentColor}):Play()
-            TweenService:Create(textLabel, tweenInfo, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-            TweenService:Create(indicator, tweenInfo, {BackgroundColor3 = accentColor}):Play()
+            TweenService:Create(button, tInfo, {BackgroundColor3 = Color3.fromRGB(28, 28, 36)}):Play()
+            TweenService:Create(uiStroke, tInfo, {Color = accentColor}):Play()
+            TweenService:Create(textLabel, tInfo, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            TweenService:Create(indicator, tInfo, {BackgroundColor3 = accentColor}):Play()
         else
-            TweenService:Create(button, tweenInfo, {BackgroundColor3 = Color3.fromRGB(18, 18, 22)}):Play()
-            TweenService:Create(uiStroke, tweenInfo, {Color = Color3.fromRGB(45, 45, 55)}):Play()
-            TweenService:Create(textLabel, tweenInfo, {TextColor3 = Color3.fromRGB(200, 200, 210)}):Play()
-            TweenService:Create(indicator, tweenInfo, {BackgroundColor3 = Color3.fromRGB(70, 70, 80)}):Play()
+            TweenService:Create(button, tInfo, {BackgroundColor3 = Color3.fromRGB(18, 18, 22)}):Play()
+            TweenService:Create(uiStroke, tInfo, {Color = Color3.fromRGB(45, 45, 55)}):Play()
+            TweenService:Create(textLabel, tInfo, {TextColor3 = Color3.fromRGB(200, 200, 210)}):Play()
+            TweenService:Create(indicator, tInfo, {BackgroundColor3 = Color3.fromRGB(70, 70, 80)}):Play()
         end
 
-        if callback then
-            callback(activeState)
-        end
+        if callback then callback(activeState) end
     end)
 
     return button
 end
 
-
-createButton("Camera Lock", Color3.fromRGB(0, 229, 255), 1, function(Value)
+-- สร้างปุ่มใช้งาน
+local camlockBtn = createDraggableButton("Camera Lock", Color3.fromRGB(0, 229, 255), UDim2.new(0, 20, 0, 20), function(Value)
     getgenv().CamlockEnabled = Value
-    if not Value then
-        getgenv().CurrentTarget = nil
-    end
+    if not Value then getgenv().CurrentTarget = nil end
 end)
 
-createButton("Teleport Player", Color3.fromRGB(0, 229, 255), 2, function(state)
-    FollowEnabled = state
-    getgenv().TPToTargetEnabled = state
+local teleportBtn = createDraggableButton("Teleport Player", Color3.fromRGB(0, 229, 255), UDim2.new(0, 20, 0, 68), function(state)
     getgenv().FollowEnabled = state
-
-    if not state then
-        currentTarget = nil
-        getgenv().CurrentTarget = nil
-    end
+    getgenv().TPToTargetEnabled = state
+    if not state then getgenv().CurrentTarget = nil end
 end)
 
 
+if typeof(Config) == "table" then
+    Config:Toggle({
+        Title = "Camera Lock ",
+        Desc = "ซ่อน/แสดง ปุ่ม Camera Lock",
+        Flag = "ToggleCamlockUI",
+        Value = true,
+        Callback = function(Value)
+            if camlockBtn then camlockBtn.Visible = Value end
+        end,
+    })
 
-Config:Toggle({
-    Title = "Mobile Custom Toggles UI",
-    Desc = "A modern mobile toggle menu with smooth animations and a master hide/show switch.",
-    Flag = "MobileMobile",
-    Value = true, -- ค่าเริ่มต้นให้แสดงผล
-    Callback = function(Value)
-        container.Visible = Value
-    end,
-})
-
+    Config:Toggle({
+        Title = "Teleport Player ",
+        Desc = "ซ่อน/แสดง ปุ่ม Teleport Player",
+        Flag = "ToggleTeleportUI",
+        Value = true,
+        Callback = function(Value)
+            if teleportBtn then teleportBtn.Visible = Value end
+        end,
+    })
+end
 
 
 
