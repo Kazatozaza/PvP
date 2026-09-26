@@ -3417,8 +3417,6 @@ local function isPlayerInCombat(player, character)
 
     return false
 end
-
-
 local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
 
@@ -3428,11 +3426,12 @@ local function runAutoBounty(deltaTime)
 
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
-    local myRoot = myChar.HumanoidRootPart
-    local humanoid = myChar:FindFirstChildOfClass("Humanoid")
-
+    
+    local rootPart = myChar.HumanoidRootPart
+    local charHumanoid = myChar:FindFirstChildOfClass("Humanoid")
     local TweenService = game:GetService("TweenService")
-    local currentHpPercent = (humanoid.Health / humanoid.MaxHealth) * 100
+    
+    local currentHpPercent = (charHumanoid.Health / charHumanoid.MaxHealth) * 100
 
     local function getPlayerLevel(player)
         local success, lvl = pcall(function()
@@ -3455,10 +3454,10 @@ local function runAutoBounty(deltaTime)
     end
 
     local function findNearestTarget()
-        local myChar = LocalPlayer.Character
-        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil, nil, math.huge end
+        local currentTeamChar = LocalPlayer.Character
+        if not currentTeamChar or not currentTeamChar:FindFirstChild("HumanoidRootPart") then return nil, nil, math.huge end
         
-        local myRoot = myChar.HumanoidRootPart
+        local currentRoot = currentTeamChar.HumanoidRootPart
         local myLevel = getPlayerLevel(LocalPlayer)
         
         local nearestTargetRoot = nil
@@ -3491,7 +3490,7 @@ local function runAutoBounty(deltaTime)
                                 end
 
                                 if isLevelValid then
-                                    local distance = (targetRoot.Position - myRoot.Position).Magnitude
+                                    local distance = (targetRoot.Position - currentRoot.Position).Magnitude
                                     if distance <= 10000 and distance < shortestDistance then
                                         shortestDistance = distance
                                         nearestTargetRoot = targetRoot
@@ -3508,51 +3507,57 @@ local function runAutoBounty(deltaTime)
         return nearestTargetRoot, nearestTargetChar, shortestDistance
     end
 
-    -- 1. ระบบ Safe Mode
-    if defenseProtocolEnabled then
-        -- ถ้าเลือดต่ำกว่าหรือเท่ากับที่กำหนด และยังไม่ได้บินหนี
-        if currentHpPercent <= healthTriggerThreshold and not isEmergencyAscending then
+    -- Defense Protocol Check
+    if defenseProtocolEnabled and charHumanoid and charHumanoid.Health > 0 and rootPart then
+        local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
+        local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
+
+        -- ถ้าเลือดต่ำกว่ากำหนด และยังไม่ได้อยู่ในสถานะบินหนี
+        if currentHpRatio <= healthTriggerThreshold and not isEmergencyAscending then
             isEmergencyAscending = true
             if setSafeNoclip then setSafeNoclip(true) end
-            humanoid.PlatformStand = true
-            myRoot.AssemblyLinearVelocity = Vector3.zero
-            myRoot.AssemblyAngularVelocity = Vector3.zero
+            charHumanoid.PlatformStand = true
+            rootPart.AssemblyLinearVelocity = Vector3.zero
+            rootPart.AssemblyAngularVelocity = Vector3.zero
 
             if notify then notify("Emergency Defense", "Critical HP! Emergency flight activated!") end
+
+            local destinationCFrame = rootPart.CFrame + Vector3.new(0, 1000, 0)
+            local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local riseTween = TweenService:Create(rootPart, transitionInfo, {CFrame = destinationCFrame})
+            riseTween:Play()
         end
 
-        -- ขณะกำลังอยู่ในสถานะบินหนีขึ้นฟ้า
+        -- ขณะกำลังบินหนีขึ้นฟ้า
         if isEmergencyAscending then
-            humanoid.PlatformStand = true
+            charHumanoid.PlatformStand = true
             if setSafeNoclip then setSafeNoclip(true) end
-            myRoot.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
-            myRoot.AssemblyAngularVelocity = Vector3.zero
+            rootPart.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
+            rootPart.AssemblyAngularVelocity = Vector3.zero
             
-            if myRoot.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
-                myRoot.CFrame = myRoot.CFrame + Vector3.new(0, 100, 0)
+            if rootPart.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
+                rootPart.CFrame = rootPart.CFrame + Vector3.new(0, 100, 0)
             end
             
-            -- เงื่อนไขกลับคืนสู่สภาวะปกติ (เลือดฟื้นฟูถึงจุดที่กำหนด)
-            if currentHpPercent >= healthRecoveryThreshold then
+            -- เงื่อนไขกลับคืนสู่สภาวะปกติ (เลือดถึงจุดรีเซ็ต หรือปลอดภัยแล้ว)
+            if (currentHpRatio >= healthRecoveryThreshold) then
                 isEmergencyAscending = false
-                humanoid.PlatformStand = false
+                charHumanoid.PlatformStand = false
                 if setSafeNoclip then setSafeNoclip(false) end
-                myRoot.AssemblyLinearVelocity = Vector3.zero
+                rootPart.AssemblyLinearVelocity = Vector3.zero
                 if notify then notify("Emergency Defense", "Resuming normal operations.") end
             end
             
-            -- ถ้ากำลังบินหนีอยู่ ให้หยุดการทำงานของ Auto Bounty ส่วนอื่นไว้ก่อน (ไม่ให้เดินไปตีคนอื่น)
             return 
         end
     end
-
 
     if not autoBountyEnabled then return end
 
     -- 2. ค้นหาเป้าหมายรอบแรก
     local nearestTargetRoot, nearestTargetChar, shortestDistance = findNearestTarget()
 
-    if nearestTargetRoot and nearestTargetChar and humanoid and humanoid.Health > 0 and shortestDistance <= 10000 then
+    if nearestTargetRoot and nearestTargetChar and charHumanoid and charHumanoid.Health > 0 and shortestDistance <= 10000 then
         lastTargetSeenTime = tick() -- รีเซ็ตเวลาว่าเจอเป้าหมายล่าสุด
         
         pcall(function()
@@ -3566,7 +3571,7 @@ local function runAutoBounty(deltaTime)
         return
     end
 
-    -- 4. ระบบหน่วงเวลาก่อนย้ายเซิร์ฟ (รอ 4 วินาทีหลังเป้าหมายหายไป)
+    -- 4. ระบบหน่วงเวลาก่อนย้ายเซิร์ฟ (รอหลังเป้าหมายหายไป)
     if (tick() - lastTargetSeenTime) < SEARCH_COOLDOWN then
         return
     end
@@ -3655,8 +3660,6 @@ local function runAutoBounty(deltaTime)
         end
     end
 end
-
-
 
 
 local Toggle = Bounty:Toggle({
