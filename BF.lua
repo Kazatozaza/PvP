@@ -940,8 +940,6 @@ task.spawn(function()
     if not success or not Mouse then return end
 
 
--- Hook __index แบบใช้ CFrame ของเป้าหมายตรงๆ
--- Hook __index คืนค่า CFrame ของเป้าหมายตรงๆ
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SkillRedirectEnabled and self == Mouse then
@@ -1862,6 +1860,8 @@ do
             connectionHealth = humanoid.HealthChanged:Connect(UpdateHealth)
         end
 
+        
+
         if player.Character then
             task.spawn(function()
                 Setup(player.Character)
@@ -2116,109 +2116,135 @@ end)
 
 
 
-getgenv().OptimizeEffectsEnabled = getgenv().OptimizeEffectsEnabled or false
 
-local LocalPlayer = game:GetService("Players").LocalPlayer
 
--- ฟังก์ชันเช็กวัตถุที่ต้องยกเว้น
-local function isIgnored(item)
-    if not item then return true end
-    local p = item.Parent
-    while p and p ~= workspace do
-        if p.Name == "Map" or p.Name == "Characters" or p.Name == "Enemies" or p.Name == "NPCs" then
-            return true
-        end
-        p = p.Parent
-    end
-    return false
-end
 
--- ฟังก์ชันสำหรับลบหรือปิดการใช้งานเอฟเฟคเพื่อเพิ่ม FPS
-local function removeOrDisableEffect(item)
-    if isIgnored(item) then return end
-    
-    pcall(function()
-        if item:IsA("ParticleEmitter") then
-            -- ปิดการปล่อยอนุภาค หรือจะใช้ item:Destroy() เพื่อลบออกเลยก็ได้
-            item.Enabled = false
-            item.Rate = 0
-        elseif item:IsA("Trail") or item:IsA("Beam") then
-            item.Enabled = false
-        elseif item:IsA("Light") then
-            item.Enabled = false
-        -- หากต้องการลดภาระ BasePart ที่เป็นเอฟเฟคใสๆ (Transparent) หรือเอฟเฟคสกิล
-        elseif item:IsA("BasePart") and not item.Anchored then
-            -- สามารถเลือกทำลายพาร์ทเอฟเฟคชั่วคราวได้ถ้าไม่ใช่ตัวละครหลัก
-            -- item:Destroy()
-        end
-    end)
-end
 
-local function optimizeTarget(targetObj)
-    if not targetObj or not getgenv().OptimizeEffectsEnabled then return end
-    if isIgnored(targetObj) then return end
-    
-    removeOrDisableEffect(targetObj)
-    
-    for _, descendant in ipairs(targetObj:GetDescendants()) do
-        if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("Light") then
-            removeOrDisableEffect(descendant)
+
+
+
+
+
+
+
+
+
+
+
+local SafetyMode = System:Section({ Title = "Safety Mode" })
+
+
+-- Configuration & State Variables
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local defenseProtocolEnabled = false
+local isEmergencyAscending = false
+local healthTriggerThreshold = 20    
+local healthRecoveryThreshold = 100
+local ascentVelocity = 180 
+
+-- UI Components (ตัวอย่างโครงสร้าง UI ของคุณ)
+local ShieldToggle = System:Toggle({
+    Title = "Safety Mode",
+    Desc = "Automatically escapes and flies up when HP is critical",
+    Icon = "shield-alert",
+    Value = false,
+    Type = "Toggle",
+    Locked = false,
+    Flag = "defense_protocol_toggle",
+    Callback = function(activated)
+        defenseProtocolEnabled = activated
+        if not activated then
+            isEmergencyAscending = false
         end
     end
+})
+
+local HPRestoreSlider = System:Slider({
+    Title = "Resume Health Percent",
+    Desc = "HP percentage required to resume normal operations",
+    Value = {
+        Min = 20,
+        Max = 80,
+        Default = 20
+    },
+    Step = 1,
+    Locked = false,
+    Flag = "defense_restore_percent_slider",
+    Callback = function(val)
+        healthTriggerThreshold = val
+    end
+})
+
+
+local function executeDefenseProtocol(charHumanoid, rootPart)
+    if not defenseProtocolEnabled or not charHumanoid or charHumanoid.Health <= 0 or not rootPart then 
+        return 
+    end
+
+    local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
+    local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
+
+    -- ถ้าเลือดต่ำกว่ากำหนด และยังไม่ได้อยู่ในสถานะบินหนี
+    if currentHpRatio <= healthTriggerThreshold and not isEmergencyAscending then
+        isEmergencyAscending = true
+        if setSafeNoclip then setSafeNoclip(true) end
+        charHumanoid.PlatformStand = true
+        rootPart.AssemblyLinearVelocity = Vector3.zero
+        rootPart.AssemblyAngularVelocity = Vector3.zero
+
+        if notify then notify("Emergency Defense", "Critical HP! Emergency flight activated!") end
+
+        local destinationCFrame = rootPart.CFrame + Vector3.new(0, 1000, 0)
+        local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local riseTween = TweenService:Create(rootPart, transitionInfo, {CFrame = destinationCFrame})
+        riseTween:Play()
+    end
+
+    -- ขณะกำลังบินหนีขึ้นฟ้า
+    if isEmergencyAscending then
+        charHumanoid.PlatformStand = true
+        if setSafeNoclip then setSafeNoclip(true) end
+        rootPart.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
+        rootPart.AssemblyAngularVelocity = Vector3.zero
+        
+        if rootPart.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
+            rootPart.CFrame = rootPart.CFrame + Vector3.new(0, 100, 0)
+        end
+        
+        -- เงื่อนไขกลับคืนสู่สภาวะปกติ (เลือดถึงจุดรีเซ็ต หรือปลอดภัยแล้ว)
+        if (currentHpRatio >= healthRecoveryThreshold) then
+            isEmergencyAscending = false
+            charHumanoid.PlatformStand = false
+            if setSafeNoclip then setSafeNoclip(false) end
+            rootPart.AssemblyLinearVelocity = Vector3.zero
+            if notify then notify("Emergency Defense", "Resuming normal operations.") end
+        end
+        
+        return 
+    end
 end
 
--- เฝ้าระวังตัวละคร
-local function hookCharacterEffects(character)
+-- เชื่อมต่อเข้ากับลูปหลักของเกม เพื่อให้ฟังก์ชันทำงานตลอดเวลา
+RunService.RenderStepped:Connect(function()
+    if not defenseProtocolEnabled then return end
+    
+    local character = LocalPlayer.Character
     if not character then return end
-    optimizeTarget(character)
     
-    character.DescendantAdded:Connect(function(descendant)
-        if getgenv().OptimizeEffectsEnabled then
-            task.defer(function()
-                removeOrDisableEffect(descendant)
-            end)
-        end
-    end)
-end
-
-if LocalPlayer.Character then
-    hookCharacterEffects(LocalPlayer.Character)
-end
-LocalPlayer.CharacterAdded:Connect(hookCharacterEffects)
-
--- ดักจับวัตถุใหม่ใน Workspace เพื่อเคลียร์เอฟเฟคสกิลทิ้งทันที
-workspace.DescendantAdded:Connect(function(descendant)
-    if getgenv().OptimizeEffectsEnabled then
-        if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("Light") then
-            task.defer(function()
-                removeOrDisableEffect(descendant)
-            end)
-        end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    
+    if humanoid and rootPart then
+        executeDefenseProtocol(humanoid, rootPart)
     end
 end)
 
 
-local SystemFPS = System:Section({ Title = "Boost FPS" })
-
--- ส่วนของ Toggle UI
-local Toggle = System:Toggle({
-    Title = "Optimize FPS (Remove Effects)",
-    Desc = "ปิดเอฟเฟคสกิลและแสงต่างๆ เพื่อเพิ่ม FPS",
-    Icon = "zap",
-    Value = false,
-    Type = "Toggle",
-    Locked = false,
-    Flag = "fps_boost_toggle",
-    Callback = function(state)
-        getgenv().OptimizeEffectsEnabled = state
-        print("FPS Boost State:", state)
-        
-        -- ถ้ากดเปิด ให้จัดการเคลียร์เอฟเฟคที่มีอยู่แล้วทันที
-        if state and LocalPlayer.Character then
-            optimizeTarget(LocalPlayer.Character)
-        end
-    end
-})
 
 
 
@@ -2292,6 +2318,7 @@ local function SetFastAttack(state)
         task.wait()
     end)
 end
+
 
 
 
@@ -3391,6 +3418,7 @@ local function isPlayerInCombat(player, character)
     return false
 end
 
+
 local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
 
@@ -3481,47 +3509,43 @@ local function runAutoBounty(deltaTime)
     end
 
     -- 1. ระบบ Safe Mode
-    if safeModeActive and humanoid.Health > 0 then
-        if currentHpPercent <= safeModePercent and not isSafeEscaping then
-            isSafeEscaping = true
-            setSafeNoclip(true)
+    if defenseProtocolEnabled then
+        -- ถ้าเลือดต่ำกว่าหรือเท่ากับที่กำหนด และยังไม่ได้บินหนี
+        if currentHpPercent <= healthTriggerThreshold and not isEmergencyAscending then
+            isEmergencyAscending = true
+            if setSafeNoclip then setSafeNoclip(true) end
             humanoid.PlatformStand = true
             myRoot.AssemblyLinearVelocity = Vector3.zero
             myRoot.AssemblyAngularVelocity = Vector3.zero
 
-            if notify then notify("Safe Mode", "Critical HP! Emergency flight activated!") end
-
-            local targetCFrame = myRoot.CFrame + Vector3.new(0, 700, 0)
-            local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            local tween = TweenService:Create(myRoot, tweenInfo, {CFrame = targetCFrame})
-            tween:Play()
+            if notify then notify("Emergency Defense", "Critical HP! Emergency flight activated!") end
         end
 
-        if isSafeEscaping then
+        -- ขณะกำลังอยู่ในสถานะบินหนีขึ้นฟ้า
+        if isEmergencyAscending then
             humanoid.PlatformStand = true
-            setSafeNoclip(true)
-            myRoot.AssemblyLinearVelocity = Vector3.new(0, flySpeed, 0)
+            if setSafeNoclip then setSafeNoclip(true) end
+            myRoot.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
             myRoot.AssemblyAngularVelocity = Vector3.zero
             
             if myRoot.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
                 myRoot.CFrame = myRoot.CFrame + Vector3.new(0, 100, 0)
             end
             
-            local tempRoot, tempChar, tempDist = findNearestTarget()
-            local inCombatNow = isPlayerInCombat(LocalPlayer, myChar)
-            local targetNotFoundOrFar = (not tempRoot or tempDist > 10000)
-            
-            if (targetNotFoundOrFar and not inCombatNow) or (currentHpPercent >= safeStopPercent) then
-                isSafeEscaping = false
+            -- เงื่อนไขกลับคืนสู่สภาวะปกติ (เลือดฟื้นฟูถึงจุดที่กำหนด)
+            if currentHpPercent >= healthRecoveryThreshold then
+                isEmergencyAscending = false
                 humanoid.PlatformStand = false
-                setSafeNoclip(false)
+                if setSafeNoclip then setSafeNoclip(false) end
                 myRoot.AssemblyLinearVelocity = Vector3.zero
-                if notify then notify("Safe Mode", "Resuming normal operations.") end
+                if notify then notify("Emergency Defense", "Resuming normal operations.") end
             end
             
+            -- ถ้ากำลังบินหนีอยู่ ให้หยุดการทำงานของ Auto Bounty ส่วนอื่นไว้ก่อน (ไม่ให้เดินไปตีคนอื่น)
             return 
         end
     end
+
 
     if not autoBountyEnabled then return end
 
@@ -3662,21 +3686,6 @@ local Toggle = Bounty:Toggle({
     end
 })
 
-
-Bounty:Slider({
-    Title = "Safe Mode ",
-    Desc = "The escape system is currently in the beta stage.",
-    Increment = 1,
-    Value = {
-        Min = 20,
-        Max = 100,
-        Default = 20
-    },
-    Flag = "SafeModePercentSlider",
-    Callback = function(value)
-        safeModePercent = value
-    end,
-})
 
 local Toggle = Bounty:Toggle({
     Title = "Enable PvP",
