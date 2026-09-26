@@ -42,7 +42,7 @@ if success and result then
     
     WindUI:Notify({
         Title = "DestinyHub Success",
-        Content = "โหลด WindUI สำเร็จแล้ว!",
+        Content = "โหลด Destiny Hub สำเร็จแล้ว!",
         Duration = 3
     })
 else
@@ -3152,7 +3152,7 @@ local function equipToolByType(toolType)
     -- ถ้าไม่ได้ระบุ toolType หรือเป็นค่าว่าง/nil ให้เก็บอาวุธทั้งหมดที่มีออกจากตัวละคร
     if not toolType or toolType == "" then
         if currentTool and backpack then
-            humanoid:UnequipTools() -- หรือจะใช้การสลับเข้า Backpack ตามความเหมาะสม
+            humanoid:UnequipTools()
         end
         return
     end
@@ -3162,8 +3162,11 @@ local function equipToolByType(toolType)
         local nameLower = currentTool.Name:lower()
         if toolType == "Melee" and (nameLower:find("combat") or nameLower:find("dark step") or nameLower:find("electro") or nameLower:find("water karate") or nameLower:find("dragon claw") or nameLower:find("superhuman") or nameLower:find("death step") or nameLower:find("sharkman karate") or nameLower:find("electric claw") or nameLower:find("dragon talon") or nameLower:find("godhuman") or nameLower:find("sanguine art")) then
             return
-        elseif toolType == "Sword" and (currentTool.ToolTip == "Sword" or (currentTool:FindFirstChild("Handle") and not nameLower:find("fruit") and not nameLower:find("gun") and not nameLower:find("godhuman") and not nameLower:find("combat") and not nameLower:find("sanguine") and not nameLower:find("superhuman"))) then
-            return
+        elseif toolType == "Sword" then
+            local isGun = nameLower:find("gun") or nameLower:find("slingshot") or nameLower:find("musket") or nameLower:find("flintlock") or nameLower:find("cannon") or nameLower:find("kabucha") or nameLower:find("soul guitar") or nameLower:find("acidum rifle") or nameLower:find("bizarre rifle") or nameLower:find("bazooka")
+            if (currentTool.ToolTip == "Sword" or nameLower:find("sword") or nameLower:find("katana") or nameLower:find("blade") or nameLower:find("pole") or nameLower:find("trident") or nameLower:find("tushita") or nameLower:find("yama") or nameLower:find("dark dagger") or nameLower:find("culling") or nameLower:find("hallow") or nameLower:find("saber") or nameLower:find("rengoku") or nameLower:find("midnight")) and not isGun and not nameLower:find("fruit") and not nameLower:find("combat") and not nameLower:find("godhuman") then
+                return
+            end
         elseif toolType == "Fruit" and (currentTool.ToolTip == "Blox Fruit" or currentTool:GetAttribute("Fruit") or nameLower:find("fruit") or nameLower:find("rocket") or nameLower:find("spin") or nameLower:find("chop") or nameLower:find("spring") or nameLower:find("bomb") or nameLower:find("smoke") or nameLower:find("spike") or nameLower:find("flame") or nameLower:find("falcon") or nameLower:find("ice") or nameLower:find("sand") or nameLower:find("dark") or nameLower:find("diamond") or nameLower:find("light") or nameLower:find("rubber") or nameLower:find("barrier") or nameLower:find("ghost") or nameLower:find("magma") or nameLower:find("quake") or nameLower:find("buddha") or nameLower:find("love") or nameLower:find("spider") or nameLower:find("sound") or nameLower:find("phoenix") or nameLower:find("portal") or nameLower:find("rumble") or nameLower:find("pain") or nameLower:find("blizzard") or nameLower:find("gravity") or nameLower:find("mammoth") or nameLower:find("t-rex") or nameLower:find("dough") or nameLower:find("shadow") or nameLower:find("venom") or nameLower:find("control") or nameLower:find("spirit") or nameLower:find("dragon") or nameLower:find("leopard") or nameLower:find("kitsune") or nameLower:find("gas") or nameLower:find("yeti")) then
             return
         elseif toolType == "Gun" and (currentTool.ToolTip == "Gun" or nameLower:find("gun") or nameLower:find("slingshot") or nameLower:find("musket") or nameLower:find("flintlock") or nameLower:find("cannon") or nameLower:find("kabucha") or nameLower:find("soul guitar") or nameLower:find("acidum rifle") or nameLower:find("bizarre rifle") or nameLower:find("bazooka")) then
@@ -3193,7 +3196,8 @@ local function equipToolByType(toolType)
                     isMatch = true
                 end
             elseif toolType == "Sword" then
-                if tool.ToolTip == "Sword" or (tool:FindFirstChild("Handle") and not nameLower:find("fruit") and not nameLower:find("gun") and not nameLower:find("godhuman") and not nameLower:find("combat") and not nameLower:find("sanguine") and not nameLower:find("superhuman")) then
+                local isGun = nameLower:find("gun") or nameLower:find("slingshot") or nameLower:find("musket") or nameLower:find("flintlock") or nameLower:find("cannon") or nameLower:find("kabucha") or nameLower:find("soul guitar") or nameLower:find("acidum rifle") or nameLower:find("bizarre rifle") or nameLower:find("bazooka")
+                if (tool.ToolTip == "Sword" or nameLower:find("sword") or nameLower:find("katana") or nameLower:find("blade") or nameLower:find("pole") or nameLower:find("trident") or nameLower:find("tushita") or nameLower:find("yama") or nameLower:find("dark dagger") or nameLower:find("culling") or nameLower:find("hallow") or nameLower:find("saber") or nameLower:find("rengoku") or nameLower:find("midnight")) and not isGun and not nameLower:find("fruit") and not nameLower:find("combat") and not nameLower:find("godhuman") then
                     isMatch = true
                 end
             elseif toolType == "Fruit" then
@@ -3576,55 +3580,99 @@ local function runAutoBounty(deltaTime)
 
     if not autoBountyEnabled then return end
 
+if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+    local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+    if browser then browser.Enabled = false end
+    return 
+end
+
+local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
+browserGui.Enabled = true 
+task.wait(1)
+
+while autoBountyEnabled do
     if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-        if browser then browser.Enabled = false end
-        return 
+        browserGui.Enabled = false
+        return
     end
-
-    local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
-    browserGui.Enabled = true 
-    task.wait(1)
-
-    while autoBountyEnabled do
-        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-            browserGui.Enabled = false
-            return
-        end
-        
-        local nRoot, nChar, nDist = findNearestTarget()
-        if nRoot and nChar and nDist <= 10000 then
-            lastTargetSeenTime = tick()
-            browserGui.Enabled = false
-            return
-        end
-        
-        local joined = false
-        local frame = browserGui:FindFirstChild("Frame", true)
-        
-        if frame then
-            for _, i in ipairs(frame:GetDescendants()) do
-                if not autoBountyEnabled then return end
+    
+    local nRoot, nChar, nDist = findNearestTarget()
+    if nRoot and nChar and nDist <= 10000 then
+        lastTargetSeenTime = tick()
+        browserGui.Enabled = false
+        return
+    end
+    
+    local joined = false
+    local frame = browserGui:FindFirstChild("Frame", true)
+    
+    if frame then
+        for _, i in ipairs(frame:GetDescendants()) do
+            if not autoBountyEnabled then return end
+            
+            if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
+                local container = i.Parent
+                local fullText = ""
                 
-                if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
-                    if firesignal then 
-                        firesignal(i.MouseButton1Click) 
-                        joined = true
+                local isOurServer = false
+                if container then
+                    for _, desc in ipairs(container:GetDescendants()) do
+                        if desc:IsA("TextLabel") then
+                            fullText = fullText .. " " .. desc.Text
+                            if string.find(desc.Text, "Your Server") then
+                                isOurServer = true
+                            end
+                        end
                     end
-                    task.wait(0.2)
-                elseif i:IsA("ScrollingFrame") then
-                    i.CanvasPosition = i.CanvasPosition + Vector2.new(0, 150)
                 end
+                
+                if not isOurServer and container and container.Parent then
+                    for _, desc in ipairs(container.Parent:GetDescendants()) do
+                        if desc:IsA("TextLabel") then
+                            fullText = fullText .. " " .. desc.Text
+                            if string.find(desc.Text, "Your Server") then
+                                isOurServer = true
+                            end
+                        end
+                    end
+                end
+                
+                if not isOurServer then
+                    local currentPlayers, maxPlayers = string.match(fullText, "Players:%s*(%d+)%s*/%s*(%d+)")
+                    
+                    if currentPlayers and maxPlayers then
+                        local current = tonumber(currentPlayers)
+                        local max = tonumber(maxPlayers)
+                        local emptySlots = max - current
+                        
+                        if emptySlots >= 4 and emptySlots <= 6 then
+                            pcall(function()
+                                if firesignal then 
+                                    firesignal(i.MouseButton1Click) 
+                                end
+                                if i.Activated then
+                                    i.Activated:Fire()
+                                end
+                            end)
+                            joined = true
+                            break
+                        end
+                    end
+                end
+            elseif i:IsA("ScrollingFrame") then
+                i.CanvasPosition = i.CanvasPosition + Vector2.new(0, 150)
             end
         end
-        
-        if not joined then
-            task.wait(2) 
-        else
-            task.wait(1)
-        end
+    end
+    
+    if not joined then
+        task.wait(2) 
+    else
+        task.wait(1)
     end
 end
+end
+
 
 local Toggle = Bounty:Toggle({
     Title = "Auto Bounty",
@@ -3703,7 +3751,7 @@ local DropdownMyFaction = Bounty:Dropdown({
 
 local UtilitySection = Bounty:Section({ 
     Title = "Settings Skills", 
-    Icon = "settings" -- หรือใช้ "sliders", "command" ก็ได้ครับ
+    Icon = "command" -- หรือใช้ "sliders", "command" ก็ได้ครับ
 })
 
 local DropdownMelee = Bounty:Dropdown({
