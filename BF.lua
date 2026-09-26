@@ -1040,7 +1040,7 @@ end
 
 loadConfig()
 
--- ** เพิ่ม task.spawn และ task.wait(2) ก่อนเริ่มรันระบบหลัก **
+
 task.spawn(function()
     task.wait(5)
 
@@ -1124,7 +1124,6 @@ task.spawn(function()
         end
     end)
 end)
-
 
 
 System:Toggle({
@@ -2199,7 +2198,7 @@ local function executeDefenseProtocol(charHumanoid, rootPart)
 
         if notify then notify("Emergency Defense", "Critical HP! Emergency flight activated!") end
 
-        local destinationCFrame = rootPart.CFrame + Vector3.new(0, 1000, 0)
+        local destinationCFrame = rootPart.CFrame + Vector3.new(0, 550, 0)
         local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         local riseTween = TweenService:Create(rootPart, transitionInfo, {CFrame = destinationCFrame})
         riseTween:Play()
@@ -2337,6 +2336,7 @@ CombatTab:Toggle({
 
 CombatTab:Toggle({
     Title = "Silent Aim",
+    Icon = "crosshair", -- เปลี่ยนตรงนี้เป็นไอคอนอื่นที่ต้องการ
     Desc  = "Hit shots without precise crosshairs.",
     Flag  = "silent_aim_toggle",
     Value = getgenv().SilentAimEnabled,
@@ -3492,7 +3492,7 @@ local function runAutoBounty(deltaTime)
 
                                 if isLevelValid then
                                     local distance = (targetRoot.Position - myRoot.Position).Magnitude
-                                    if distance <= 10000 and distance < shortestDistance then
+                                    if distance <= 15000 and distance < shortestDistance then
                                         shortestDistance = distance
                                         nearestTargetRoot = targetRoot
                                         nearestTargetChar = char
@@ -3508,7 +3508,7 @@ local function runAutoBounty(deltaTime)
         return nearestTargetRoot, nearestTargetChar, shortestDistance
     end
 
-   -- Defense Protocol Check
+    -- 1. ระบบ Safe Mode
     if defenseProtocolEnabled and charHumanoid and charHumanoid.Health > 0 and rootPart then
         local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
         local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
@@ -3523,7 +3523,7 @@ local function runAutoBounty(deltaTime)
 
             if notify then notify("Emergency Defense", "Critical HP! Emergency flight activated!") end
 
-            local destinationCFrame = rootPart.CFrame + Vector3.new(0, 1000, 0)
+            local destinationCFrame = rootPart.CFrame + Vector3.new(0, 550, 0)
             local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
             local riseTween = TweenService:Create(rootPart, transitionInfo, {CFrame = destinationCFrame})
             riseTween:Play()
@@ -3552,7 +3552,6 @@ local function runAutoBounty(deltaTime)
             return 
         end
     end
-
 
 
     if not autoBountyEnabled then return end
@@ -3602,42 +3601,53 @@ local function runAutoBounty(deltaTime)
 
     if not autoBountyEnabled then return end
 
-    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-        if browser then browser.Enabled = false end
-        return 
-    end
+-- ตรวจสอบสถานะการต่อสู้ก่อนเริ่ม
+if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+    local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+    if browser then browser.Enabled = false end
+    return 
+end
 
-    local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
-    browserGui.Enabled = true 
+local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
+browserGui.Enabled = true 
+task.wait(1)
+
+-- ฟังก์ชันช่วยค้นหาปุ่มแบบปลอดภัย
+local function findButton(parent, textName, buttonName)
+    for _, i in ipairs(parent:GetDescendants()) do
+        if i:IsA("TextButton") and (i.Text == textName or i.Name == buttonName) then
+            return i
+        end
+    end
+    return nil
+end
+
+-- กดปุ่ม Refresh
+local refreshBtn = findButton(browserGui.Frame, "Refresh", "RefreshButton")
+if refreshBtn and firesignal then
+    firesignal(refreshBtn.MouseButton1Click)
     task.wait(1)
+end
 
-    -- กดปุ่ม Refresh
-    for _, i in ipairs(browserGui.Frame:GetDescendants()) do
-        if i:IsA("TextButton") and (i.Text == "Refresh" or i.Name == "RefreshButton") then
-            if firesignal then firesignal(i.MouseButton1Click) end
-            task.wait(1)
-            break
-        end
+-- 6. วนลูปกดปุ่ม Join เพื่อย้ายเซิร์ฟ (เอา break ออกเพื่อให้เช็คปุ่มถัดไปถ้าเซิร์ฟเต็ม)
+while autoBountyEnabled do
+    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+        browserGui.Enabled = false
+        return
     end
-
-    -- 6. วนลูปกดปุ่ม Join เพื่อย้ายเซิร์ฟ
-    while autoBountyEnabled do
-        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-            browserGui.Enabled = false
-            return
-        end
-        
-        local nRoot, nChar, nDist = findNearestTarget()
-        if nRoot and nChar and nDist <= 10000 then
-            lastTargetSeenTime = tick()
-            browserGui.Enabled = false
-            return
-        end
-        
-        local joined = false
-        
-        for _, i in ipairs(browserGui.Frame:GetDescendants()) do
+    
+    local nRoot, nChar, nDist = findNearestTarget()
+    if nRoot and nChar and nDist <= 10000 then
+        lastTargetSeenTime = tick()
+        browserGui.Enabled = false
+        return
+    end
+    
+    local joined = false
+    local frame = browserGui:FindFirstChild("Frame", true)
+    
+    if frame then
+        for _, i in ipairs(frame:GetDescendants()) do
             if not autoBountyEnabled then return end
             
             if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
@@ -3649,19 +3659,21 @@ local function runAutoBounty(deltaTime)
                 if firesignal then 
                     firesignal(i.MouseButton1Click) 
                     joined = true
+                    -- เอา break ออก ตรงนี้จะปล่อยให้มันกดปุ่มอื่นเผื่อเซิร์ฟนี้เต็ม
                 end
-                task.wait(0.1)
+                task.wait(0.2) -- หน่วงสั้นๆ ระหว่างกดแต่ละปุ่ม ป้องกันตัวรันรับคำสั่งไม่ทัน
             elseif i:IsA("ScrollingFrame") then
-                i.CanvasPosition += Vector2.new(0, 150)
+                i.CanvasPosition = i.CanvasPosition + Vector2.new(0, 150)
             end
         end
-        
-        if not joined then
-            task.wait(0.1)
-        else
-            break 
-        end
     end
+    
+    if not joined then
+        task.wait(0.5) 
+    else
+        task.wait(1) -- ถ้าระบบกดปุ่ม Join ไปแล้ว ให้รอแป๊บนึงดูว่าเข้าเซิร์ฟไหม ถ้ายังไม่ออกให้วนหาใหม่
+    end
+end
 end
 
 
@@ -3693,6 +3705,7 @@ local Toggle = Bounty:Toggle({
         end
     end
 })
+
 
 
 local Toggle = Bounty:Toggle({
