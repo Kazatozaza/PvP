@@ -1,5 +1,6 @@
 local _version = "1.6.66"
 
+-- 1. เคลียร์หน้าต่างเก่า (ถ้ามี)
 if getgenv().DestinyHubWindow then
     pcall(function()
         if typeof(getgenv().DestinyHubWindow.Destroy) == "function" then
@@ -9,9 +10,29 @@ if getgenv().DestinyHubWindow then
     getgenv().DestinyHubWindow = nil
 end
 
-local success, WindUI = pcall(function()
-    return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
-end)
+-- 2. โหลด WindUI แบบปลอดภัยและมีระบบพยายามโหลดซ้ำ (Retry) หากอินเทอร์เน็ตช้า
+local WindUI
+local maxAttempts = 5
+local attempt = 0
+
+repeat
+    attempt = attempt + 1
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
+    end)
+    
+    if success and result then
+        WindUI = result
+        break
+    else
+        task.wait(1) -- รอ 1 วิแล้วลองใหม่
+    end
+until attempt >= maxAttempts
+
+if not WindUI then
+    warn("[DestinyHub]: ไม่สามารถโหลด WindUI ได้ กรุณาตรวจสอบอินเทอร์เน็ตหรือลิงก์เวอร์ชัน")
+    return
+end
 
 pcall(function()
   WindUI:AddTheme({
@@ -344,6 +365,7 @@ Home:Paragraph({
     }
 })
 
+
 local FPS = Home:Input({
     Title = "FPS Unlocker ",
     Icon = "user",
@@ -407,7 +429,10 @@ Config:Button({
 
 
 
-local Configjson = Config:Section({ Title = "Config.json" })
+local Configjson = Config:Section({ 
+    Title = "Config.json", 
+    Icon = "file" -- หรือใช้ "folder", "save" ก็ได้ครับ
+})
 
 
 local importedConfigData = ""
@@ -483,12 +508,18 @@ Config:Button({
     end,
 })
 
+-- 3. โหลด Config หลังจากแน่ใจว่า UI พร้อมแล้ว
 task.spawn(function()
-    task.wait()
+    -- รอให้เกมและ UI โหลดเสร็จชัวร์ๆ ก่อน (ปรับเวลาได้ตามความเหมาะสม)
+    task.wait(1.5)
+    
     pcall(function()
-        MyConfig:Load()
+        if typeof(MyConfig) == "table" and typeof(MyConfig.Load) == "function" then
+            MyConfig:Load()
+        end
     end)
 end)
+
 
 
 
@@ -835,16 +866,6 @@ local function GetTargetInFOV(refPos)
 end
 
 
-
-
-
-
-
-
-
-
-
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -1147,10 +1168,8 @@ local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
 RunService.RenderStepped:Connect(function(dt)
-    -- Smooth Color Transition (ปรับความเร็วในการเปลี่ยนสี ยิ่งตัวเลขมากยิ่งเปลี่ยนเร็ว แนะนำ 15-25)
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
-    -- ตรวจสอบตัวละครหลักและกล้องอย่างปลอดภัย
     local character = LocalPlayer.Character
     local camera = Workspace.CurrentCamera
     
@@ -1327,7 +1346,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local HideShowUI = Config:Section({ Title = "Settings" })
+
 
 -- ==================== รวมตัวแปรหลัก (ประกาศครั้งเดียวจบ) ====================
 local Players = game:GetService("Players")
@@ -2058,7 +2077,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 
-local SafetyMode = System:Section({ Title = "Safety Mode" })
+local SafetyMode = System:Section({ 
+    Title = "Safety Mode", 
+    Icon = "shield-alert" -- ตัวอย่างชื่อไอคอน (ขึ้นอยู่กับไลบรารีที่ใช้)
+})
+
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -2269,8 +2292,11 @@ CombatTab:Toggle({
     end,
 })
 
--- [ 2. TARGETING & FOV SETTINGS ] -----------------------------------------------
-local FOVSection = CombatTab:Section({ Title = "Targeting & FOV" })
+
+local FOVSection = CombatTab:Section({ 
+    Title = "Targeting & FOV", 
+    Icon = "crosshair" -- หรือใช้ "eye", "target" ก็ได้ครับ
+})
 
 CombatTab:Dropdown({
     Title = "Silent Aim Mode",
@@ -2342,8 +2368,10 @@ CombatTab:Toggle({
 })
 
 
--- [ 3. VISUALS & FILTERS ] ----------------------------------------------------
-local VisualsSection = CombatTab:Section({ Title = "Visuals & Filters" })
+local VisualsSection = CombatTab:Section({ 
+    Title = "Visuals & Filters", 
+    Icon = "eye" -- หรือใช้ "palette", "sparkles" ก็ได้ครับ
+})
 
 CombatTab:Toggle({
     Title = "Show Red Snapline",
@@ -2455,10 +2483,11 @@ task.spawn(function()
     end
 end)
 
+local CharacterAbilities = GeneralTab:Section({ 
+    Title = "Character & Abilities", 
+    Icon = "user" -- หรือใช้ "zap", "activity" ก็ได้ครับ
+})
 
-
-
-local CharacterAbilities = GeneralTab:Section({ Title = "Character & Abilities" })
 GeneralTab:Toggle({
     Title = "Auto Race V4",
     Desc = "Auto Race V4 activate & upgrade.",
@@ -2706,7 +2735,10 @@ Visuals:Toggle({
 })
 
 
-local UtilitySection = GeneralTab:Section({ Title = "Target Dominance" })
+local UtilitySection = GeneralTab:Section({ 
+    Title = "Target Dominance", 
+    Icon = "crown" -- หรือใช้ "sword", "crosshair" ก็ได้ครับ
+})
 
 FollowToggle = GeneralTab:Toggle({
     Title = "Instant Warp",
@@ -2748,6 +2780,12 @@ local Slider = GeneralTab:Slider({
     Callback = function(value)
         FollowDistance = value
     end,
+})
+
+
+local HideShowUI = Config:Section({ 
+    Title = "Settings", 
+    Icon = "monitor" 
 })
 
 
@@ -2797,12 +2835,15 @@ Config:Toggle({
     end,
 })
 
-
-
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
+
+-- เคลียร์ปุ่มเก่าทิ้งก่อนรันใหม่ (ป้องกันปุ่มซ้ำซ้อน)
+if CoreGui:FindFirstChild("CustomMobileTogglesStyle") then
+    CoreGui.CustomMobileTogglesStyle:Destroy()
+end
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CustomMobileTogglesStyle"
@@ -2900,7 +2941,7 @@ local function createDraggableButton(text, accentColor, defaultPosition, callbac
             
             local screenSize = Camera.ViewportSize
             local newX = math.clamp(startPos.X + delta.X, 0, screenSize.X - button.AbsoluteSize.X)
-            local newY = math.math and math.clamp(startPos.Y + delta.Y, 0, screenSize.Y - button.AbsoluteSize.Y) or math.clamp(startPos.Y + delta.Y, 0, screenSize.Y - button.AbsoluteSize.Y)
+            local newY = math.clamp(startPos.Y + delta.Y, 0, screenSize.Y - button.AbsoluteSize.Y)
             
             button.Position = UDim2.new(0, newX, 0, newY)
         end
@@ -2941,7 +2982,6 @@ local teleportBtn = createDraggableButton("Teleport Player", Color3.fromRGB(0, 2
     getgenv().TPToTargetEnabled = state
     if not state then getgenv().CurrentTarget = nil end
 end)
-
 
 if typeof(Config) == "table" then
     Config:Toggle({
@@ -3633,8 +3673,10 @@ local DropdownMyFaction = Bounty:Dropdown({
     end
 })
 
-
-local UtilitySection = Bounty:Section({ Title = "Settings Skills" })
+local UtilitySection = Bounty:Section({ 
+    Title = "Settings Skills", 
+    Icon = "settings" -- หรือใช้ "sliders", "command" ก็ได้ครับ
+})
 
 local DropdownMelee = Bounty:Dropdown({
     Title = "Melee",
