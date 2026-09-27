@@ -20,6 +20,21 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
+-- เพิ่มส่วนการรอ Services และ Workspace ที่คุณต้องการ
+local requiredServices = {
+    game:GetService("Players"),
+    game:GetService("CoreGui"),
+}
+
+for _, service in ipairs(requiredServices) do
+    if not service then
+        repeat 
+            task.wait() 
+        until game:GetService(service.ClassName) or workspace
+    end
+end
+
+-- รอให้ LocalPlayer โหลดเข้ามาจริงๆ
 repeat task.wait() until game:GetService("Players").LocalPlayer
 
 if getgenv().DestinyHubWindow then
@@ -30,8 +45,6 @@ if getgenv().DestinyHubWindow then
     end)
     getgenv().DestinyHubWindow = nil
 end
-
-task.wait(13)
 
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
@@ -205,12 +218,6 @@ end)
 
 
 WindUI:SetNotificationLower(true)
-
-if windowSuccess and Window then
-    getgenv().DestinyHubWindow = Window
-else
-    warn("Destiny Hub: ไม่สามารถสร้างหน้าต่าง UI ได้")
-end
 
 
 Window:Section({
@@ -485,10 +492,9 @@ Config:Button({
     end,
 })
 
--- 3. โหลด Config หลังจากแน่ใจว่า UI พร้อมแล้ว
+
 task.spawn(function()
-    -- รอให้เกมและ UI โหลดเสร็จชัวร์ๆ ก่อน (ปรับเวลาได้ตามความเหมาะสม)
-    task.wait(1.5)
+    task.wait(2)
     
     pcall(function()
         if typeof(MyConfig) == "table" and typeof(MyConfig.Load) == "function" then
@@ -553,7 +559,6 @@ UIStroke.Color = FOVThemeColor
 UIStroke.Transparency = 0.3
 UIStroke.Parent = FOVUI
 
--- ✨ เพิ่มจุดตรงกลาง (Center Dot)
 local CenterDot = Instance.new("Frame")
 CenterDot.Name = "CenterDot"
 CenterDot.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -566,10 +571,9 @@ local DotCorner = Instance.new("UICorner")
 DotCorner.CornerRadius = UDim.new(1, 0)
 DotCorner.Parent = CenterDot
 
-
 local Snapline = Drawing.new("Line")
 Snapline.Visible = false
-Snapline.Thickness = 1.5         
+Snapline.Thickness = 1.5       
 Snapline.Color = Color3.fromRGB(255, 255, 255) 
 Snapline.Transparency = 1              
 Snapline.From = Vector2.new(0, 0)         
@@ -780,16 +784,12 @@ local function getPlayerStatus(player)
     return pvpStatus .. " | " .. safeZoneStatus .. " | " .. combatStatus
 end
 
--- ตัวอย่างการแสดงผล ESP
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         local statusText = getPlayerStatus(player)
     end
 end
 
-
-
--- กำหนดจุดอ้างอิง (กลางจอ หรือ ตามนิ้ว)
 local function GetReferencePosition()
     local viewportSize = Camera.ViewportSize
     local mode = tostring(getgenv().FOVPositionMode):lower()
@@ -857,38 +857,6 @@ local Camera = workspace.CurrentCamera
 getgenv().SkillRedirectEnabled = getgenv().SkillRedirectEnabled or true
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
--- รายชื่อรีโมทคร่าวๆ ของเกมแนว Blox Fruits
-local allowedSkillRemotes = {
-    toMouse = true, castskill = true, useability = true, 
-    attack = true, combat = true, skill = true, shoot = true,
-    miniclick = true, mouseclick = true, remote = true,
-    replicate = true, validator = true
-}
-
-local blockedRemotes = {
-    equip = true, unequip = true, store = true, reset = true,
-    chat = true, data = true, load = true, save = true
-}
-
-local remoteCache = {}
-
-local function isSkillRemote(self)
-    local name = self.Name
-    local cached = remoteCache[name]
-    if cached ~= nil then return cached end
-
-    local lowerName = name:lower()
-    for blockWord in pairs(blockedRemotes) do
-        if lowerName:find(blockWord, 1, true) then
-            remoteCache[name] = false
-            return false
-        end
-    end
-
-    remoteCache[name] = true 
-    return true
-end
-
 local cachedPart = nil
 local lastTarget = nil
 
@@ -907,6 +875,7 @@ local function getTargetCFrame()
     
     return cachedPart
 end
+
 
 task.spawn(function()
     local success, Mouse = pcall(function()
@@ -939,28 +908,28 @@ task.spawn(function()
         local rootPart = getTargetCFrame()
 
         if enabled and rootPart and (method == "FireServer" or method == "InvokeServer") then
-            if isSkillRemote(self) then
-                local targetCFrame = rootPart.CFrame
-                local targetPos = targetCFrame.Position
-                local args = { ... }
-                
-                for i = 1, #args do
-                    local arg = args[i]
-                    local argType = typeof(arg)
-                    if argType == "CFrame" then
-                        args[i] = targetCFrame
-                    elseif argType == "Vector3" then
-                        args[i] = targetPos
-                    end
+            local targetCFrame = rootPart.CFrame
+            local targetPos = targetCFrame.Position
+            local args = { ... }
+            
+            for i = 1, #args do
+                local arg = args[i]
+                local argType = typeof(arg)
+                if argType == "CFrame" then
+                    args[i] = targetCFrame
+                elseif argType == "Vector3" then
+                    args[i] = targetPos
                 end
-                
-                return oldNamecall(self, unpack(args))
             end
+            
+            return oldNamecall(self, unpack(args))
         end
 
         return oldNamecall(self, ...)
     end))
 end)
+
+
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
@@ -1147,16 +1116,23 @@ end)
 
 
 
-
-
-
-
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 16
+getgenv().HitboxSize = 19
 
--- ==========================================
-RunService.RenderStepped:Connect(function()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ใช้เวลานับถ่วง เพื่อไม่ต้องรันคำสั่งหนักๆ ทุกเฟรม (เช่น รันทุกๆ 0.2 วินาที)
+local timeElapsed = 0
+local updateInterval = 0.2 
+
+RunService.RenderStepped:Connect(function(dt)
     if not getgenv().HitboxEnabled then return end
+    
+    timeElapsed = timeElapsed + dt
+    if timeElapsed < updateInterval then return end
+    timeElapsed = 0
 
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
@@ -1166,17 +1142,18 @@ RunService.RenderStepped:Connect(function()
             if hum and hum.Health > 0 then
                 local head = char:FindFirstChild("Head")
                 if head then
-                    head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                    head.Transparency = 1
-                    head.CanCollide = false
-                    head.CastShadow = false
+                    -- เช็คก่อนว่าขนาดไม่เท่ากัน ถึงจะสั่งเปลี่ยน (ช่วยลดภาระการประมวลผล)
+                    if head.Size.X ~= getgenv().HitboxSize then
+                        head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                        head.Transparency = 1
+                        head.CanCollide = false
+                        head.CastShadow = false
+                    end
                 end
             end
         end
     end
 end)
-
-
 
 
 
@@ -1232,60 +1209,83 @@ end
 
 loadConfig()
 
-
 task.spawn(function()
-    task.wait(5)
-getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
-getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
+    getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
+    getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
 
-local LocalPlayer = game:GetService("Players").LocalPlayer
+    local LocalPlayer = game:GetService("Players").LocalPlayer
 
--- ฟังก์ชันเปลี่ยนสีเฉพาะ Object ที่รองรับ (ตัดฟังก์ชันเช็กโฟลเดอร์ทิ้ง เพื่อความเร็วสูงสุด)
-local function applyColor(item)
-    pcall(function()
-        if item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") then
-            item.Color = ColorSequence.new(getgenv().SkillColor)
-        elseif item:IsA("BasePart") or item:IsA("Light") then
-            item.Color = getgenv().SkillColor
+    local ignoredFolders = {
+        workspace:FindFirstChild("SeaEvents"),
+        workspace:FindFirstChild("SeaBeasts"),
+        workspace:FindFirstChild("NPCs"),
+        workspace:FindFirstChild("Map"),
+        workspace:FindFirstChild("Enemies"),
+        workspace:FindFirstChild("Boats"),
+        workspace:FindFirstChild("Characters"),
+        workspace:FindFirstChild("ChestModels"),
+    }
+
+    -- ฟังก์ชันเช็กว่า Object อยู่ในโฟลเดอร์ที่ถูกข้ามหรือไม่
+    local function isIgnored(item)
+        for _, folder in ipairs(ignoredFolders) do
+            if folder and (item == folder or item:IsDescendantOf(folder)) then
+                return true
+            end
+        end
+        return false
+    end
+
+    -- ฟังก์ชันเปลี่ยนสีเฉพาะ Object ที่รองรับ
+    local function applyColor(item)
+        if isIgnored(item) then return end
+        
+        pcall(function()
+            if item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") then
+                item.Color = ColorSequence.new(getgenv().SkillColor)
+            elseif item:IsA("BasePart") or item:IsA("Light") then
+                item.Color = getgenv().SkillColor
+            end
+        end)
+    end
+
+    -- ฟังก์ชันเริ่มแรกตอนตัวละครเกิด
+    local function onCharacterAdded(character)
+        if not character then return end
+        
+        for _, descendant in ipairs(character:GetDescendants()) do
+            if getgenv().SkillColorChangerEnabled then
+                applyColor(descendant)
+            end
+        end
+        
+        -- ดักจับเฉพาะ Object ใหม่ที่เพิ่มเข้ามาในตัวละคร
+        character.DescendantAdded:Connect(function(descendant)
+            if getgenv().SkillColorChangerEnabled then
+                task.defer(function()
+                    applyColor(descendant)
+                end)
+            end
+        end)
+    end
+
+    if LocalPlayer.Character then
+        onCharacterAdded(LocalPlayer.Character)
+    end
+    LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+
+    -- ดักจับเฉพาะเอฟเฟกต์ใหม่ที่ถูกสร้างขึ้นใน Workspace (พร้อมระบบกรองข้ามโฟลเดอร์)
+    workspace.DescendantAdded:Connect(function(descendant)
+        if getgenv().SkillColorChangerEnabled then
+            if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("BasePart") or descendant:IsA("Light") then
+                if not isIgnored(descendant) then
+                    task.defer(function()
+                        applyColor(descendant)
+                    end)
+                end
+            end
         end
     end)
-end
-
--- ฟังก์ชันเริ่มแรกตอนตัวละครเกิด (เปลี่ยนเฉพาะสิ่งที่มีอยู่แล้วแบบรวดเร็ว)
-local function onCharacterAdded(character)
-    if not character then return end
-    
-    for _, descendant in ipairs(character:GetDescendants()) do
-        if getgenv().SkillColorChangerEnabled then
-            applyColor(descendant)
-        end
-    end
-    
-    -- ดักจับเฉพาะ Object ใหม่ที่เพิ่มเข้ามาในตัวละคร
-    character.DescendantAdded:Connect(function(descendant)
-        if getgenv().SkillColorChangerEnabled then
-            task.defer(function()
-                applyColor(descendant)
-            end)
-        end
-    end)
-end
-
-if LocalPlayer.Character then
-    onCharacterAdded(LocalPlayer.Character)
-end
-LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
-
--- ดักจับเฉพาะเอฟเฟกต์ใหม่ที่ถูกสร้างขึ้นใน Workspace (กรองเฉพาะคลาสที่ต้องเปลี่ยนสีทันที)
-workspace.DescendantAdded:Connect(function(descendant)
-    if getgenv().SkillColorChangerEnabled then
-        if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("BasePart") or descendant:IsA("Light") then
-            task.defer(function()
-                applyColor(descendant)
-            end)
-        end
-    end
-end)
 end)
 
 
@@ -1425,7 +1425,6 @@ local function SetAutoRaceAbility(state)
     end)
 end
 
--- ==================== 4. ระบบเปิดเผ่า v4 ====================
 local autoRaceV4Connection = nil
 
 local function SetAutoRaceV4(state)
@@ -1462,7 +1461,6 @@ local function SetAutoRaceV4(state)
     end)
 end
 
--- ==================== 5. ลูปการทำงานหลัก (RenderStepped) ====================
 RunService.RenderStepped:Connect(function(deltaTime)
     local character = GetCharacter()
     if not character then return end
@@ -3516,6 +3514,21 @@ local function runAutoBounty(deltaTime)
     end
 end
 
+local player = game:GetService("Players").LocalPlayer
+local bountyStat = player.leaderstats:WaitForChild("Bounty/Honor")
+
+local bountyParagraph = Bounty:Paragraph({
+    Title = "Bounty: " .. tostring(bountyStat.Value),
+    Desc = "Start bounty hunting missions", -- คำอธิบายด้านล่าง
+    Color = Color3.fromRGB(35, 35, 35),
+    ThumbnailSize = 28
+})
+
+bountyStat.Changed:Connect(function(newValue)
+    bountyParagraph:SetTitle("Bounty: " .. tostring(newValue))
+end)
+
+local function setupSkillSettings()
 local Toggle = Bounty:Toggle({
     Title = "Auto Bounty",
     Desc = "Automatically hunt bounty for you",
@@ -3583,7 +3596,7 @@ local DropdownMyFaction = Bounty:Dropdown({
     end
 })
 
-local function setupSkillSettings()
+
     local UtilitySection = Bounty:Section({ 
         Title = "Settings Skills", 
         Icon = "settings" 
