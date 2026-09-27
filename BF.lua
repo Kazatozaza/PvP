@@ -864,7 +864,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 20
+getgenv().HitboxSize = 12
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
