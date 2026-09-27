@@ -17,6 +17,19 @@ if getgenv().DestinyHub_IsLoading then
 end
 getgenv().DestinyHub_IsLoading = true
 
+-- แจ้งเตือนเริ่มนับถอยหลังรอ 10 วินาที
+pcall(function()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "DestinyHub Info",
+        Text = "เริ่มโหลดข้อมูล...",
+        Duration = 10,
+        Icon = "rbxassetid://97596339693490"
+    })
+end)
+
+-- หน่วงเวลา 10 วินาที
+task.wait(10)
+
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 end)
@@ -851,7 +864,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 18
+getgenv().HitboxSize = 20
 
 -- ==========================================
 RunService.RenderStepped:Connect(function()
