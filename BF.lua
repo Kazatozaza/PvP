@@ -189,7 +189,9 @@ local windowSuccess, Window = pcall(function()
     Theme = "Darker-Soft", -- library theme
     Resizable = true, -- the ability to rezize window
     SideBarWidth = 200, -- sidebar (tabs) width
-    HideSearchBar = true, -- hide search bar
+    HideSearchBar = false, -- hide search bar
+    ScrollBarEnabled = true, -- scrollbars that are located to the right of the scroll frame
+ 
     })
 end)
 
@@ -297,6 +299,7 @@ local dashboardText = [[
 <font color="#888888">Welcome back, <font color="#FFFFFF">]] .. displayName .. [[</font>.
 Enjoy your experience with <font color="#B57CFF">Destiny Hub</font>.</font>
 ]]
+
 
 
 Home:Paragraph({
@@ -469,6 +472,62 @@ Config:Button({
         end)
     end,
 })
+
+
+
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+
+local FPSTag = Window:Tag({
+    Title = "FPS: --",
+    Icon = "gauge",
+    Color = Color3.fromRGB(240, 240, 240),
+})
+
+local frameCount, lastUpdate = 0, os.clock()
+
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    local now = os.clock()
+    local elapsed = now - lastUpdate
+    
+    -- เปลี่ยนจาก 0.5 เป็น 1.0 วินาที เพื่อลดการคำนวณซ้ำบ่อยเกินไป
+    if elapsed >= 1.0 then
+        local fps = math.floor(frameCount / elapsed)
+        FPSTag:SetTitle(string.format("FPS: %d", fps))
+        
+        frameCount = 0
+        lastUpdate = now
+    end
+end)
+
+local PingTag = Window:Tag({
+    Title = "Ping: --ms",
+    Icon = "wifi",
+    Color = Color3.fromRGB(180, 180, 180),
+})
+
+task.spawn(function()
+    local serverStats = Stats:FindFirstChild("Network") 
+        and Stats.Network:FindFirstChild("ServerStatsItem")
+    local dataPing = serverStats and serverStats:FindFirstChild("Data Ping")
+    
+    while true do
+        local success, ping = pcall(function()
+            if dataPing then
+                return math.floor(dataPing:GetValue())
+            end
+            return 0
+        end)
+        
+        if success and ping then
+            PingTag:SetTitle(string.format("Ping: %dms", ping))
+        end
+        
+        task.wait(2)
+    end
+end)
+
 
 
 task.spawn(function()
@@ -1374,17 +1433,17 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- Remote สำหรับฮาคิและเผ่า V3
+
 local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
 local CommF = Remotes and Remotes:FindFirstChild("CommF_")
 local commE = Remotes and Remotes:FindFirstChild("CommE")
 
 -- ==================== 1. ระบบแดช วิ่งเร็ว กระโดดสูง ====================
 local JumpEnabled = false
-local JumpPercentage = 100
+local JumpMultiplier = 1 -- เปลี่ยนเป็นตัวคูณ (เริ่มต้น 1x)
 
 local DashEnabled = false
-local DashPercentage = 100
+local DashMultiplier = 1 -- เปลี่ยนเป็นตัวคูณ (เริ่มต้น 1x)
 
 -- ฟังก์ชันหาตัวละคร
 local function GetCharacter()
@@ -1396,18 +1455,17 @@ local function GetCharacter()
     return LocalPlayer.Character
 end
 
--- ฟังก์ชันอัปเดตระบบกระโดด
+-- ฟังก์ชันอัปเดตระบบกระโดด (ใช้ค่าคูณ)
 local function UpdateJump(hum)
     hum.UseJumpPower = true
-    hum.JumpPower = 50 * (JumpPercentage / 100)
+    hum.JumpPower = 50 * JumpMultiplier
 end
 
--- ฟังก์ชันอัปเดตระบบพุ่ง (Dash)
+-- ฟังก์ชันอัปเดตระบบพุ่ง (Dash) (ใช้ค่าคูณ)
 local function UpdateDash(character, humanoid, deltaTime)
     if humanoid.MoveDirection.Magnitude > 0 then
         local baseSpeed = 25 
-        local speedMultiplier = (DashPercentage / 100)
-        character:TranslateBy(humanoid.MoveDirection * baseSpeed * speedMultiplier * deltaTime)
+        character:TranslateBy(humanoid.MoveDirection * baseSpeed * DashMultiplier * deltaTime)
     end
 end
 
@@ -3272,10 +3330,6 @@ CombatTab:Dropdown({
         getgenv().TargetMode = mode
     end,
 })
-end
-
-setupSkillSettings()
-
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -3564,11 +3618,12 @@ GeneralTab:Toggle({
     end,
 })
 
+end
 
+setupSkillSettings()
 
 
 local function setupSkillSettings()
--- Toggle: เปิด/ปิด การกระโดดสูง
 GeneralTab:Toggle({
     Title = "Jump Boost",
     Desc = "Enhances your jump height significantly.",
@@ -3579,19 +3634,19 @@ GeneralTab:Toggle({
     end,
 })
 
--- Slider: ปรับความแรงกระโดด
+-- Slider: ปรับตัวคูณความสูงกระโดด (1x ถึง 10x)
 GeneralTab:Slider({
-    Title = "Jump Power (%)",
+    Title = "Jump Multiplier",
     Desc = "Adjust the multiplier for your jump power.",
     Flag = "JumpSlider",
-    Increment = 1,
+    Increment = 0.1, -- ละเอียดขึ้นแบบทศนิยม หรือจะเปลี่ยนเป็น 1 ถ้าเอาจำนวนเต็ม
     Value = {
-        Min = 100,
-        Max = 1000,
-        Default = 100
+        Min = 1,
+        Max = 10,
+        Default = 1
     },
     Callback = function(value)
-        JumpPercentage = value
+        JumpMultiplier = value
     end,
 })
 
@@ -3606,22 +3661,21 @@ GeneralTab:Toggle({
     end,
 })
 
--- Slider: ปรับความเร็วพุ่ง
+-- Slider: ปรับตัวคูณความเร็วพุ่ง (1x ถึง 10x)
 GeneralTab:Slider({
-    Title = "Dash Speed (%)",
-    Desc = "Adjust the speed and velocity of your dash.",
+    Title = "Dash Multiplier",
+    Desc = "Adjust the speed multiplier of your dash.",
     Flag = "DashSlider",
-    Increment = 1,
+    Increment = 0.1, -- ละเอียดขึ้นแบบทศนิยม หรือจะเปลี่ยนเป็น 1 ถ้าเอาจำนวนเต็ม
     Value = {
-        Min = 100,
-        Max = 1000,
-        Default = 100
+        Min = 1,
+        Max = 10,
+        Default = 1
     },
     Callback = function(value)
-        DashPercentage = value
+        DashMultiplier = value
     end,
 })
-
 
 Visuals:Toggle({
     Title = "Show Name",
@@ -4214,7 +4268,6 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     end
 end
 
--- ✅ ปรับปรุง: ลดความถี่การค้นหาเป้าหมาย
 local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
 
@@ -4271,6 +4324,7 @@ local function runAutoBounty(deltaTime)
         
         local nearestTargetRoot = nil
         local nearestTargetChar = nil
+        local nearestTargetPlayer = nil
         local shortestDistance = math.huge
 
         for _, targetPlayer in ipairs(Players:GetPlayers()) do
@@ -4304,6 +4358,7 @@ local function runAutoBounty(deltaTime)
                                         shortestDistance = distance
                                         nearestTargetRoot = targetRoot
                                         nearestTargetChar = char
+                                        nearestTargetPlayer = targetPlayer
                                     end
                                 end
                             end
@@ -4313,16 +4368,19 @@ local function runAutoBounty(deltaTime)
             end
         end
         
-        cachedNearestTarget = {root = nearestTargetRoot, char = nearestTargetChar, distance = shortestDistance}
+        cachedNearestTarget = {root = nearestTargetRoot, char = nearestTargetChar, distance = shortestDistance, player = nearestTargetPlayer}
+
         return cachedNearestTarget
     end
 
+    -- 🛡️ ระบบป้องกันตัว (Defense Protocol)
     if defenseProtocolEnabled and charHumanoid and charHumanoid.Health > 0 and rootPart then
         local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
         local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
 
         if currentHpRatio <= healthTriggerThreshold and not isEmergencyAscending then
             isEmergencyAscending = true
+
             if setSafeNoclip then setSafeNoclip(true) end
             charHumanoid.PlatformStand = true
             rootPart.AssemblyLinearVelocity = Vector3.zero
@@ -4362,6 +4420,7 @@ local function runAutoBounty(deltaTime)
     local nearestTargetChar = targetData and targetData.char
     local shortestDistance = targetData and targetData.distance or math.huge
 
+    -- 🎯 พบเป้าหมายและกำลังเข้าหา
     if nearestTargetRoot and nearestTargetChar and charHumanoid and charHumanoid.Health > 0 and shortestDistance <= 10000 then
         pcall(function()
             smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
@@ -4400,6 +4459,7 @@ local function runAutoBounty(deltaTime)
         return 
     end
 
+    -- 🌐 กำลังเปลี่ยนเซิร์ฟเวอร์
     local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
     browserGui.Enabled = true 
     task.wait(1)
