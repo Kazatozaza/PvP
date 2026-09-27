@@ -307,23 +307,25 @@ Home:Paragraph({
 
     Thumbnail = "rbxassetid://79823581173943",
     ThumbnailSize = 48,
+        Buttons = {
+            {
+                Title = "Copy Discord",
+                Icon = "link",
 
-    Buttons = {
-        {
-            Title = "Copy Discord",
-            Icon = "link",
+                Callback = function()
+                    local ok, err = pcall(function()
+                        setclipboard("https://discord.gg/hUMaVECvBz")
+                    end)
 
-            Callback = function()
-                if clipboard then
-                    clipboard("https://discord.gg/hUMaVECvBz")
-                else
-                    warn("[Cybernetic Hub] Clipboard is not supported.")
+                    if ok then
+                    else
+                        warn("[Destiny Hub] Clipboard error: " .. tostring(err))
+                    end
                 end
-            end
+            }
         }
-    }
+    
 })
-
 
 local MyConfig = Window.ConfigManager:Config("DestinyConfig")
 
@@ -514,8 +516,7 @@ ScreenGui.Name = "MobileAimbotGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- กำหนดสี (เผื่อกรณีลืมประกาศตัวแปร FOVThemeColor ด้านบน)
-local FOVThemeColor = FOVThemeColor or Color3.fromRGB(255, 255, 255)
+local FOVThemeColor = _G.FOVThemeColor or Color3.fromRGB(255, 255, 255)
 
 -- สร้างวงกลม FOV
 local FOVUI = Instance.new("Frame")
@@ -1125,148 +1126,235 @@ end)
 
 
 
-
-
 local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
 local FileName = "SkillColorConfig.json"
 
--- ฟังก์ชันเซฟสี
+getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
+getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
+
+--// =========================
+--// Save Config
+--// =========================
+
 local function saveConfig()
     local success, err = pcall(function()
+        local color = getgenv().SkillColor
+
         local data = {
-            R = getgenv().SkillColor.R,
-            G = getgenv().SkillColor.G,
-            B = getgenv().SkillColor.B
+            R = color.R,
+            G = color.G,
+            B = color.B
         }
+
         writefile(FileName, HttpService:JSONEncode(data))
     end)
+
     if not success then
         warn("Failed to save color config: " .. tostring(err))
     end
 end
 
--- ฟังก์ชันโหลดสี
+--// =========================
+--// Load Config
+--// =========================
+
 local function loadConfig()
-    if pcall(function() readfile(FileName) end) then
-        local success, err = pcall(function()
-            local content = readfile(FileName)
-            local data = HttpService:JSONDecode(content)
-            if data and data.R and data.G and data.B then
-                getgenv().SkillColor = Color3.new(data.R, data.G, data.B)
-            end
-        end)
-        if not success then
-            warn("Failed to load color config: " .. tostring(err))
+    local exists = pcall(function()
+        readfile(FileName)
+    end)
+
+    if not exists then
+        return
+    end
+
+    local success, err = pcall(function()
+        local content = readfile(FileName)
+        local data = HttpService:JSONDecode(content)
+
+        if data
+            and data.R ~= nil
+            and data.G ~= nil
+            and data.B ~= nil then
+
+            getgenv().SkillColor = Color3.new(
+                tonumber(data.R) or 1,
+                tonumber(data.G) or 1,
+                tonumber(data.B) or 1
+            )
         end
+    end)
+
+    if not success then
+        warn("Failed to load color config: " .. tostring(err))
     end
 end
 
 loadConfig()
 
-task.spawn(function()
-    getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
-    getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
+--// =========================
+--// Ignored Folders
+--// =========================
 
-    local LocalPlayer = game:GetService("Players").LocalPlayer
+local ignoredFolders = {
+    workspace:FindFirstChild("SeaEvents"),
+    workspace:FindFirstChild("SeaBeasts"),
+    workspace:FindFirstChild("NPCs"),
+    workspace:FindFirstChild("Map"),
+    workspace:FindFirstChild("Enemies"),
+    workspace:FindFirstChild("Boats"),
+    workspace:FindFirstChild("Characters"),
+    workspace:FindFirstChild("ChestModels"),
+}
 
-    local ignoredFolders = {
-        workspace:FindFirstChild("SeaEvents"),
-        workspace:FindFirstChild("SeaBeasts"),
-        workspace:FindFirstChild("NPCs"),
-        workspace:FindFirstChild("Map"),
-        workspace:FindFirstChild("Enemies"),
-        workspace:FindFirstChild("Boats"),
-        workspace:FindFirstChild("Characters"),
-        workspace:FindFirstChild("ChestModels"),
-    }
-
-    -- ฟังก์ชันเช็กว่า Object อยู่ในโฟลเดอร์ที่ถูกข้ามหรือไม่
-    local function isIgnored(item)
-        for _, folder in ipairs(ignoredFolders) do
-            if folder and (item == folder or item:IsDescendantOf(folder)) then
-                return true
-            end
+local function isIgnored(item)
+    for _, folder in ipairs(ignoredFolders) do
+        if folder and (item == folder or item:IsDescendantOf(folder)) then
+            return true
         end
-        return false
     end
 
-    -- ฟังก์ชันเปลี่ยนสีเฉพาะ Object ที่รองรับ
-    local function applyColor(item)
-        if isIgnored(item) then return end
-        
-        pcall(function()
-            if item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") then
-                item.Color = ColorSequence.new(getgenv().SkillColor)
-            elseif item:IsA("BasePart") or item:IsA("Light") then
-                item.Color = getgenv().SkillColor
-            end
-        end)
+    return false
+end
+
+--// =========================
+--// Apply Color
+--// =========================
+
+local function applyColor(item)
+    if not item or isIgnored(item) then
+        return
     end
 
-    -- ฟังก์ชันเริ่มแรกตอนตัวละครเกิด
-    local function onCharacterAdded(character)
-        if not character then return end
-        
-        for _, descendant in ipairs(character:GetDescendants()) do
-            if getgenv().SkillColorChangerEnabled then
-                applyColor(descendant)
-            end
-        end
-        
-        -- ดักจับเฉพาะ Object ใหม่ที่เพิ่มเข้ามาในตัวละคร
-        character.DescendantAdded:Connect(function(descendant)
-            if getgenv().SkillColorChangerEnabled then
-                task.defer(function()
-                    applyColor(descendant)
-                end)
-            end
-        end)
-    end
+    pcall(function()
+        local color = getgenv().SkillColor
 
-    if LocalPlayer.Character then
-        onCharacterAdded(LocalPlayer.Character)
-    end
-    LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+        if item:IsA("ParticleEmitter")
+            or item:IsA("Trail")
+            or item:IsA("Beam") then
 
-    -- ดักจับเฉพาะเอฟเฟกต์ใหม่ที่ถูกสร้างขึ้นใน Workspace (พร้อมระบบกรองข้ามโฟลเดอร์)
-    workspace.DescendantAdded:Connect(function(descendant)
-        if getgenv().SkillColorChangerEnabled then
-            if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Beam") or descendant:IsA("BasePart") or descendant:IsA("Light") then
-                if not isIgnored(descendant) then
-                    task.defer(function()
-                        applyColor(descendant)
-                    end)
-                end
-            end
+            item.Color = ColorSequence.new(color)
+
+        elseif item:IsA("BasePart")
+            or item:IsA("Light") then
+
+            item.Color = color
         end
     end)
+end
+
+--// =========================
+--// Apply To Character
+--// =========================
+
+local function applySkillColorOnly(character)
+    if not character then
+        return
+    end
+
+    if not getgenv().SkillColorChangerEnabled then
+        return
+    end
+
+    for _, descendant in ipairs(character:GetDescendants()) do
+        applyColor(descendant)
+    end
+end
+
+--// =========================
+--// Character Handler
+--// =========================
+
+local function onCharacterAdded(character)
+    if not character then
+        return
+    end
+
+    -- Apply ของเดิม
+    if getgenv().SkillColorChangerEnabled then
+        applySkillColorOnly(character)
+    end
+
+    -- Apply ของที่สร้างใหม่
+    character.DescendantAdded:Connect(function(descendant)
+        if getgenv().SkillColorChangerEnabled then
+            task.defer(function()
+                applyColor(descendant)
+            end)
+        end
+    end)
+end
+
+--// Character ปัจจุบัน
+if LocalPlayer.Character then
+    onCharacterAdded(LocalPlayer.Character)
+end
+
+--// Character เกิดใหม่
+LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+
+--// =========================
+--// Workspace Effect Handler
+--// =========================
+
+workspace.DescendantAdded:Connect(function(descendant)
+    if not getgenv().SkillColorChangerEnabled then
+        return
+    end
+
+    if descendant:IsA("ParticleEmitter")
+        or descendant:IsA("Trail")
+        or descendant:IsA("Beam")
+        or descendant:IsA("BasePart")
+        or descendant:IsA("Light") then
+
+        if not isIgnored(descendant) then
+            task.defer(function()
+                applyColor(descendant)
+            end)
+        end
+    end
 end)
 
+--// =========================
+--// UI Toggle
+--// =========================
 
 System:Toggle({
     Title = "Skill Color Changer",
     Desc = "Change skill effect colors only.",
     Flag = "skill_color_toggle",
     Value = getgenv().SkillColorChangerEnabled,
+
     Callback = function(Value)
         getgenv().SkillColorChangerEnabled = Value
+
         if Value and LocalPlayer.Character then
             applySkillColorOnly(LocalPlayer.Character)
-        else
         end
     end,
 })
+
+--// =========================
+--// Color Picker
+--// =========================
 
 System:Colorpicker({
     Title = "Select Skill Color",
     Desc = "Choose your custom skill effect color.",
     Default = getgenv().SkillColor,
+
     Callback = function(color)
         if not getgenv().RainbowModeEnabled then
             getgenv().SkillColor = color
+
             saveConfig()
 
-            if getgenv().SkillColorChangerEnabled and LocalPlayer.Character then
+            if getgenv().SkillColorChangerEnabled
+                and LocalPlayer.Character then
+
                 applySkillColorOnly(LocalPlayer.Character)
             end
         end
@@ -1994,14 +2082,13 @@ do
         -- HEALTH BACKGROUND
         -- ==================================================
 
-        local hpBG =
-    CreateGuiElement(
-        "Frame",
-        container,
-        "HPBG",
-        UDim2.new(0.58, 0, 0, 3),
-        UDim2.new(0.21, 0, 0, 66)
-    )
+        local hpBG = CreateGuiElement(
+            "Frame",
+            container,
+            "HPBG",
+            UDim2.new(0.58, 0, 0, 3),
+            UDim2.new(0.21, 0, 0, 66)
+        )
 
         hpBG.Visible =
             ESPConfig.ShowHealth
@@ -2196,7 +2283,7 @@ do
 
             gui.LightInfluence = 0
 
-            gui.MaxDistance = 1200
+            gui.MaxDistance = 1000000
 
             gui.Enabled =
                 teamEnabled
@@ -2735,11 +2822,13 @@ local LocalPlayer = Players.LocalPlayer
 local FollowEnabled = false
 local FollowDistance = 300
 local TpBehindDistance = 5
+local FollowKeybind = Enum.KeyCode.E
 
 local currentTarget = nil
 local FollowToggle 
 
-local function ShouldIgnoreTarget(targetChar)
+-- เปลี่ยนชื่อฟังก์ชันเป็น CheckIgnoreCondition
+local function CheckIgnoreCondition(targetChar)
     if not targetChar or not targetChar.Parent then return true end
     
     local targetPlayer = Players:GetPlayerFromCharacter(targetChar)
@@ -2770,7 +2859,6 @@ local function ShouldIgnoreTarget(targetChar)
             inSafeZone = isPlayerInSafeZone(targetPlayer, targetChar) 
         end
         
-        -- วิธี ข: เช็กผ่าน Attribute ของ Roblox ที่เกมส่วนใหญ่นิยมใช้เก็บสถานะ
         if targetChar:GetAttribute("SafeZone") or targetPlayer:GetAttribute("InSafeZone") then
             inSafeZone = true
         end
@@ -2780,15 +2868,9 @@ local function ShouldIgnoreTarget(targetChar)
         end
     end)
     
-    -- 5. เงื่อนไข SafeZone: ถ้าเป้าหมายอยู่ในเซฟโซน ให้ละเว้น (ไม่โจมตี)
     if inSafeZone then
         return true
     end
-    
-    -- 6. เงื่อนไข PvP / Combat (เปิดใช้งานบรรทัดล่างนี้ หากต้องการโจมตีเฉพาะคนที่ติด Combat เท่านั้น)
-    -- if not inCombat then 
-    --     return true 
-    -- end
     
     return false
 end
@@ -2803,11 +2885,11 @@ local function GetClosestPlayerTarget()
 
     for _, otherPlayer in ipairs(Players:GetPlayers()) do
         local targetChar = otherPlayer.Character
-        if targetChar and not ShouldIgnoreTarget(targetChar) then
+        -- อัปเดตเรียกใช้ชื่อฟังก์ชันใหม่
+        if targetChar and not CheckIgnoreCondition(targetChar) then
             local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
             local targetHumanoid = targetChar:FindFirstChildOfClass("Humanoid")
             
-            -- เช็กว่าเป้าหมายยังไม่ตาย
             if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
                 local distance = (rootPart.Position - targetRoot.Position).Magnitude
                 if distance < shortestDistance then
@@ -2852,8 +2934,8 @@ RunService.RenderStepped:Connect(function()
 
     if not rootPart or not myHumanoid or myHumanoid.Health <= 0 then return end
 
-    -- ถ้าไม่มีเป้าหมาย หรือเป้าหมายปัจจุบันเข้าเงื่อนไขถูกเมิน ให้หาใหม่ทันที
-    if not currentTarget or ShouldIgnoreTarget(currentTarget) then
+    -- อัปเดตเรียกใช้ชื่อฟังก์ชันใหม่
+    if not currentTarget or CheckIgnoreCondition(currentTarget) then
         currentTarget = GetClosestPlayerTarget()
     end
 
@@ -2861,12 +2943,10 @@ RunService.RenderStepped:Connect(function()
         local targetRoot = currentTarget:FindFirstChild("HumanoidRootPart")
         local targetHumanoid = currentTarget:FindFirstChildOfClass("Humanoid")
 
-        -- เช็กว่าเป้าหมายตายหรือยัง
         if not targetHumanoid or targetHumanoid.Health <= 0 or not currentTarget.Parent then
             DisableFollowSystem("Target eliminated! Switching...")
-            currentTarget = GetClosestPlayerTarget() -- พยายามหาเป้าหมายใหม่ต่อทันที
+            currentTarget = GetClosestPlayerTarget() 
         elseif targetRoot then
-            -- เทเลพอร์ตไปข้างหลังเป้าหมายอย่างแม่นยำ
             rootPart.CFrame = targetRoot.CFrame * CFrame.new(0, 0, TpBehindDistance)
         end
     end
@@ -2959,15 +3039,11 @@ local function executeDefenseProtocol(charHumanoid, rootPart)
     local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
     local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
 
-    -- ถ้าเลือดต่ำกว่ากำหนด และยังไม่ได้อยู่ในสถานะบินหนี
     if currentHpRatio <= healthTriggerThreshold and not isEmergencyAscending then
         isEmergencyAscending = true
-        if setSafeNoclip then setSafeNoclip(true) end
         charHumanoid.PlatformStand = true
         rootPart.AssemblyLinearVelocity = Vector3.zero
         rootPart.AssemblyAngularVelocity = Vector3.zero
-
-        if notify then notify("Emergency Defense", "Critical HP! Emergency flight activated!") end
 
         local destinationCFrame = rootPart.CFrame + Vector3.new(0, 550, 0)
         local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -2978,7 +3054,6 @@ local function executeDefenseProtocol(charHumanoid, rootPart)
     -- ขณะกำลังบินหนีขึ้นฟ้า
     if isEmergencyAscending then
         charHumanoid.PlatformStand = true
-        if setSafeNoclip then setSafeNoclip(true) end
         rootPart.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
         rootPart.AssemblyAngularVelocity = Vector3.zero
         
@@ -2990,14 +3065,13 @@ local function executeDefenseProtocol(charHumanoid, rootPart)
         if (currentHpRatio >= healthRecoveryThreshold) then
             isEmergencyAscending = false
             charHumanoid.PlatformStand = false
-            if setSafeNoclip then setSafeNoclip(false) end
             rootPart.AssemblyLinearVelocity = Vector3.zero
-            if notify then notify("Emergency Defense", "Resuming normal operations.") end
         end
         
         return 
     end
 end
+
 
 RunService.RenderStepped:Connect(function()
     if not defenseProtocolEnabled then return end
@@ -3042,7 +3116,7 @@ local Toggle = System:Toggle({
 
 
 
-
+local function setupSkillSettings()
 CombatTab:Toggle({
     Title = "CamLock (PC/Mobile)",
     Desc  = "Lock onto targets instantly.",
@@ -3198,8 +3272,9 @@ CombatTab:Dropdown({
         getgenv().TargetMode = mode
     end,
 })
+end
 
-
+setupSkillSettings()
 
 
 local Players = game:GetService("Players")
@@ -3337,20 +3412,21 @@ GeneralTab:Toggle({
     Desc = "Automatically toggles the Ken feature when enabled or disabled",
     Flag = "AutoKenCheck",
     Value = false,
+
     Callback = function(state)
         autoKenEnabled = state
+
         pcall(function()
-            CommE:FireServer(unpack({"Ken", state}))
+            CommE:FireServer("Ken", tostring(state))
         end)
     end,
 })
 
 task.spawn(function()
-    while true do
-        task.wait(1.5)
+    while task.wait(1.5) do
         if autoKenEnabled then
             pcall(function()
-                CommE:FireServer(unpack({"Ken", true}))
+                CommE:FireServer("Ken", "true")
             end)
         end
     end
@@ -3491,7 +3567,7 @@ GeneralTab:Toggle({
 
 
 
-
+local function setupSkillSettings()
 -- Toggle: เปิด/ปิด การกระโดดสูง
 GeneralTab:Toggle({
     Title = "Jump Boost",
@@ -3669,6 +3745,10 @@ local UIKeybind = Config:Keybind({
         Window:Toggle()
     end
 })
+end
+
+setupSkillSettings()
+
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -3876,6 +3956,7 @@ end
 
 
 
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -3895,6 +3976,9 @@ local flySpeed = 220
 local cachedNearestTarget = nil
 local lastTargetSearchTime = 0
 local targetSearchInterval = 0.3  -- ค้นหาเป้าหมายทุก 0.3 วินาที
+
+-- ประกาศตัวแปรไว้ด้านบนสุดและกำหนดค่าเริ่มต้น
+local selectedFaction = "Pirates"
 
 local function checkAndSwitchTeam()
     task.wait(2)
@@ -3949,6 +4033,29 @@ local function pressKey(keyName)
     end)
 end
 
+local function checkMatch(tool, typeName)
+    local name = tool.Name:lower()
+    local tooltip = tool.ToolTip or ""
+    
+    if typeName == "Melee" then
+        return name:find("combat") or name:find("dark step") or name:find("electro") or 
+               name:find("water karate") or name:find("dragon claw") or name:find("superhuman") or 
+               name:find("death step") or name:find("sharkman karate") or name:find("electric claw") or 
+               name:find("dragon talon") or name:find("godhuman") or name:find("sanguine art")
+               
+    elseif typeName == "Sword" then
+        return tooltip:lower() == "sword"
+               
+    elseif typeName == "Fruit" then
+        return tooltip:lower() == "blox fruit" or tool:GetAttribute("Fruit") == true
+               
+    elseif typeName == "Gun" then
+        return tooltip:lower() == "gun"
+    end
+    return false
+end
+
+-- ✅ แก้ไข: equipToolByType ให้เลือกแค่อาวุธที่ตรงกับประเภท
 local function equipToolByType(toolType)
     local myChar = localPlayer.Character
     local backpack = localPlayer:FindFirstChildOfClass("Backpack")
@@ -3957,52 +4064,35 @@ local function equipToolByType(toolType)
     local humanoid = myChar:FindFirstChildOfClass("Humanoid")
     local currentTool = myChar:FindFirstChildOfClass("Tool")
 
-    if not toolType or toolType == "" then
+    if not toolType or toolType == "" or toolType == "None" then
         if currentTool and backpack and humanoid then
             humanoid:UnequipTools()
         end
         return
     end
 
-    local function checkMatch(tool, typeName)
-        local name = tool.Name:lower()
-        local tooltip = tool.ToolTip
-        
-        if typeName == "Melee" then
-            return name:find("combat") or name:find("dark step") or name:find("electro") or 
-                   name:find("water karate") or name:find("dragon claw") or name:find("superhuman") or 
-                   name:find("death step") or name:find("sharkman karate") or name:find("electric claw") or 
-                   name:find("dragon talon") or name:find("godhuman") or name:find("sanguine art")
-                   
-        elseif typeName == "Sword" then
-            return tooltip == "Sword" or (tool:FindFirstChild("Handle") and not name:find("fruit") and 
-                   not name:find("gun") and not name:find("godhuman") and not name:find("combat") and 
-                   not name:find("sanguine") and not name:find("superhuman"))
-                   
-        elseif typeName == "Fruit" then
-            return tooltip == "Blox Fruit" or tool:GetAttribute("Fruit") or name:find("fruit") or 
-                   name:find("rocket") or name:find("spin") or name:find("chop") or name:find("buddha") or 
-                   name:find("dough") or name:find("kitsune") or name:find("leopard") or name:find("dragon")
-                   
-        elseif typeName == "Gun" then
-            return tooltip == "Gun" or name:find("gun") or name:find("slingshot") or 
-                   name:find("kabucha") or name:find("soul guitar") or name:find("rifle") or name:find("bazooka")
-        end
-        return false
-    end
-
+    -- ✅ ถ้าเป็นอาวุธที่ถูกต้องแล้ว ไม่ต้องเปลี่ยน
     if currentTool and checkMatch(currentTool, toolType) then
         return
     end
 
     local itemsToCheck = {}
     if backpack then
-        for _, item in ipairs(backpack:GetChildren()) do table.insert(itemsToCheck, item) end
+        for _, item in ipairs(backpack:GetChildren()) do 
+            if item:IsA("Tool") then
+                table.insert(itemsToCheck, item)
+            end
+        end
     end
-    for _, item in ipairs(myChar:GetChildren()) do table.insert(itemsToCheck, item) end
+    for _, item in ipairs(myChar:GetChildren()) do 
+        if item:IsA("Tool") then
+            table.insert(itemsToCheck, item)
+        end
+    end
 
+    -- ✅ ค้นหาอาวุธที่ตรงกับประเภท
     for _, tool in ipairs(itemsToCheck) do
-        if tool:IsA("Tool") and checkMatch(tool, toolType) then
+        if checkMatch(tool, toolType) then
             if humanoid then
                 humanoid:EquipTool(tool)
                 break
@@ -4011,6 +4101,7 @@ local function equipToolByType(toolType)
     end
 end
 
+-- ✅ แก้ไข: ฟังก์ชันใหม่ที่เลือกอาวุธเฉพาะประเภท (ไม่ซ้อนทับ)
 local function executeSkills(skillTable, toolType)
     if not skillTable or type(skillTable) ~= "table" then return end
     
@@ -4022,17 +4113,24 @@ local function executeSkills(skillTable, toolType)
         end
     end
     
-    if hasValid then
-        equipToolByType(toolType)
-        task.wait(0.05)  -- ลดจาก 0.1 เป็น 0.05
-        for _, skill in ipairs(skillTable) do
-            if skill ~= "None" then
-                pressKey(skill)
-                task.wait(0.01)  -- ลด delay ระหว่าง skill
-            end
+    if not hasValid then return end
+    
+    -- ✅ เลือกอาวุธเพียงครั้งเดียวเท่านั้น
+    equipToolByType(toolType)
+    task.wait(0.05)
+    
+    -- ✅ ใช้สกิลตามลำดับ
+    for _, skill in ipairs(skillTable) do
+        if skill ~= "None" then
+            pressKey(skill)
+            task.wait(0.05)
         end
     end
 end
+
+-- ประกาศตัวแปรควบคุมคูลดาวน์คอมโบไว้ด้านบน (หรือนอกฟังก์ชัน เพื่อให้จำค่าเวลาล่าสุดได้)
+local lastComboTime = 0
+local comboCooldown = 1
 
 local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceToTarget)
     local localPlayer = game:GetService("Players").LocalPlayer
@@ -4075,16 +4173,29 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         myRoot.AssemblyAngularVelocity = Vector3.zero
 
         if distance <= 100 then
-            lastComboTime = lastComboTime or 0
-            comboCooldown = comboCooldown or 1
-
             if tick() - lastComboTime >= comboCooldown then
                 lastComboTime = tick()
                 
-                executeSkills(selectedMeleeSkills, "Melee")
-                executeSkills(selectedSwordSkills, "Sword")
-                executeSkills(selectedFruitSkills, "Fruit")
-                executeSkills(selectedGunSkills, "Gun")
+                -- ✅ แก้ไข: เรียกสกิลแต่ละประเภท พร้อมตรวจสอบความถูกต้อง
+                if selectedMeleeSkills and selectedMeleeSkills[1] ~= "None" then
+                    executeSkills(selectedMeleeSkills, "Melee")
+                    task.wait(0.1)
+                end
+                
+                if selectedSwordSkills and selectedSwordSkills[1] ~= "None" then
+                    executeSkills(selectedSwordSkills, "Sword")
+                    task.wait(0.1)
+                end
+                
+                if selectedFruitSkills and selectedFruitSkills[1] ~= "None" then
+                    executeSkills(selectedFruitSkills, "Fruit")
+                    task.wait(0.1)
+                end
+                
+                if selectedGunSkills and selectedGunSkills[1] ~= "None" then
+                    executeSkills(selectedGunSkills, "Gun")
+                    task.wait(0.1)
+                end
             end
         end
         return
@@ -4217,8 +4328,6 @@ local function runAutoBounty(deltaTime)
             rootPart.AssemblyLinearVelocity = Vector3.zero
             rootPart.AssemblyAngularVelocity = Vector3.zero
 
-            if notify then notify("Emergency Defense", "Critical HP! Emergency flight activated!") end
-
             local destinationCFrame = rootPart.CFrame + Vector3.new(0, 550, 0)
             local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
             local riseTween = TweenService:Create(rootPart, transitionInfo, {CFrame = destinationCFrame})
@@ -4240,7 +4349,6 @@ local function runAutoBounty(deltaTime)
                 charHumanoid.PlatformStand = false
                 if setSafeNoclip then setSafeNoclip(false) end
                 rootPart.AssemblyLinearVelocity = Vector3.zero
-                if notify then notify("Emergency Defense", "Resuming normal operations.") end
             end
             
             return 
@@ -4349,6 +4457,8 @@ bountyStat.Changed:Connect(function(newValue)
     bountyParagraph:SetTitle("Bounty: " .. tostring(newValue))
 end)
 
+
+
 local function setupSkillSettings()
 local Toggle = Bounty:Toggle({
     Title = "Auto Bounty",
@@ -4423,57 +4533,54 @@ local DropdownMyFaction = Bounty:Dropdown({
         Icon = "settings" 
     })
 
-    local DropdownMelee = Bounty:Dropdown({
-        Title = "Melee",
-        Desc = "Select Melee skills (Supports all fighting styles in the game)",
-        Values = {"Z", "X", "C", "None"},
-        Value = {"None"},
-        Multi = true,
-        Locked = false,
-        Flag = "melee_skill_multi",
-        Callback = function(selected)
-            selectedMeleeSkills = selected
-        end
-    })
+        local DropdownMelee = Bounty:Dropdown({
+            Title = "Melee",
+            Desc = "Select Melee skills (Supports all fighting styles in the game)",
+            Values = {"Z", "X", "C"},
+            Multi = true,
+            AllowNone = true,
+            Flag = "melee_skill_multi",
+            Callback = function(selected)
+                selectedMeleeSkills = selected
+            end
+        })
 
-    local DropdownSword = Bounty:Dropdown({
-        Title = "Sword",
-        Desc = "Select Sword skills (Supports all swords in the game)",
-        Values = {"Z", "X", "None"},
-        Value = {"None"},
-        Multi = true,
-        Locked = false,
-        Flag = "sword_skill_multi",
-        Callback = function(selected)
-            selectedSwordSkills = selected
-        end
-    })
+        local DropdownSword = Bounty:Dropdown({
+            Title = "Sword",
+            Desc = "Select Sword skills (Supports all swords in the game)",
+            Values = {"Z", "X"},
+            Multi = true,
+            AllowNone = true,
+            Flag = "sword_skill_multi",
+            Callback = function(selected)
+                selectedSwordSkills = selected
+            end
+        })
 
-    local DropdownFruit = Bounty:Dropdown({
-        Title = "Blox Fruit",
-        Desc = "Select Blox Fruit skills (Supports all fruits in the game)",
-        Values = {"Z", "X", "C", "V", "F", "None"},
-        Value = {"None"},
-        Multi = true,
-        Locked = false,
-        Flag = "fruit_skill_multi",
-        Callback = function(selected)
-            selectedFruitSkills = selected
-        end
-    })
+        local DropdownFruit = Bounty:Dropdown({
+            Title = "Blox Fruit",
+            Desc = "Select Blox Fruit skills (Supports all fruits in the game)",
+            Values = {"Z", "X", "C", "V", "F"},
+            Multi = true,
+            AllowNone = true,
+            Flag = "fruit_skill_multi",
+            Callback = function(selected)
+                selectedFruitSkills = selected
+            end
+        })
 
-    local DropdownGun = Bounty:Dropdown({
-        Title = "Gun",
-        Desc = "Select Gun skills (Supports all guns in the game)",
-        Values = {"Z", "X", "None"},
-        Value = {"None"},
-        Multi = true,
-        Locked = false,
-        Flag = "gun_skill_multi",
-        Callback = function(selected)
-            selectedGunSkills = selected
-        end
-    })
+        local DropdownGun = Bounty:Dropdown({
+            Title = "Gun",
+            Desc = "Select Gun skills (Supports all guns in the game)",
+            Values = {"Z", "X"},
+            Multi = true,
+            AllowNone = true,
+            Flag = "gun_skill_multi",
+            Callback = function(selected)
+                selectedGunSkills = selected
+            end
+        })
 end
+
 
 setupSkillSettings()
