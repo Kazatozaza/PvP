@@ -18,12 +18,12 @@ pcall(function()
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "DestinyHub Info",
         Text = "กำลังรอข้อมูล...",
-        Duration = 8,
+        Duration = 10,
         Icon = "rbxassetid://97596339693490"
     })
 end)
 
-task.wait(8)
+task.wait(10)
 
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
@@ -528,10 +528,18 @@ task.spawn(function()
     end
 end)
 
-
-
 task.spawn(function()
-    task.wait(2)
+    -- รอให้มั่นใจว่า WindUI และตัวแปรที่เกี่ยวข้องพร้อมแล้วจริง ๆ
+    local maxWait = 10
+    local elapsed = 0
+    
+    while not WindUI and elapsed < maxWait do
+        task.wait(0.5)
+        elapsed = elapsed + 0.5
+    end
+
+    -- เพิ่มเวลาเผื่อให้องค์ประกอบภายใน UI สร้างเสร็จสิ้น
+    task.wait(1)
     
     pcall(function()
         if typeof(MyConfig) == "table" and typeof(MyConfig.Load) == "function" then
@@ -539,8 +547,6 @@ task.spawn(function()
         end
     end)
 end)
-
-
 
 
 getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
@@ -1179,12 +1185,6 @@ end)
 
 
 
-
-
-
-
-
-
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
@@ -1195,49 +1195,24 @@ getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
 getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
 
 --// =========================
---// Save Config
+--// Save & Load Config
 --// =========================
 
 local function saveConfig()
-    local success, err = pcall(function()
+    pcall(function()
         local color = getgenv().SkillColor
-
-        local data = {
-            R = color.R,
-            G = color.G,
-            B = color.B
-        }
-
+        local data = { R = color.R, G = color.G, B = color.B }
         writefile(FileName, HttpService:JSONEncode(data))
     end)
-
-    if not success then
-        warn("Failed to save color config: " .. tostring(err))
-    end
 end
 
---// =========================
---// Load Config
---// =========================
-
 local function loadConfig()
-    local exists = pcall(function()
-        readfile(FileName)
-    end)
-
-    if not exists then
-        return
-    end
-
-    local success, err = pcall(function()
+    local success = pcall(function()
+        if not isfile(FileName) then return end
         local content = readfile(FileName)
         local data = HttpService:JSONDecode(content)
 
-        if data
-            and data.R ~= nil
-            and data.G ~= nil
-            and data.B ~= nil then
-
+        if data and data.R ~= nil and data.G ~= nil and data.B ~= nil then
             getgenv().SkillColor = Color3.new(
                 tonumber(data.R) or 1,
                 tonumber(data.G) or 1,
@@ -1245,31 +1220,38 @@ local function loadConfig()
             )
         end
     end)
-
-    if not success then
-        warn("Failed to load color config: " .. tostring(err))
-    end
 end
 
 loadConfig()
 
---// =========================
---// Ignored Folders
---// =========================
-
-local ignoredFolders = {
-    workspace:FindFirstChild("SeaEvents"),
-    workspace:FindFirstChild("SeaBeasts"),
-    workspace:FindFirstChild("NPCs"),
-    workspace:FindFirstChild("Map"),
-    workspace:FindFirstChild("Enemies"),
-    workspace:FindFirstChild("Boats"),
-    workspace:FindFirstChild("Characters"),
-    workspace:FindFirstChild("ChestModels"),
-}
-
 local function isIgnored(item)
-    for _, folder in ipairs(ignoredFolders) do
+    if not item then return true end
+
+    local ignoredNames = {
+        "SeaEvents", "SeaBeasts", "NPCs", "Map", 
+        "Enemies", "Boats", "Characters", "ChestModels",
+        "Workspace", "Terrain"
+    }
+
+    -- เช็คชื่อตัวเองหรือ Parent ขึ้นไป
+    local current = item
+    while current and current ~= workspace do
+        local name = current.Name
+        for _, ignoredName in ipairs(ignoredNames) do
+            if name == ignoredName then
+                return true
+            end
+        end
+        current = current.Parent
+    end
+
+    local char = LocalPlayer.Character
+    if char and (item == char or item:IsDescendantOf(char)) then
+        return false -- อยู่ในตัวเรา อนุญาต
+    end
+
+    for _, name in ipairs(ignoredNames) do
+        local folder = workspace:FindFirstChild(name)
         if folder and (item == folder or item:IsDescendantOf(folder)) then
             return true
         end
@@ -1278,9 +1260,6 @@ local function isIgnored(item)
     return false
 end
 
---// =========================
---// Apply Color
---// =========================
 
 local function applyColor(item)
     if not item or isIgnored(item) then
@@ -1296,9 +1275,11 @@ local function applyColor(item)
 
             item.Color = ColorSequence.new(color)
 
-        elseif item:IsA("BasePart")
-            or item:IsA("Light") then
-
+        elseif item:IsA("BasePart") or item:IsA("Light") then
+            -- ป้องกันไม่ให้ไปเปลี่ยนสีพื้นหลังแมพที่เป็น BasePart หลักๆ
+            if item.Name == "HumanoidRootPart" or item.Name == "Head" or item.Name == "Torso" or item.Name == "UpperTorso" or item.Name == "LowerTorso" then
+                return -- ไม่เปลี่ยนสีตัวละครหลักโดยตรง (เปลี่ยนเฉพาะเอฟเฟกต์)
+            end
             item.Color = color
         end
     end)
@@ -1309,34 +1290,23 @@ end
 --// =========================
 
 local function applySkillColorOnly(character)
-    if not character then
-        return
-    end
-
-    if not getgenv().SkillColorChangerEnabled then
-        return
-    end
+    if not character then return end
+    if not getgenv().SkillColorChangerEnabled then return end
 
     for _, descendant in ipairs(character:GetDescendants()) do
         applyColor(descendant)
     end
 end
 
---// =========================
---// Character Handler
---// =========================
-
 local function onCharacterAdded(character)
-    if not character then
-        return
-    end
+    if not character then return end
 
-    -- Apply ของเดิม
     if getgenv().SkillColorChangerEnabled then
-        applySkillColorOnly(character)
+        task.defer(function()
+            applySkillColorOnly(character)
+        end)
     end
 
-    -- Apply ของที่สร้างใหม่
     character.DescendantAdded:Connect(function(descendant)
         if getgenv().SkillColorChangerEnabled then
             task.defer(function()
@@ -1346,27 +1316,22 @@ local function onCharacterAdded(character)
     end)
 end
 
---// Character ปัจจุบัน
 if LocalPlayer.Character then
     onCharacterAdded(LocalPlayer.Character)
 end
 
---// Character เกิดใหม่
 LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
 
 --// =========================
---// Workspace Effect Handler
+--// Workspace Effect Handler (Safe)
 --// =========================
 
 workspace.DescendantAdded:Connect(function(descendant)
-    if not getgenv().SkillColorChangerEnabled then
-        return
-    end
+    if not getgenv().SkillColorChangerEnabled then return end
 
     if descendant:IsA("ParticleEmitter")
         or descendant:IsA("Trail")
         or descendant:IsA("Beam")
-        or descendant:IsA("BasePart")
         or descendant:IsA("Light") then
 
         if not isIgnored(descendant) then
@@ -1406,19 +1371,15 @@ System:Colorpicker({
     Default = getgenv().SkillColor,
 
     Callback = function(color)
-        if not getgenv().RainbowModeEnabled then
-            getgenv().SkillColor = color
+        getgenv().SkillColor = color
+        saveConfig()
 
-            saveConfig()
-
-            if getgenv().SkillColorChangerEnabled
-                and LocalPlayer.Character then
-
-                applySkillColorOnly(LocalPlayer.Character)
-            end
+        if getgenv().SkillColorChangerEnabled and LocalPlayer.Character then
+            applySkillColorOnly(LocalPlayer.Character)
         end
     end
 })
+
 
 
 -- ==================== ระบบป้องกันการรันซ้ำ ====================
@@ -3618,12 +3579,6 @@ GeneralTab:Toggle({
     end,
 })
 
-end
-
-setupSkillSettings()
-
-
-local function setupSkillSettings()
 GeneralTab:Toggle({
     Title = "Jump Boost",
     Desc = "Enhances your jump height significantly.",
@@ -3634,12 +3589,12 @@ GeneralTab:Toggle({
     end,
 })
 
--- Slider: ปรับตัวคูณความสูงกระโดด (1x ถึง 10x)
+
 GeneralTab:Slider({
     Title = "Jump Multiplier",
     Desc = "Adjust the multiplier for your jump power.",
     Flag = "JumpSlider",
-    Increment = 0.1, -- ละเอียดขึ้นแบบทศนิยม หรือจะเปลี่ยนเป็น 1 ถ้าเอาจำนวนเต็ม
+    Increment = 0.1, 
     Value = {
         Min = 1,
         Max = 10,
