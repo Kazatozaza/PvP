@@ -1,8 +1,6 @@
 local _version = "1.6.66"
 
 if getgenv().DestinyHub_IsLoading then
-    warn("[DestinyHub]: สคริปต์กำลังโหลดอยู่แล้ว กรุณารอสักครู่...")
-    
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "DestinyHub Warning",
@@ -16,35 +14,16 @@ if getgenv().DestinyHub_IsLoading then
 end
 getgenv().DestinyHub_IsLoading = true
 
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
+pcall(function()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "DestinyHub Info",
+        Text = "กำลังรอข้อมูล...",
+        Duration = 8,
+        Icon = "rbxassetid://97596339693490"
+    })
+end)
 
--- เพิ่มส่วนการรอ Services และ Workspace ที่คุณต้องการ
-local requiredServices = {
-    game:GetService("Players"),
-    game:GetService("CoreGui"),
-}
-
-for _, service in ipairs(requiredServices) do
-    if not service then
-        repeat 
-            task.wait() 
-        until game:GetService(service.ClassName) or workspace
-    end
-end
-
--- รอให้ LocalPlayer โหลดเข้ามาจริงๆ
-repeat task.wait() until game:GetService("Players").LocalPlayer
-
-if getgenv().DestinyHubWindow then
-    pcall(function()
-        if typeof(getgenv().DestinyHubWindow.Destroy) == "function" then
-            getgenv().DestinyHubWindow:Destroy()
-        end
-    end)
-    getgenv().DestinyHubWindow = nil
-end
+task.wait(8)
 
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
@@ -60,8 +39,6 @@ if success and result then
         Icon = "rbxassetid://97596339693490"
     })
 else
-    warn("[DestinyHub]: ไม่สามารถโหลด WindUI ได้ กรุณาตรวจสอบอินเทอร์เน็ตหรือลิงก์เวอร์ชัน")
-    
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "DestinyHub Error",
@@ -278,75 +255,74 @@ local Config = Window:Tab({
 GeneralTab:Select()
 
 
-local executorName = (identifyexecutor and identifyexecutor()) or (getexecutorname and getexecutorname()) or "Unknown Executor"
-local safeClipboard = setclipboard or toclipboard or (syn and syn.write_clipboard)
 
--- ตัวแปรสถานะระบบ
-local isOnline = true 
-local isMaintenance = false 
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local LP = Players.LocalPlayer
 
-local statusText = "● ONLINE [STABLE]"
-if isMaintenance then
-    statusText = "▲ MAINTENANCE [UPDATING]"
-elseif not isOnline then
-    statusText = "■ OFFLINE [DOWN]"
+-- Executor
+local executorName =
+    (identifyexecutor and identifyexecutor())
+    or (getexecutorname and getexecutorname())
+    or "Unknown"
+
+-- Device
+local device = "PC"
+if UIS.TouchEnabled and not UIS.KeyboardEnabled then
+    device = "Mobile"
+elseif UIS.TouchEnabled and UIS.KeyboardEnabled then
+    device = "Laptop"
 end
 
--- ตรวจจับประเภทอุปกรณ์ (Device Detection)
-local userInputService = game:GetService("UserInputService")
-local players = game:GetService("Players")
-local localPlayer = players.LocalPlayer
+-- Player
+local username = LP.Name
+local displayName = LP.DisplayName
 
-local deviceText = "Unknown Device"
+local dashboardText = [[
 
-if userInputService.TouchEnabled and not userInputService.KeyboardEnabled then
-    deviceText = "Mobile / Tablet"
-elseif userInputService.TouchEnabled and userInputService.KeyboardEnabled then
-    deviceText = "Laptop / Touch PC"
-else
-    deviceText = "PC / Computer"
-end
+<font color="#555555">━━━━━━━━━━━━━━━━━━━━━━━━</font>
+<font color="#FFFFFF"><b> SYSTEM INFORMATION</b></font>
 
--- Script update & Creator information
-local isScriptUpdated = "Yes (Latest)"
-local updateDate = "September 20, 2026"
-local scriptCreator = "Destiny Hub"
+<font color="#777777">●</font> Status     : <font color="#00FF88"><b>ONLINE</b></font>
+<font color="#777777">●</font> Executor   : <font color="#00BFFF">]] .. executorName .. [[</font>
+<font color="#777777">●</font> Device     : <font color="#FFA500">]] .. device .. [[</font>
+<font color="#555555">━━━━━━━━━━━━━━━━━━━━━━━━</font>
+<font color="#FFFFFF"><b> SCRIPT INFORMATION</b></font>
 
--- Player information
-local playerName = localPlayer.Name
-local playerDisplayName = localPlayer.DisplayName
+<font color="#777777">●</font> Version    : <font color="#B57CFF"><b>v2.0.0</b></font>
+<font color="#777777">●</font> Status     : <font color="#00FF88"><b>UP TO DATE</b></font>
+<font color="#777777">●</font> Creator    : <font color="#FF7043">Destiny Hub</font>
+
+<font color="#555555">━━━━━━━━━━━━━━━━━━━━━━━━</font>
+<font color="#888888">Welcome back, <font color="#FFFFFF">]] .. displayName .. [[</font>.
+Enjoy your experience with <font color="#B57CFF">Destiny Hub</font>.</font>
+]]
+
 
 Home:Paragraph({
-    Title = "⚡ CYBERNETIC HUB | Dashboard",
-    Desc = string.format(
-        "• Status: [ <font color='#00FF00'>%s</font> ]\n• Executor: <font color='#00BFFF'>%s</font>\n• Device: <font color='#FFA500'>%s</font>\n• Created By: <font color='#FF4500'>%s</font>\n• Updated Status: <font color='#00FF00'>%s</font>\n• Last Updated: <font color='#FFFF00'>%s</font>\n• Player: <font color='#FF69B4'>%s (@%s)</font>\n\n────────────────────────\n🌟 Welcome back! Thanks for using our premium script hub.",
-        statusText,
-        executorName,
-        deviceText,
-        scriptCreator,
-        isScriptUpdated,
-        updateDate,
-        playerDisplayName,
-        playerName
-    ),
-    ImageSize = 28,
-    Thumbnail = "rbxassetid://79823581173943", 
-    ThumbnailSize = 58,
+    Title = "● Destiny Hub | Dashboard",
+    Desc = dashboardText,
+
+    ImageSize = 23,
+
+    Thumbnail = "rbxassetid://79823581173943",
+    ThumbnailSize = 48,
+
     Buttons = {
         {
-            Title = "Copy Discord Website",
+            Title = "Copy Discord",
             Icon = "link",
+
             Callback = function()
-                if safeClipboard then
-                    safeClipboard("https://discord.gg/hUMaVECvBz")
+                if clipboard then
+                    clipboard("https://discord.gg/hUMaVECvBz")
                 else
-                    warn("⚠️ [Cybernetic Hub] Your executor does not support automatic clipboard.")
+                    warn("[Cybernetic Hub] Clipboard is not supported.")
                 end
             end
         }
     }
 })
-
 
 
 local MyConfig = Window.ConfigManager:Config("DestinyConfig")
@@ -727,7 +703,7 @@ local lastTargetUpdate = 0
 local targetUpdateInterval = 0.15  
 
 local function UpdateValidTargets()
-    table.clear(cachedValidTargets)  -- ล้างตารางเดิม ไม่ได้สร้างใหม่
+    table.clear(cachedValidTargets)  
     local mode = getgenv().TargetMode or "Both"
 
     if mode == "Both" or mode == "Players Only" then
@@ -750,11 +726,9 @@ local function UpdateValidTargets()
     end
 end
 
--- ฟังก์ชันดึงข้อมูล (ใช้แคช)
 local function GetAllValidTargets()
     local now = tick()
     
-    -- อัปเดตแคชทุก 0.15 วินาที เท่านั้น
     if now - lastTargetUpdate >= targetUpdateInterval then
         lastTargetUpdate = now
         UpdateValidTargets()
@@ -762,7 +736,6 @@ local function GetAllValidTargets()
     
     return cachedValidTargets
 end
-
 
 local function getPlayerStatus(player)
     local character = player.Character
@@ -801,7 +774,6 @@ local function GetReferencePosition()
     end
 end
 
--- คำนวณพรีดิกต์ตำแหน่งเป้าหมายเคลื่อนที่
 local function GetPredictedPosition(targetPart)
     if not targetPart then return Vector3.new(0,0,0) end
     local basePos = targetPart.Position
@@ -849,7 +821,6 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -875,7 +846,6 @@ local function getTargetCFrame()
     
     return cachedPart
 end
-
 
 task.spawn(function()
     local success, Mouse = pcall(function()
@@ -928,8 +898,6 @@ task.spawn(function()
         return oldNamecall(self, ...)
     end))
 end)
-
-
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
@@ -1109,13 +1077,6 @@ end)
 
 
 
-
-
-
-
-
-
-
 getgenv().HitboxEnabled = true
 getgenv().HitboxSize = 19
 
@@ -1123,7 +1084,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- ใช้เวลานับถ่วง เพื่อไม่ต้องรันคำสั่งหนักๆ ทุกเฟรม (เช่น รันทุกๆ 0.2 วินาที)
 local timeElapsed = 0
 local updateInterval = 0.2 
 
@@ -1154,12 +1114,6 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
-
-
-
-
-
-
 
 
 
@@ -1483,416 +1437,1292 @@ RunService.RenderStepped:Connect(function(deltaTime)
 end)
 
 
+--// =========================================================
+--// NEON GLOW ESP
+--// =========================================================
 
+getgenv().ESPConfig = getgenv().ESPConfig or {
+    ShowName = true,
+    ShowDistance = true,
+    ShowLevel = true,
+    ShowBounty = true,
+    ShowHealth = true,
+    ShowStatus = true,
+
+    ShowAllTeams = false,
+    Pirates = true,
+    Marines = true,
+}
+
+--// =========================================================
+--// NEON COLORS
+--// =========================================================
+
+getgenv().COLORS = {
+
+    -- Team
+    Pirates = Color3.fromRGB(255, 35, 75),
+    Marines = Color3.fromRGB(0, 190, 255),
+    Neutral = Color3.fromRGB(230, 230, 240),
+
+    -- General
+    White = Color3.fromRGB(255, 255, 255),
+
+    -- Health
+    HP = Color3.fromRGB(0, 255, 120),
+    HPBG = Color3.fromRGB(8, 8, 14),
+
+    -- Information
+    Level = Color3.fromRGB(255, 220, 0),
+    Bounty = Color3.fromRGB(255, 60, 210),
+
+    -- Status
+    PvPOn = Color3.fromRGB(50, 255, 100),
+    PvPOff = Color3.fromRGB(255, 50, 80),
+
+    SafeZoneOn = Color3.fromRGB(0, 235, 255),
+    SafeZoneOff = Color3.fromRGB(255, 125, 30),
+
+    Combat = Color3.fromRGB(255, 215, 0),
+
+    -- Glow / outline
+    Outline = Color3.fromRGB(5, 5, 10),
+    Glow = Color3.fromRGB(255, 255, 255),
+}
+
+-- ==========================================================
+-- SCOPE 2: Player Information
+-- ==========================================================
+
+local isInSafeZoneRadius,
+    GetTeamInfo,
+    GetLevel,
+    GetBounty,
+    GetDetailedStatus,
+    FormatNumber
 
 do
-    getgenv().ESPConfig = getgenv().ESPConfig or {
-        ShowName = true,
-        ShowDistance = true,
-        ShowLevel = true,
-        ShowBounty = true,
-        ShowHealth = true,
-        ShowStatus = true,
-        ShowAllTeams = false,
-        Pirates = true,
-        Marines = true,
-    }
-    getgenv().COLORS = {
-        Pirates = Color3.fromRGB(255, 45, 45),
-        Marines = Color3.fromRGB(0, 150, 255),
-        Neutral = Color3.fromRGB(220, 220, 220),
-        White = Color3.fromRGB(255, 255, 255),
-        HP = Color3.fromRGB(0, 255, 100),
-        HPBG = Color3.fromRGB(10, 10, 15),
-        Level = Color3.fromRGB(255, 200, 0),
-        Bounty = Color3.fromRGB(255, 80, 180),
-        PvPOn = Color3.fromRGB(50, 255, 50),
-        PvPOff = Color3.fromRGB(255, 50, 80),
-        Combat = Color3.fromRGB(255, 220, 0),
-        SafeZoneOn = Color3.fromRGB(0, 220, 255),
-        SafeZoneOff = Color3.fromRGB(255, 120, 0),
-    }
-end
 
-local isInSafeZoneRadius, GetTeamInfo, GetLevel, GetBounty, GetDetailedStatus, FormatNumber
-do
     local Players = game:GetService("Players")
     local Workspace = game:GetService("Workspace")
-    
-    -- แคชโซน Safe Zone เพื่อไม่ต้องค้นหาซ้ำ
+
+    -- ======================================================
+    -- Safe Zone Cache
+    -- ======================================================
+
     local safeZoneCache = nil
+    local safeZoneList = nil
     local lastSafeZoneCacheTime = 0
 
-    local function getSafeZonesFolder()
-        local now = tick()
-        if safeZoneCache and (now - lastSafeZoneCacheTime) < 5 then
-            return safeZoneCache
-        end
-        
-        local origin = Workspace:FindFirstChild("_WorldOrigin")
-        if origin then
-            safeZoneCache = origin:FindFirstChild("SafeZones")
-            lastSafeZoneCacheTime = now
-            return safeZoneCache
-        end
-        return nil
-    end
+    local function rebuildSafeZoneCache()
 
-    isInSafeZoneRadius = function(character)
-        if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
-        local folder = getSafeZonesFolder()
-        if not folder then return false end
-        
-        local charPos = character.HumanoidRootPart.Position
-        for _, zonePart in ipairs(folder:GetChildren()) do
-            if zonePart:IsA("BasePart") then
-                local zonePos = zonePart.Position
-                local radius = 0
-                local mesh = zonePart:FindFirstChildOfClass("SpecialMesh")
-                if mesh then
-                    radius = mesh.Scale.X / 2
-                else
-                    radius = math.max(zonePart.Size.X, zonePart.Size.Z) / 2
-                end
-                if (charPos - zonePos).Magnitude <= radius then
-                    return true
+        local origin = Workspace:FindFirstChild("_WorldOrigin")
+        local folder = origin and origin:FindFirstChild("SafeZones")
+
+        safeZoneCache = folder
+        safeZoneList = {}
+
+        if folder then
+            for _, zonePart in ipairs(folder:GetChildren()) do
+                if zonePart:IsA("BasePart") then
+
+                    local mesh = zonePart:FindFirstChildOfClass("SpecialMesh")
+                    local radius
+
+                    if mesh then
+                        radius = mesh.Scale.X * 0.5
+                    else
+                        radius = math.max(
+                            zonePart.Size.X,
+                            zonePart.Size.Z
+                        ) * 0.5
+                    end
+
+                    safeZoneList[#safeZoneList + 1] = {
+                        Position = zonePart.Position,
+                        Radius = radius
+                    }
                 end
             end
         end
+
+        lastSafeZoneCacheTime = tick()
+    end
+
+    local function getSafeZoneList()
+
+        local now = tick()
+
+        if not safeZoneList
+            or (now - lastSafeZoneCacheTime) >= 5 then
+
+            rebuildSafeZoneCache()
+        end
+
+        return safeZoneList
+    end
+
+    -- ======================================================
+    -- Safe Zone Detection
+    -- ======================================================
+
+    isInSafeZoneRadius = function(character)
+
+        if not character then
+            return false
+        end
+
+        local root = character:FindFirstChild("HumanoidRootPart")
+
+        if not root then
+            return false
+        end
+
+        local zones = getSafeZoneList()
+
+        if not zones then
+            return false
+        end
+
+        local charPos = root.Position
+
+        for i = 1, #zones do
+            local zone = zones[i]
+            local delta = charPos - zone.Position
+
+            -- Squared distance avoids creating/using Magnitude repeatedly.
+            if (delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z)
+                <= (zone.Radius * zone.Radius) then
+                return true
+            end
+        end
+
         return false
     end
 
+    -- ======================================================
+    -- Team Information
+    -- ======================================================
+
     GetTeamInfo = function(player)
+
         if ESPConfig.ShowAllTeams then
+
             local team = player.Team
-            return team and team.Name or "Player", COLORS.White, true
+
+            return
+                team and team.Name or "Player",
+                COLORS.White,
+                true
         end
 
         local team = player.Team
         local teamName = team and team.Name or "Neutral"
 
         if teamName == "Pirates" then
-            return "Pirates", COLORS.Pirates, ESPConfig.Pirates
+
+            return
+                "Pirates",
+                COLORS.Pirates,
+                ESPConfig.Pirates
+
         elseif teamName == "Marines" then
-            return "Marines", COLORS.Marines, ESPConfig.Marines
+
+            return
+                "Marines",
+                COLORS.Marines,
+                ESPConfig.Marines
         end
 
-        return teamName, COLORS.Neutral, true
+        return
+            teamName,
+            COLORS.Neutral,
+            true
     end
 
+    -- ======================================================
+    -- Level
+    -- ======================================================
+
     GetLevel = function(player)
+
         local data = player:FindFirstChild("Data")
-        if data and data:FindFirstChild("Level") then return data.Level.Value end
+
+        if data and data:FindFirstChild("Level") then
+            return data.Level.Value
+        end
+
         local leaderstats = player:FindFirstChild("leaderstats")
-        if leaderstats and leaderstats:FindFirstChild("Level") then return leaderstats.Level.Value end
+
+        if leaderstats
+            and leaderstats:FindFirstChild("Level") then
+
+            return leaderstats.Level.Value
+        end
+
         return "?"
     end
 
+    -- ======================================================
+    -- Bounty
+    -- ======================================================
+
     GetBounty = function(player)
+
         local leaderstats = player:FindFirstChild("leaderstats")
+
         if leaderstats then
-            local bVal = leaderstats:FindFirstChild("Bounty/Honor")
-            if bVal then return bVal.Value end
+
+            local bounty =
+                leaderstats:FindFirstChild("Bounty/Honor")
+
+            if bounty then
+                return bounty.Value
+            end
         end
+
         return 0
     end
 
-    GetDetailedStatus = function(player)
-        local pvpDisabled = player:GetAttribute("PvpDisabled")
-        local pvpText = (pvpDisabled == true) and "OFF" or "ON"
-        local pvpColor = (pvpDisabled == true) and COLORS.PvPOff or COLORS.PvPOn
-        
-        local inSafeZoneAttr = player:GetAttribute("SafeZone") or (player.Character and player.Character:GetAttribute("SafeZone"))
-        local inRadius = player.Character and isInSafeZoneRadius(player.Character)
-        local hasTempSafeZone = player.Character and player.Character:FindFirstChild("TempSafeZone")
-        local inSafeZone = inSafeZoneAttr == true or inRadius or hasTempSafeZone
-        
-        local safeText = inSafeZone and "Safe" or "Normal"
-        local safeColor = inSafeZone and COLORS.SafeZoneOn or COLORS.SafeZoneOff
+    -- ======================================================
+    -- Detailed Status
+    -- ======================================================
 
-        local inCombatVal = player:GetAttribute("InCombat")
+    GetDetailedStatus = function(player)
+
+        -- PvP
+        local pvpDisabled =
+            player:GetAttribute("PvpDisabled")
+
+        local pvpText =
+            (pvpDisabled == true)
+            and "OFF"
+            or "ON"
+
+        local pvpColor =
+            (pvpDisabled == true)
+            and COLORS.PvPOff
+            or COLORS.PvPOn
+
+        -- Safe Zone
+        local inSafeZoneAttr =
+            player:GetAttribute("SafeZone")
+            or (
+                player.Character
+                and player.Character:GetAttribute("SafeZone")
+            )
+
+        local inRadius =
+            player.Character
+            and isInSafeZoneRadius(player.Character)
+
+        local hasTempSafeZone =
+            player.Character
+            and player.Character:FindFirstChild("TempSafeZone")
+
+        local inSafeZone =
+            inSafeZoneAttr == true
+            or inRadius
+            or hasTempSafeZone
+
+        local safeText =
+            inSafeZone
+            and "SAFE"
+            or "NORMAL"
+
+        local safeColor =
+            inSafeZone
+            and COLORS.SafeZoneOn
+            or COLORS.SafeZoneOff
+
+        -- Combat
+        local inCombatVal =
+            player:GetAttribute("InCombat")
+
         if player.Character then
-            inCombatVal = inCombatVal or player.Character:GetAttribute("InCombat")
+
+            inCombatVal =
+                inCombatVal
+                or player.Character:GetAttribute("InCombat")
         end
-        local isCombat = (inCombatVal == true or inCombatVal == 1 or inCombatVal == "1")
-        local combatText = isCombat and "Combat" or "Ready"
-        local combatColor = isCombat and COLORS.Combat or COLORS.White
-        
-        return pvpText, pvpColor, safeText, safeColor, combatText, combatColor
+
+        local isCombat =
+            inCombatVal == true
+            or inCombatVal == 1
+            or inCombatVal == "1"
+
+        local combatText =
+            isCombat
+            and "COMBAT"
+            or "READY"
+
+        local combatColor =
+            isCombat
+            and COLORS.Combat
+            or COLORS.White
+
+        return
+            pvpText,
+            pvpColor,
+            safeText,
+            safeColor,
+            combatText,
+            combatColor
     end
 
+    -- ======================================================
+    -- Number Format
+    -- ======================================================
+
     FormatNumber = function(number)
+
         local formatted = tostring(number)
+
         if type(number) == "number" then
-            if number >= 1000000 then
-                formatted = string.format("%.1fM", number / 1000000)
+
+            if number >= 1000000000 then
+
+                formatted =
+                    string.format(
+                        "%.1fB",
+                        number / 1000000000
+                    )
+
+            elseif number >= 1000000 then
+
+                formatted =
+                    string.format(
+                        "%.1fM",
+                        number / 1000000
+                    )
+
             elseif number >= 1000 then
-                formatted = string.format("%.1fK", number / 1000)
+
+                formatted =
+                    string.format(
+                        "%.1fK",
+                        number / 1000
+                    )
             end
         end
+
         return formatted
     end
 end
 
--- ==========================================
--- SCOPE 3: ESP Rendering & Connection Handler - ปรับปรุงประสิทธิภาพ
--- ==========================================
+-- ==========================================================
+-- SCOPE 3: ESP Rendering
+-- ==========================================================
+
 do
+
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
-    local LocalPlayer = Players.LocalPlayer
-    local ActiveESPs = {}
-    
-    -- ตัวตั้งเวลา ESP
-    local espUpdateTimer = 0
-    local espUpdateInterval = 0.2 -- อัปเดตทุก 0.2 วินาที แทนทุกเฟรม
 
-    local function CreateGuiElement(className, parent, name, size, position)
-        local element = Instance.new(className)
+    local LocalPlayer = Players.LocalPlayer
+
+    local ActiveESPs = {}
+
+    -- Update interval
+    local espUpdateTimer = 0
+    local espUpdateInterval = 0.55
+
+    -- ======================================================
+    -- Create GUI
+    -- ======================================================
+
+    local function CreateGuiElement(
+        className,
+        parent,
+        name,
+        size,
+        position
+    )
+
+        local element =
+            Instance.new(className)
+
         element.Name = name
         element.Size = size
-        if position then element.Position = position end
+
+        if position then
+            element.Position = position
+        end
+
         element.Parent = parent
+
         return element
     end
 
-    local function BuildUIComponents(container, player)
-        local nameLabel = CreateGuiElement("TextLabel", container, "NameLabel", UDim2.new(1, 0, 0, 20))
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Visible = ESPConfig.ShowName
-        nameLabel.RichText = true
-        nameLabel.TextSize = 13
-        nameLabel.Font = Enum.Font.FredokaOne
-        nameLabel.TextStrokeTransparency = 0.3
-        nameLabel.TextStrokeColor3 = Color3.fromRGB(10, 10, 15)
+    -- ======================================================
+    -- Neon Text Setup
+    -- ======================================================
 
-        local pvpLabel = CreateGuiElement("TextLabel", container, "PvPLabel", UDim2.new(1, 0, 0, 16), UDim2.new(0, 0, 0, 22))
-        pvpLabel.BackgroundTransparency = 1
-        pvpLabel.Visible = ESPConfig.ShowStatus
-        pvpLabel.RichText = true
-        pvpLabel.TextSize = 11
-        pvpLabel.Font = Enum.Font.GothamMedium
-        pvpLabel.TextStrokeTransparency = 0.4
-        pvpLabel.TextStrokeColor3 = Color3.fromRGB(10, 10, 15)
+    local function ApplyNeonText(label)
 
-        local levelLabel = CreateGuiElement("TextLabel", container, "LevelLabel", UDim2.new(1, 0, 0, 16), UDim2.new(0, 0, 0, 40))
-        levelLabel.BackgroundTransparency = 1
-        levelLabel.Visible = ESPConfig.ShowLevel
-        levelLabel.Text = "⚡ LVL: " .. tostring(GetLevel(player))
-        levelLabel.TextColor3 = COLORS.Level
-        levelLabel.TextSize = 11
-        levelLabel.Font = Enum.Font.GothamBold
-        levelLabel.TextStrokeTransparency = 0.4
-        levelLabel.TextStrokeColor3 = Color3.fromRGB(10, 10, 15)
+        label.BackgroundTransparency = 1
 
-        local bountyLabel = CreateGuiElement("TextLabel", container, "BountyLabel", UDim2.new(1, 0, 0, 16), UDim2.new(0, 0, 0, 58))
-        bountyLabel.BackgroundTransparency = 1
-        bountyLabel.Visible = ESPConfig.ShowBounty
-        bountyLabel.Text = "💎 BOUNTY: " .. FormatNumber(GetBounty(player))
-        bountyLabel.TextColor3 = COLORS.Bounty
-        bountyLabel.TextSize = 11
-        bountyLabel.Font = Enum.Font.GothamBold
-        bountyLabel.TextStrokeTransparency = 0.4
-        bountyLabel.TextStrokeColor3 = Color3.fromRGB(10, 10, 15)
+        label.TextStrokeTransparency = 0
+        label.TextStrokeColor3 = COLORS.Outline
 
-        local hpBG = CreateGuiElement("Frame", container, "HPBG", UDim2.new(0.75, 0, 0, 6), UDim2.new(0.125, 0, 0, 80))
-        hpBG.Visible = ESPConfig.ShowHealth
-        hpBG.BackgroundColor3 = COLORS.HPBG
-        hpBG.BorderSizePixel = 0
+        label.RichText = true
 
-        local hpCornerBG = Instance.new("UICorner")
-        hpCornerBG.CornerRadius = UDim.new(1, 0)
-        hpCornerBG.Parent = hpBG
+        label.TextScaled = false
 
-        local hpStroke = Instance.new("UIStroke")
-        hpStroke.Thickness = 1
-        hpStroke.Color = Color3.fromRGB(255, 255, 255)
-        hpStroke.Transparency = 0.8
-        hpStroke.Parent = hpBG
+        label.TextXAlignment =
+            Enum.TextXAlignment.Center
 
-        local hp = CreateGuiElement("Frame", hpBG, "HP", UDim2.new(1, 0, 1, 0))
-        hp.BackgroundColor3 = COLORS.HP
-        hp.BorderSizePixel = 0
-
-        local hpCorner = Instance.new("UICorner")
-        hpCorner.CornerRadius = UDim.new(1, 0)
-        hpCorner.Parent = hp
-
-        return nameLabel, pvpLabel, levelLabel, bountyLabel, hpBG
+        label.TextYAlignment =
+            Enum.TextYAlignment.Center
     end
 
+    -- ======================================================
+    -- Build ESP Components
+    -- ======================================================
+
+    local function BuildUIComponents(
+        container,
+        player
+    )
+
+        -- ==================================================
+        -- NAME
+        -- ==================================================
+
+        local nameLabel =
+            CreateGuiElement(
+                "TextLabel",
+                container,
+                "NameLabel",
+                UDim2.new(1, 0, 0, 18)
+            )
+
+        ApplyNeonText(nameLabel)
+
+        nameLabel.Visible =
+            ESPConfig.ShowName
+
+        nameLabel.TextSize = 12
+
+        nameLabel.Font =
+            Enum.Font.GothamBold
+
+        nameLabel.TextStrokeTransparency = 0.05
+
+        -- ==================================================
+        -- STATUS
+        -- ==================================================
+
+        local pvpLabel =
+            CreateGuiElement(
+                "TextLabel",
+                container,
+                "PvPLabel",
+                UDim2.new(1, 0, 0, 14),
+                UDim2.new(0, 0, 0, 19)
+            )
+
+        ApplyNeonText(pvpLabel)
+
+        pvpLabel.Visible =
+            ESPConfig.ShowStatus
+
+        pvpLabel.TextSize = 9
+
+        pvpLabel.Font =
+            Enum.Font.GothamBold
+
+        pvpLabel.TextStrokeTransparency = 0.05
+
+        -- ==================================================
+        -- LEVEL
+        -- ==================================================
+
+        local levelLabel =
+            CreateGuiElement(
+                "TextLabel",
+                container,
+                "LevelLabel",
+                UDim2.new(1, 0, 0, 14),
+                UDim2.new(0, 0, 0, 34)
+            )
+
+        ApplyNeonText(levelLabel)
+
+        levelLabel.Visible =
+            ESPConfig.ShowLevel
+
+        levelLabel.TextSize = 9
+
+        levelLabel.Font =
+            Enum.Font.GothamBold
+
+        levelLabel.TextColor3 =
+            COLORS.Level
+
+        levelLabel.TextStrokeTransparency = 0.05
+
+        -- ==================================================
+        -- BOUNTY
+        -- ==================================================
+
+        local bountyLabel =
+            CreateGuiElement(
+                "TextLabel",
+                container,
+                "BountyLabel",
+                UDim2.new(1, 0, 0, 14),
+                UDim2.new(0, 0, 0, 49)
+            )
+
+        ApplyNeonText(bountyLabel)
+
+        bountyLabel.Visible =
+            ESPConfig.ShowBounty
+
+        bountyLabel.TextSize = 9
+
+        bountyLabel.Font =
+            Enum.Font.GothamBold
+
+        bountyLabel.TextColor3 =
+            COLORS.Bounty
+
+        bountyLabel.TextStrokeTransparency = 0.05
+
+        -- ==================================================
+        -- HEALTH BACKGROUND
+        -- ==================================================
+
+        local hpBG =
+    CreateGuiElement(
+        "Frame",
+        container,
+        "HPBG",
+        UDim2.new(0.58, 0, 0, 3),
+        UDim2.new(0.21, 0, 0, 66)
+    )
+
+        hpBG.Visible =
+            ESPConfig.ShowHealth
+
+        hpBG.BackgroundColor3 =
+            COLORS.HPBG
+
+        hpBG.BackgroundTransparency = 0.15
+
+        hpBG.BorderSizePixel = 0
+
+        -- Rounded background
+        local hpCornerBG =
+            Instance.new("UICorner")
+
+        hpCornerBG.CornerRadius =
+            UDim.new(1, 0)
+
+        hpCornerBG.Parent = hpBG
+
+        -- Outer neon stroke
+        local hpStroke =
+            Instance.new("UIStroke")
+
+        hpStroke.Thickness = 1
+
+        hpStroke.Color =
+            Color3.fromRGB(
+                0,
+                255,
+                140
+            )
+
+        hpStroke.Transparency = 0.1
+
+        hpStroke.Parent = hpBG
+
+        -- ==================================================
+        -- HEALTH BAR
+        -- ==================================================
+
+        local hp =
+            CreateGuiElement(
+                "Frame",
+                hpBG,
+                "HP",
+                UDim2.new(1, 0, 1, 0)
+            )
+
+        hp.BackgroundColor3 =
+            COLORS.HP
+
+        hp.BorderSizePixel = 0
+
+        local hpCorner =
+            Instance.new("UICorner")
+
+        hpCorner.CornerRadius =
+            UDim.new(1, 0)
+
+        hpCorner.Parent = hp
+
+        -- ==================================================
+        -- HEALTH GLOW
+        -- ==================================================
+
+        local hpGlow =
+            Instance.new("UIStroke")
+
+        hpGlow.Thickness = 1
+
+        hpGlow.Color =
+            COLORS.HP
+
+        hpGlow.Transparency = 0.25
+
+        hpGlow.Parent = hp
+
+        return
+            nameLabel,
+            pvpLabel,
+            levelLabel,
+            bountyLabel,
+            hpBG
+    end
+
+    -- ======================================================
+    -- Create ESP
+    -- ======================================================
+
     local function CreateESP(player)
-        if player == LocalPlayer then return end
+
+        if player == LocalPlayer then
+            return
+        end
 
         local connectionHealth
 
+        -- ==================================================
+        -- Cleanup
+        -- ==================================================
+
         local function CleanupGui()
-            if connectionHealth then 
+
+            if connectionHealth then
+
                 connectionHealth:Disconnect()
-                connectionHealth = nil 
+                connectionHealth = nil
             end
-            if ActiveESPs[player] and ActiveESPs[player].Gui then
+
+            if ActiveESPs[player]
+                and ActiveESPs[player].Gui then
+
                 ActiveESPs[player].Gui:Destroy()
+
                 ActiveESPs[player].Gui = nil
             end
         end
 
+        -- ==================================================
+        -- Setup Character
+        -- ==================================================
+
         local function Setup(character)
-            if not character then return end
+
+            if not character then
+                return
+            end
+
             CleanupGui()
 
-            local head = character:WaitForChild("Head", 10)
-            local humanoid = character:WaitForChild("Humanoid", 10)
+            local head =
+                character:WaitForChild(
+                    "Head",
+                    10
+                )
 
-            if not head or not humanoid then return end
+            local humanoid =
+                character:WaitForChild(
+                    "Humanoid",
+                    10
+                )
 
-            local old = head:FindFirstChild("PlayerESP")
-            if old then old:Destroy() end
+            if not head or not humanoid then
+                return
+            end
 
-            local teamName, teamColor, teamEnabled = GetTeamInfo(player)
+            -- Remove old ESP
+            local old =
+                head:FindFirstChild(
+                    "PlayerESP"
+                )
 
-            local gui = Instance.new("BillboardGui")
+            if old then
+                old:Destroy()
+            end
+
+            -- ==================================================
+            -- Team
+            -- ==================================================
+
+            local teamName,
+                teamColor,
+                teamEnabled =
+                GetTeamInfo(player)
+
+            -- ==================================================
+            -- Billboard
+            -- ==================================================
+
+            local gui =
+                Instance.new("BillboardGui")
+
             gui.Name = "PlayerESP"
+
             gui.Adornee = head
-            gui.Size = UDim2.fromOffset(260, 115)
-            gui.StudsOffset = Vector3.new(0, 3.4, 0)
+
+            gui.Size =
+                UDim2.fromOffset(
+                    210,
+                    86
+                )
+
+            gui.StudsOffset =
+                Vector3.new(
+                    0,
+                    3.0,
+                    0
+                )
+
             gui.AlwaysOnTop = true
-            gui.Enabled = teamEnabled
+
+            gui.LightInfluence = 0
+
+            gui.MaxDistance = 1200
+
+            gui.Enabled =
+                teamEnabled
+
             gui.Parent = head
 
-            local container = CreateGuiElement("Frame", gui, "Container", UDim2.new(1, 0, 1, 0))
+            -- ==================================================
+            -- Container
+            -- ==================================================
+
+            local container =
+                CreateGuiElement(
+                    "Frame",
+                    gui,
+                    "Container",
+                    UDim2.new(1, 0, 1, 0)
+                )
+
             container.BackgroundTransparency = 1
 
-            local nameLabel, pvpLabel, levelLabel, bountyLabel, hpBG = BuildUIComponents(container, player)
-            local hp = hpBG:FindFirstChild("HP")
+            -- ==================================================
+            -- UI
+            -- ==================================================
+
+            local nameLabel,
+                pvpLabel,
+                levelLabel,
+                bountyLabel,
+                hpBG =
+                BuildUIComponents(
+                    container,
+                    player
+                )
+
+            local hp =
+                hpBG:FindFirstChild("HP")
+
+            -- ==================================================
+            -- Health
+            -- ==================================================
 
             local function UpdateHealth(value)
-                local maxHealth = humanoid.MaxHealth
-                if maxHealth <= 0 then maxHealth = 1 end
-                hp.Size = UDim2.new(math.clamp(value / maxHealth, 0, 1), 0, 1, 0)
+
+                local maxHealth =
+                    humanoid.MaxHealth
+
+                if maxHealth <= 0 then
+                    maxHealth = 1
+                end
+
+                local percent =
+                    math.clamp(
+                        value / maxHealth,
+                        0,
+                        1
+                    )
+
+                hp.Size =
+                    UDim2.new(
+                        percent,
+                        0,
+                        1,
+                        0
+                    )
+
+                -- ==========================================
+                -- Dynamic Neon Health Color
+                -- ==========================================
+
+                local healthColor
+
+                if percent > 0.65 then
+
+                    healthColor =
+                        Color3.fromRGB(
+                            0,
+                            255,
+                            120
+                        )
+
+                elseif percent > 0.30 then
+
+                    healthColor =
+                        Color3.fromRGB(
+                            255,
+                            220,
+                            0
+                        )
+
+                else
+
+                    healthColor =
+                        Color3.fromRGB(
+                            255,
+                            35,
+                            65
+                        )
+                end
+
+                hp.BackgroundColor3 =
+                    healthColor
+
+                local glow =
+                    hp:FindFirstChildOfClass(
+                        "UIStroke"
+                    )
+
+                if glow then
+                    glow.Color =
+                        healthColor
+                end
+
+                local bgStroke =
+                    hpBG:FindFirstChildOfClass(
+                        "UIStroke"
+                    )
+
+                if bgStroke then
+                    bgStroke.Color =
+                        healthColor
+                end
             end
+
+            -- ==================================================
+            -- Dynamic Update
+            -- ==================================================
 
             local lastDynamicUpdate = 0
+
             local function UpdateDynamicInfo()
+
                 local now = tick()
-                
-                -- ไม่อัปเดตข้อมูล dynamic ทุกครั้ง แต่อัปเดตแบบประหยัด
-                if now - lastDynamicUpdate < 0.1 then
+
+                if now - lastDynamicUpdate < 0.3 then
                     return
                 end
+
                 lastDynamicUpdate = now
 
-                _, teamColor, teamEnabled = GetTeamInfo(player)
-                
-                nameLabel.Visible = ESPConfig.ShowName
-                pvpLabel.Visible = ESPConfig.ShowStatus
-                levelLabel.Visible = ESPConfig.ShowLevel
-                bountyLabel.Visible = ESPConfig.ShowBounty
-                hpBG.Visible = ESPConfig.ShowHealth
+                -- ==========================================
+                -- Team
+                -- ==========================================
+
+                local newTeamName,
+                    newTeamColor,
+                    newTeamEnabled =
+                    GetTeamInfo(player)
+
+                teamName =
+                    newTeamName
+
+                teamColor =
+                    newTeamColor
+
+                teamEnabled =
+                    newTeamEnabled
+
+                gui.Enabled =
+                    teamEnabled
+
+                -- ==========================================
+                -- Visibility
+                -- ==========================================
+
+                nameLabel.Visible =
+                    ESPConfig.ShowName
+
+                pvpLabel.Visible =
+                    ESPConfig.ShowStatus
+
+                levelLabel.Visible =
+                    ESPConfig.ShowLevel
+
+                bountyLabel.Visible =
+                    ESPConfig.ShowBounty
+
+                hpBG.Visible =
+                    ESPConfig.ShowHealth
+
+                -- ==========================================
+                -- Distance
+                -- ==========================================
 
                 local distStr = ""
-                if ESPConfig.ShowDistance and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
-                    local myHead = LocalPlayer.Character.Head
-                    local distance = math.floor((myHead.Position - head.Position).Magnitude)
-                    distStr = string.format(" <font color=\"rgb(150,150,165)\">[%dm]</font>", distance)
+
+                if ESPConfig.ShowDistance
+                    and LocalPlayer.Character
+                    and LocalPlayer.Character:FindFirstChild("Head") then
+
+                    local myHead =
+                        LocalPlayer.Character.Head
+
+                    local distance =
+                        math.floor(
+                            (
+                                myHead.Position
+                                - head.Position
+                            ).Magnitude
+                        )
+
+                    distStr =
+                        string.format(
+                            " <font color=\"rgb(170,170,190)\">[%dm]</font>",
+                            distance
+                        )
                 end
 
-                nameLabel.Text = string.format("<font color=\"rgb(%d,%d,%d)\">[%s]</font> <font color=\"rgb(255,255,255)\">%s</font>%s", 
-                    math.floor(teamColor.R * 255), 
-                    math.floor(teamColor.G * 255), 
-                    math.floor(teamColor.B * 255), 
-                    teamName, 
-                    player.DisplayName,
-                    distStr
-                )
+                -- ==========================================
+                -- Team Color
+                -- ==========================================
 
-                local pvpText, pvpColor, safeText, safeColor, combatText, combatColor = GetDetailedStatus(player)
-                
-                pvpLabel.Text = string.format("⚡ PvP:<font color=\"rgb(%d,%d,%d)\">%s</font> | <font color=\"rgb(%d,%d,%d)\">%s</font> | <font color=\"rgb(%d,%d,%d)\">%s</font>", 
-                    math.floor(pvpColor.R*255), math.floor(pvpColor.G*255), math.floor(pvpColor.B*255), pvpText,
-                    math.floor(safeColor.R*255), math.floor(safeColor.G*255), math.floor(safeColor.B*255), safeText,
-                    math.floor(combatColor.R*255), math.floor(combatColor.G*255), math.floor(combatColor.B*255), combatText
-                )
+                local tr =
+                    math.floor(
+                        teamColor.R * 255
+                    )
+
+                local tg =
+                    math.floor(
+                        teamColor.G * 255
+                    )
+
+                local tb =
+                    math.floor(
+                        teamColor.B * 255
+                    )
+
+                -- ==========================================
+                -- Name
+                -- ==========================================
+
+                nameLabel.Text =
+                    string.format(
+                        "<font color=\"rgb(%d,%d,%d)\">[%s]</font> <font color=\"rgb(255,255,255)\">%s</font>%s",
+
+                        tr,
+                        tg,
+                        tb,
+
+                        teamName,
+
+                        player.DisplayName,
+
+                        distStr
+                    )
+
+                -- ==========================================
+                -- Status
+                -- ==========================================
+
+                local pvpText,
+                    pvpColor,
+                    safeText,
+                    safeColor,
+                    combatText,
+                    combatColor =
+                    GetDetailedStatus(
+                        player
+                    )
+
+                pvpLabel.Text =
+                    string.format(
+                        "⚡ <font color=\"rgb(255,255,255)\">PvP</font>:<font color=\"rgb(%d,%d,%d)\">%s</font>  |  <font color=\"rgb(%d,%d,%d)\">%s</font>  |  <font color=\"rgb(%d,%d,%d)\">%s</font>",
+
+                        math.floor(
+                            pvpColor.R * 255
+                        ),
+
+                        math.floor(
+                            pvpColor.G * 255
+                        ),
+
+                        math.floor(
+                            pvpColor.B * 255
+                        ),
+
+                        pvpText,
+
+                        math.floor(
+                            safeColor.R * 255
+                        ),
+
+                        math.floor(
+                            safeColor.G * 255
+                        ),
+
+                        math.floor(
+                            safeColor.B * 255
+                        ),
+
+                        safeText,
+
+                        math.floor(
+                            combatColor.R * 255
+                        ),
+
+                        math.floor(
+                            combatColor.G * 255
+                        ),
+
+                        math.floor(
+                            combatColor.B * 255
+                        ),
+
+                        combatText
+                    )
+
+                -- ==========================================
+                -- Level
+                -- ==========================================
+
+                levelLabel.Text =
+                    "⚡ LVL: "
+                    .. tostring(
+                        GetLevel(player)
+                    )
+
+                -- ==========================================
+                -- Bounty
+                -- ==========================================
+
+                bountyLabel.Text =
+                    "💎 BOUNTY: "
+                    .. FormatNumber(
+                        GetBounty(player)
+                    )
             end
 
+            -- Initial
             UpdateDynamicInfo()
-            UpdateHealth(humanoid.Health)
-            
-            ActiveESPs[player] = { Update = UpdateDynamicInfo, Head = head, Gui = gui }
 
-            connectionHealth = humanoid.HealthChanged:Connect(UpdateHealth)
+            UpdateHealth(
+                humanoid.Health
+            )
+
+            -- ==================================================
+            -- Store
+            -- ==================================================
+
+            ActiveESPs[player] = {
+
+                Update =
+                    UpdateDynamicInfo,
+
+                Head =
+                    head,
+
+                Gui =
+                    gui,
+
+                Humanoid =
+                    humanoid,
+            }
+
+            -- ==================================================
+            -- Health Connection
+            -- ==================================================
+
+            connectionHealth =
+                humanoid.HealthChanged:Connect(
+                    UpdateHealth
+                )
         end
+
+        -- ==================================================
+        -- Existing Character
+        -- ==================================================
 
         if player.Character then
+
             task.spawn(function()
-                Setup(player.Character)
+                Setup(
+                    player.Character
+                )
             end)
         end
 
-        player.CharacterAdded:Connect(function(newChar)
-            task.spawn(function()
-                Setup(newChar)
-            end)
-        end)
+        -- ==================================================
+        -- Character Added
+        -- ==================================================
 
-        local leaderstats = player:FindFirstChild("leaderstats") or player:WaitForChild("leaderstats", 5)
+        player.CharacterAdded:Connect(
+            function(newChar)
+
+                task.spawn(function()
+
+                    Setup(newChar)
+
+                end)
+            end
+        )
+
+        -- ==================================================
+        -- Bounty Listener
+        -- ==================================================
+
+        local leaderstats =
+            player:FindFirstChild(
+                "leaderstats"
+            )
+            or player:WaitForChild(
+                "leaderstats",
+                5
+            )
+
         if leaderstats then
-            local bVal = leaderstats:FindFirstChild("Bounty/Honor")
+
+            local bVal =
+                leaderstats:FindFirstChild(
+                    "Bounty/Honor"
+                )
+
             if bVal then
-                bVal.Changed:Connect(function(newValue)
-                    if ActiveESPs[player] and ActiveESPs[player].Gui then
-                        local bountyLbl = ActiveESPs[player].Gui:FindFirstChild("BountyLabel", true)
-                        if bountyLbl then
-                           bountyLbl.Text = "💎 BOUNTY: " .. FormatNumber(newValue)
+
+                bVal.Changed:Connect(
+                    function(newValue)
+
+                        if ActiveESPs[player]
+                            and ActiveESPs[player].Gui then
+
+                            local bountyLbl =
+                                ActiveESPs[player].Gui:FindFirstChild(
+                                    "BountyLabel",
+                                    true
+                                )
+
+                            if bountyLbl then
+
+                                bountyLbl.Text =
+                                    "💎 BOUNTY: "
+                                    .. FormatNumber(
+                                        newValue
+                                    )
+                            end
                         end
                     end
-                end)
+                )
             end
         end
 
-        player:GetPropertyChangedSignal("Team"):Connect(function()
-            if ActiveESPs[player] and ActiveESPs[player].Gui then
-                local _, _, teamEnabled = GetTeamInfo(player)
-                ActiveESPs[player].Gui.Enabled = teamEnabled
+        -- ==================================================
+        -- Team Changed
+        -- ==================================================
+
+        player:GetPropertyChangedSignal(
+            "Team"
+        ):Connect(function()
+
+            if ActiveESPs[player]
+                and ActiveESPs[player].Gui then
+
+                local _,
+                    _,
+                    teamEnabled =
+                    GetTeamInfo(player)
+
+                ActiveESPs[player].Gui.Enabled =
+                    teamEnabled
+
                 ActiveESPs[player].Update()
             end
         end)
 
+        -- ==================================================
+        -- Player Destroy
+        -- ==================================================
 
-        player.Destroying:Connect(function()
-            if ActiveESPs[player] then
-                if ActiveESPs[player].Gui then
-                    ActiveESPs[player].Gui:Destroy()
+        player.Destroying:Connect(
+            function()
+
+                if ActiveESPs[player] then
+
+                    if ActiveESPs[player].Gui then
+                        ActiveESPs[player].Gui:Destroy()
+                    end
+
+                    ActiveESPs[player] = nil
                 end
-                ActiveESPs[player] = nil  -- ลบอ้างอิง
             end
-        end)
+        )
     end
 
-    -- ✅ เปลี่ยนเป็นอัปเดตทุก 0.2 วินาที แทนทุกเฟรม
-    RunService.RenderStepped:Connect(function(dt)
-        espUpdateTimer = espUpdateTimer + dt
-        
-        if espUpdateTimer < espUpdateInterval then
-            return
-        end
-        
-        espUpdateTimer = 0
+    -- ==========================================================
+    -- ESP Update Loop
+    -- ==========================================================
 
-        for _, data in pairs(ActiveESPs) do
-            if data and data.Update and data.Head and data.Head.Parent then
-                data.Update()
-            end
-        end
-    end)
+RunService.Heartbeat:Connect(function(dt)
 
-    for _, player in ipairs(Players:GetPlayers()) do
+    espUpdateTimer = espUpdateTimer + dt
+
+    if espUpdateTimer < espUpdateInterval then
+        return
+    end
+
+    espUpdateTimer = 0
+
+    for _, data in pairs(ActiveESPs) do
+
+        if data
+            and data.Update
+            and data.Head
+            and data.Head.Parent then
+
+            data.Update()
+        end
+    end
+end)
+
+    -- ==========================================================
+    -- Existing Players
+    -- ==========================================================
+
+    for _, player in ipairs(
+        Players:GetPlayers()
+    ) do
+
         CreateESP(player)
     end
 
-    Players.PlayerAdded:Connect(CreateESP)
-end
+    -- ==========================================================
+    -- New Players
+    -- ==========================================================
 
+    Players.PlayerAdded:Connect(
+        CreateESP
+    )
+end
 
 
 --วาปหาผู้เล่น (Improved Version)
@@ -2249,9 +3079,6 @@ local FOVSection = CombatTab:Section({
     Icon = "crosshair" 
 })
 
--- ตัวแปรป้องกัน Callback รันตอนสร้าง UI ครั้งแรก
-local isInitializing = true
-
 CombatTab:Dropdown({
     Title = "Silent Aim Mode",
     Desc  = "Switch targeting parameters.",
@@ -2259,7 +3086,6 @@ CombatTab:Dropdown({
     Values = { "FOV", "180°", "360°" },
     Value  = getgenv().SilentAimMode,
     Callback = function(selected)
-        if isInitializing then return end -- ข้ามการทำงานตอนโหลด UI
         
         local mode = type(selected) == "table" and selected[1] or selected
         
@@ -2290,7 +3116,6 @@ CombatTab:Slider({
         Default = getgenv().FOVRadius
     },
     Callback = function(Value)
-        if isInitializing then return end -- ข้ามการทำงานตอนโหลด UI
         
         getgenv().FOVRadius = Value
         
@@ -2300,8 +3125,6 @@ CombatTab:Slider({
     end,
 })
 
--- ปิดสถานะการโหลด เพื่อให้ Callback ทำงานปกติเมื่อผู้ใช้กดใช้งานจริง
-isInitializing = false
 
 CombatTab:Dropdown({
     Title = "FOV Position",
@@ -2460,8 +3283,6 @@ local FastAttackToggle = GeneralTab:Toggle({
         SetFastAttack(state)
     end,
 })
-
-
 
 local Slider = GeneralTab:Slider({
     Title = "Attack Speed",
