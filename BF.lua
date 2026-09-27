@@ -871,29 +871,11 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 19
+getgenv().HitboxSize = 18
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-
-local timeElapsed = 0
-local updateInterval = 0.5  -- เพิ่มจาก 0.2 เป็น 0.5 (ลด update frequency)
-local modifiedHeads = {}  -- เก็บ heads ที่แปลงแล้ว
-
-RunService.RenderStepped:Connect(function(dt)
+-- ==========================================
+RunService.RenderStepped:Connect(function()
     if not getgenv().HitboxEnabled then return end
-    
-    timeElapsed = timeElapsed + dt
-    if timeElapsed < updateInterval then return end
-    timeElapsed = 0
-
-    -- เคลียร์ heads ที่ถูก respawn
-    for head, _ in pairs(modifiedHeads) do
-        if not head.Parent then
-            modifiedHeads[head] = nil
-        end
-    end
 
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
@@ -902,20 +884,16 @@ RunService.RenderStepped:Connect(function(dt)
             
             if hum and hum.Health > 0 then
                 local head = char:FindFirstChild("Head")
-                if head and not modifiedHeads[head] then  -- แปลงเฉพาะครั้งแรก
-                    pcall(function()
-                        head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                        head.Transparency = 1
-                        head.CanCollide = false
-                        head.CastShadow = false
-                        modifiedHeads[head] = true
-                    end)
+                if head then
+                    head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                    head.Transparency = 1
+                    head.CanCollide = false
+                    head.CastShadow = false
                 end
             end
         end
     end
 end)
-
 
 
 
@@ -4254,7 +4232,7 @@ local function runAutoBounty(deltaTime)
             rootPart.AssemblyLinearVelocity = Vector3.zero
             rootPart.AssemblyAngularVelocity = Vector3.zero
 
-            local destinationCFrame = rootPart.CFrame + Vector3.new(0, 550, 0)
+            local destinationCFrame = rootPart.CFrame + Vector3.new(0, 800, 0)
             local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
             local riseTween = TweenService:Create(rootPart, transitionInfo, {CFrame = destinationCFrame})
             riseTween:Play()
