@@ -624,50 +624,31 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
-    local lastCachedScreenPoint = nil
-local lastCachedRootPart = nil
-
-local function getCachedScreenPoint(rootPart)
-    if rootPart ~= lastCachedRootPart then
-        lastCachedScreenPoint = Camera:WorldToScreenPoint(rootPart.Position)
-        lastCachedRootPart = rootPart
-    end
-    return lastCachedScreenPoint
-end
-
-    
-
     local oldIndex
-oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-    if getgenv().SkillRedirectEnabled and self == Mouse then
-        local rootPart = getTargetCFrame()
-        if rootPart then
-            if idx == "Hit" then 
-                return rootPart.CFrame
-            elseif idx == "Target" then 
-                return rootPart
-            elseif idx == "X" or idx == "Y" then 
-                local screenPoint = getCachedScreenPoint(rootPart)  -- ใช้ cache แทน
-                return screenPoint[idx]
+    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+        if getgenv().SkillRedirectEnabled and self == Mouse then
+            local rootPart = getTargetCFrame()
+            if rootPart then
+                if idx == "Hit" then 
+                    return rootPart.CFrame
+                elseif idx == "Target" then 
+                    return rootPart
+                elseif idx == "X" or idx == "Y" then 
+                    local screenPoint = Camera:WorldToScreenPoint(rootPart.Position)
+                    return screenPoint[idx]
+                end
             end
         end
-    end
-    return oldIndex(self, idx)
-end))
+        return oldIndex(self, idx)
+    end))
 
-local lastProcessedTime = 0
-local processDelay = 0.016  -- ~1 frame @ 60 FPS
-
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local enabled = getgenv().SkillRedirectEnabled
-    
-    if enabled and (method == "FireServer" or method == "InvokeServer") then
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local enabled = getgenv().SkillRedirectEnabled
         local rootPart = getTargetCFrame()
-        
-        if rootPart and (tick() - lastProcessedTime) >= processDelay then
-            lastProcessedTime = tick()
+
+        if enabled and rootPart and (method == "FireServer" or method == "InvokeServer") then
             local targetCFrame = rootPart.CFrame
             local targetPos = targetCFrame.Position
             local args = { ... }
@@ -684,10 +665,9 @@ oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
             
             return oldNamecall(self, unpack(args))
         end
-    end
 
-    return oldNamecall(self, ...)
-end))
+        return oldNamecall(self, ...)
+    end))
 end)
 
 
