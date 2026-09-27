@@ -45,6 +45,21 @@ pcall(function()
     })
 end)
 
+WindUI:AddTheme({
+    Name = "Clean Monolith",
+    
+    Accent = Color3.fromHex("#a1a1aa"),      -- เปลี่ยนไฮไลท์เป็นสีเทาสว่าง (Zinc 400)
+    Background = Color3.fromHex("#09090b"), -- ดำสนิท (Zinc 950)
+    Outline = Color3.fromHex("#27272a"),    -- ขอบสีเทาเข้มตัดเส้นบางๆ (Zinc 800)
+    Text = Color3.fromHex("#f4f4f5"),       -- ตัวหนังสือสีขาวนวล อ่านง่าย
+    Placeholder = Color3.fromHex("#71717a"),-- เทากลางสำหรับข้อความจาง
+    Button = Color3.fromHex("#18181b"),     -- ปุ่มสีเทาดำเข้ม (Zinc 900)
+    Icon = Color3.fromHex("#a1a1aa"),       -- ไอคอนสีเทาสว่าง
+
+    Toggle = Color3.fromHex("#a1a1aa"),     -- สวิตช์เปิดเป็นสีเทาสว่าง
+    ToggleBar = Color3.fromHex("#27272a"),  -- พื้นหลังสวิตช์สีเทาเข้ม
+})
+
 local windowSuccess, Window = pcall(function()
     return WindUI:CreateWindow({
         Title = "Project Destiny [v3.0]",
@@ -52,8 +67,7 @@ local windowSuccess, Window = pcall(function()
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
         Size = UDim2.fromOffset(620, 520),
-        Transparent = true,
-        Theme = "Dark",
+        Theme = "Clean Monolith",
         Resizable = true,
         SideBarWidth = 200,
         HideSearchBar = false,
@@ -94,10 +108,22 @@ task.spawn(function()
         game.Loaded:Wait()
     end
 
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "DestinyHub Warning",
+            Text = "กำลังเปิดใช้งานระบบเซฟ กรุณารอสักครู่...",
+            Duration = 5,
+            Icon = "rbxassetid://97596339693490"
+        })
+    end)
+
     local player = game:GetService("Players").LocalPlayer
-    while not player.Character do
+    while not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") do
         task.wait(0.5)
     end
+    
+    -- เพิ่มเวลารอเพิ่มเติมเผื่อปิงหรือโหลดส่วนประกอบอื่น ๆ ของตัวละครยังไม่เสร็จ
+    task.wait(3)
     
     pcall(function()
         if Window and Window.ConfigManager then
