@@ -4267,7 +4267,7 @@ local function Bounty_Defense()
         root.AssemblyAngularVelocity = Vector3.zero
 
         -- ยกตัวขึ้นทันที
-        root.CFrame = root.CFrame + Vector3.new(0, 100, 0)
+        root.CFrame = root.CFrame + Vector3.new(0, 500, 0)
     end
 
     -- 🛡️ กำลังหนี
