@@ -4248,14 +4248,14 @@ local function Bounty_Defense()
     end
 
     local maxHealth = humanoid.MaxHealth
-
     if maxHealth <= 0 then
         maxHealth = 100
     end
 
-    local healthPercent = (humanoid.Health / maxHealth) * 100
+    local healthPercent =
+        (humanoid.Health / maxHealth) * 100
 
-    -- 🚨 HP ถึงค่าที่กำหนด → หนีทันที
+    -- 🚨 HP ต่ำ → เริ่มหนี
     if healthPercent <= healthTriggerThreshold
         and not isEmergencyAscending then
 
@@ -4263,38 +4263,58 @@ local function Bounty_Defense()
 
         humanoid.PlatformStand = true
 
+        -- หยุดแรงเดิมก่อน
         root.AssemblyLinearVelocity = Vector3.zero
         root.AssemblyAngularVelocity = Vector3.zero
 
-        -- ยกตัวขึ้นทันที
-        root.CFrame = root.CFrame + Vector3.new(0, 800, 0)
+        -- 🚀 ดีดขึ้นทันที
+        root.CFrame =
+            root.CFrame + Vector3.new(0, 800, 0)
+
+        -- เริ่มพุ่งขึ้นทันที
+        root.AssemblyLinearVelocity =
+            Vector3.new(0, ascentVelocity, 0)
     end
 
-    -- 🛡️ กำลังหนี
+    -- 🛡️ กำลังหนีขึ้นฟ้า
     if isEmergencyAscending then
+
         humanoid.PlatformStand = true
 
+        -- บังคับให้ลอยขึ้นตลอดเวลา
         root.AssemblyLinearVelocity =
             Vector3.new(0, ascentVelocity, 0)
 
-        root.AssemblyAngularVelocity = Vector3.zero
+        root.AssemblyAngularVelocity =
+            Vector3.zero
 
-        -- กันตก
-        if root.Position.Y <
-            (workspace.FallenPartsDestroyHeight or -500) + 400 then
-
-            root.CFrame =
-                root.CFrame + Vector3.new(0, 100, 0)
+        -- กันไม่ให้ตัวละครตกลงมา
+        if root.AssemblyLinearVelocity.Y < ascentVelocity then
+            root.AssemblyLinearVelocity =
+                Vector3.new(0, ascentVelocity, 0)
         end
 
-        -- ❤️ HP กลับถึงค่าที่กำหนด → กลับปกติ
+        -- ถ้าถูกดึง/ตกลงมา ให้ดีดกลับขึ้น
+        if root.Position.Y < 300 then
+            root.CFrame =
+                root.CFrame + Vector3.new(0, 100, 0)
+
+            root.AssemblyLinearVelocity =
+                Vector3.new(0, ascentVelocity, 0)
+        end
+
+        -- ❤️ HP เต็มตามค่าที่ตั้งไว้ → หยุดหนี
         if healthPercent >= healthRecoveryThreshold then
+
             isEmergencyAscending = false
 
             humanoid.PlatformStand = false
 
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.AssemblyAngularVelocity = Vector3.zero
+            root.AssemblyLinearVelocity =
+                Vector3.zero
+
+            root.AssemblyAngularVelocity =
+                Vector3.zero
         end
 
         return true
@@ -4303,8 +4323,10 @@ local function Bounty_Defense()
     return false
 end
 
-RunService.Stepped:Connect(function()
-    if Bounty_Defense() then return end
+RunService.Heartbeat:Connect(function()
+    if Bounty_Defense() then
+        return
+    end
 
     for userId, selected in pairs(selectedPlayers) do
         local player = Players:GetPlayerByUserId(userId)
