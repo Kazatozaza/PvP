@@ -2176,21 +2176,28 @@ local ShieldToggle = System:Toggle({
     Callback = function(value)
         defenseProtocolEnabled = value
 
+        -- สั่งยกเลิกสถานะทันทีเมื่อกดปิด
         if not value then
             isEmergencyAscending = false
 
             local character = LocalPlayer.Character
             if character then
                 local humanoid = character:FindFirstChildOfClass("Humanoid")
+                local root = character:FindFirstChild("HumanoidRootPart")
 
                 if humanoid then
                     humanoid.PlatformStand = false
+                end
+
+                if root then
+                    -- หยุดแรงลอยทันที เพื่อให้ตัวละครร่วงลงมาตามปกติ
+                    root.AssemblyLinearVelocity = Vector3.zero
+                    root.AssemblyAngularVelocity = Vector3.zero
                 end
             end
         end
     end
 })
-
 local HPRestoreSlider = System:Slider({
     Title = "Resume Health Percent",
     Desc = "HP percentage required to resume normal operations",
@@ -4234,15 +4241,17 @@ end
 
 
 local function Bounty_Defense()
+    -- ถ้าปิดสวิตช์ Safety Mode ให้หยุดทำงานทันที
+    if not defenseProtocolEnabled then
+        isEmergencyAscending = false
+        return false
+    end
+
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local root = character and character:FindFirstChild("HumanoidRootPart")
 
-    if not defenseProtocolEnabled
-        or not humanoid
-        or humanoid.Health <= 0
-        or not root then
-
+    if not humanoid or humanoid.Health <= 0 or not root then
         isEmergencyAscending = false
         return false
     end
@@ -4252,69 +4261,49 @@ local function Bounty_Defense()
         maxHealth = 100
     end
 
-    local healthPercent =
-        (humanoid.Health / maxHealth) * 100
+    local healthPercent = (humanoid.Health / maxHealth) * 100
 
     -- 🚨 HP ต่ำ → เริ่มหนี
-    if healthPercent <= healthTriggerThreshold
-        and not isEmergencyAscending then
-
+    if healthPercent <= healthTriggerThreshold and not isEmergencyAscending then
         isEmergencyAscending = true
-
         humanoid.PlatformStand = true
 
-        -- หยุดแรงเดิมก่อน
         root.AssemblyLinearVelocity = Vector3.zero
         root.AssemblyAngularVelocity = Vector3.zero
 
-        -- 🚀 ดีดขึ้นทันที
-        root.CFrame =
-            root.CFrame + Vector3.new(0, 800, 0)
-
-        -- เริ่มพุ่งขึ้นทันที
-        root.AssemblyLinearVelocity =
-            Vector3.new(0, ascentVelocity, 0)
+        root.CFrame = root.CFrame + Vector3.new(0, 800, 0)
+        root.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
     end
 
     -- 🛡️ กำลังหนีขึ้นฟ้า
     if isEmergencyAscending then
-
-        humanoid.PlatformStand = true
-
-        -- บังคับให้ลอยขึ้นตลอดเวลา
-        root.AssemblyLinearVelocity =
-            Vector3.new(0, ascentVelocity, 0)
-
-        root.AssemblyAngularVelocity =
-            Vector3.zero
-
-        -- กันไม่ให้ตัวละครตกลงมา
-        if root.AssemblyLinearVelocity.Y < ascentVelocity then
-            root.AssemblyLinearVelocity =
-                Vector3.new(0, ascentVelocity, 0)
+        -- เช็คอีกรอบเผื่อผู้ใช้กดปิดระหว่างกำลังลอย
+        if not defenseProtocolEnabled then
+            isEmergencyAscending = false
+            humanoid.PlatformStand = false
+            root.AssemblyLinearVelocity = Vector3.zero
+            return false
         end
 
-        -- ถ้าถูกดึง/ตกลงมา ให้ดีดกลับขึ้น
-        if root.Position.Y < 300 then
-            root.CFrame =
-                root.CFrame + Vector3.new(0, 100, 0)
+        humanoid.PlatformStand = true
+        root.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
+        root.AssemblyAngularVelocity = Vector3.zero
 
-            root.AssemblyLinearVelocity =
-                Vector3.new(0, ascentVelocity, 0)
+        if root.AssemblyLinearVelocity.Y < ascentVelocity then
+            root.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
+        end
+
+        if root.Position.Y < 300 then
+            root.CFrame = root.CFrame + Vector3.new(0, 100, 0)
+            root.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
         end
 
         -- ❤️ HP เต็มตามค่าที่ตั้งไว้ → หยุดหนี
         if healthPercent >= healthRecoveryThreshold then
-
             isEmergencyAscending = false
-
             humanoid.PlatformStand = false
-
-            root.AssemblyLinearVelocity =
-                Vector3.zero
-
-            root.AssemblyAngularVelocity =
-                Vector3.zero
+            root.AssemblyLinearVelocity = Vector3.zero
+            root.AssemblyAngularVelocity = Vector3.zero
         end
 
         return true
