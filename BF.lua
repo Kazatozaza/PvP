@@ -2579,29 +2579,62 @@ local Toggle = System:Toggle({
 })
 
 local Toggle = System:Toggle({
-    Title = "Fast Mode",
-    Desc = "Enables high-speed mode to reduce lag and improve smoothness.",
+    Title = "Auto Skill Z (All Weapons)",
+    Desc = "กดสกิล Z อัตโนมัติทุกอาวุธ",
     Icon = "rocket",
     Flag = "FastMode123",
     Callback = function(state)
-        local btn = game:GetService("Players").LocalPlayer.PlayerGui.Main.Skills.Godhuman.Z.Mobile
+        -- วนลูปหรือเช็คหาปุ่ม Z จากทุกหมวดหมู่อาวุธใน PlayerGui
+        local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+        local mainSkills = playerGui:FindFirstChild("Main") and playerGui.Main:FindFirstChild("Skills")
         
-        if btn then
+        if not mainSkills then return end
+
+        local targetBtn = nil
+
+        -- รายชื่อหมวดหมู่อาวุธที่เป็นไปได้ทั้งหมดในเกม (เพิ่มได้ตามต้องการ)
+        local categories = {"Godhuman", "Melee", "Sword", "Gun", "BloxFruit", "Fruit"}
+
+        for _, catName in ipairs(categories) do
+            local categoryFolder = mainSkills:FindFirstChild(catName)
+            if categoryFolder then
+                local zButton = categoryFolder:FindFirstChild("Z") and categoryFolder.Z:FindFirstChild("Mobile")
+                -- เช็คว่าปุ่มมีอยู่จริงและมองเห็นได้ (กำลังถืออาวุธนั้นอยู่)
+                if zButton and zButton.Visible then
+                    targetBtn = zButton
+                    break
+                end
+            end
+        end
+
+        -- หากไม่เจอแบบแยกหมวด ให้ลองค้นหาแบบเจาะจงในทุก Folder ใต้ Skills
+        if not targetBtn then
+            for _, folder in ipairs(mainSkills:GetChildren()) do
+                if folder:IsA("Folder") or folder:IsA("Model") then
+                    local zBtn = folder:FindFirstChild("Z") and folder.Z:FindFirstChild("Mobile")
+                    if zBtn and zBtn.Visible then
+                        targetBtn = zBtn
+                        break
+                    end
+                end
+            end
+        end
+
+        -- ทำการกดปุ่มที่เจอ
+        if targetBtn then
             if firesignal then
-                firesignal(btn.MouseButton1Click)
-                firesignal(btn.Activated)
+                firesignal(targetBtn.MouseButton1Click)
+                firesignal(targetBtn.Activated)
             elseif fireclickdetector then
-                fireclickdetector(btn)
+                fireclickdetector(targetBtn)
             else
-                -- Fallback in case firesignal is not supported
-                for _, connection in ipairs(getconnections(btn.MouseButton1Click)) do
+                for _, connection in ipairs(getconnections(targetBtn.MouseButton1Click)) do
                     connection:Fire()
                 end
             end
         end
     end
 })
-
 
 
 
