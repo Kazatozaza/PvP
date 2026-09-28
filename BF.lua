@@ -2868,6 +2868,8 @@ GeneralTab:Toggle({
     end,
 })
 
+GeneralTab:Divider() 
+
 GeneralTab:Toggle({
     Title = "Jump Boost",
     Desc = "Enhances your jump height significantly.",
@@ -4128,7 +4130,7 @@ local function Bounty_CreatePlayer(player)
     playerControls[player.UserId] = Bounty:Toggle({
         Title = string.format("%s (@%s)", player.DisplayName, player.Name),
         Desc = Bounty_GetDesc(player),
-        Icon = "user",
+        Icon = "check",
         Value = false,
         Type = "Toggle",
         Locked = false,
