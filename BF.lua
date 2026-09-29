@@ -12,7 +12,6 @@ if getgenv().__WindUIWindow then
     getgenv().__WindUIWindow = nil
 end
 
--- โหลด WindUI
 local WindUI = loadstring(
     game:HttpGet(
         "https://github.com/Footagesus/WindUI/releases/download/"
@@ -21,168 +20,180 @@ local WindUI = loadstring(
     )
 )()
 
-
 WindUI:AddTheme({
-    Name = "Obsidian Glass",
-
-    Primary = Color3.fromHex("#F4F4F5"),
-
-    White = Color3.fromRGB(255, 255, 255),
-    Black = Color3.fromRGB(0, 0, 0),
-
-    Dialog = Color3.fromHex("#141416"),
-
-    Background = Color3.fromHex("#080809"),
+    Name = "Destiny Neon Violet",
+    Primary = Color3.fromHex("#F0E7FF"),
+    White = Color3.fromHex("#FFFFFF"),
+    Black = Color3.fromHex("#030108"),
+    Dialog = Color3.fromHex("#120722"),
+    Background = Color3.fromHex("#080312"),
     BackgroundTransparency = 0,
-
-    Hover = Color3.fromHex("#202023"),
-
-    PanelBackground = Color3.fromRGB(255, 255, 255),
-    PanelBackgroundTransparency = .97,
-
-    WindowBackground = Color3.fromHex("#080809"),
-    WindowShadow = Color3.fromRGB(0, 0, 0),
-
-    WindowTopbarTitle = Color3.fromHex("#FAFAFA"),
-    WindowTopbarAuthor = Color3.fromHex("#71717A"),
-    WindowTopbarIcon = Color3.fromHex("#A1A1AA"),
-    WindowTopbarButtonIcon = Color3.fromHex("#D4D4D8"),
-
-    WindowSearchBarBackground = Color3.fromHex("#111113"),
-
+    Hover = Color3.fromHex("#4A2080"),
+    PanelBackground = Color3.fromHex("#8B5CF6"),
+    PanelBackgroundTransparency = 0.82,
+    WindowBackground = Color3.fromHex("#080312"),
+    WindowShadow = Color3.fromHex("#C084FC"),
+    WindowTopbarTitle = Color3.fromHex("#F7F0FF"),
+    WindowTopbarAuthor = Color3.fromHex("#DDD6FE"),
+    WindowTopbarIcon = Color3.fromHex("#C084FC"),
+    WindowTopbarButtonIcon = Color3.fromHex("#E9D5FF"),
+    WindowSearchBarBackground = Color3.fromHex("#2A1055"),
     -- Tabs
-    TabBackground = Color3.fromHex("#FFFFFF"),
-    TabBackgroundHover = Color3.fromHex("#FFFFFF"),
-    TabBackgroundHoverTransparency = .95,
-
-    TabBackgroundActive = Color3.fromHex("#FFFFFF"),
-    TabBackgroundActiveTransparency = .87,
-
-    TabText = Color3.fromHex("#A1A1AA"),
-    TabTextTransparency = .25,
+    TabBackground = Color3.fromHex("#6B21A8"),
+    TabBackgroundHover = Color3.fromHex("#8B5CF6"),
+    TabBackgroundHoverTransparency = 0.80,
+    TabBackgroundActive = Color3.fromHex("#C084FC"),
+    TabBackgroundActiveTransparency = 0.70,
+    TabText = Color3.fromHex("#E9D5FF"),
+    TabTextTransparency = 0.12,
     TabTextTransparencyActive = 0,
-
-    TabTitle = Color3.fromHex("#FAFAFA"),
-
-    TabIcon = Color3.fromHex("#D4D4D8"),
-    TabIconTransparency = .2,
+    TabTitle = Color3.fromHex("#FFFFFF"),
+    TabIcon = Color3.fromHex("#D8B4FE"),
+    TabIconTransparency = 0.10,
     TabIconTransparencyActive = 0,
-
     TabBorderTransparency = 1,
-    TabBorderTransparencyActive = .72,
-    TabBorder = Color3.fromRGB(255, 255, 255),
-
+    TabBorderTransparencyActive = 0.25,
+    TabBorder = Color3.fromHex("#E9D5FF"),
+    TabSectionText = Color3.fromHex("#C4B5FD"),
+    TabSectionIcon = Color3.fromHex("#D8B4FE"),
     -- Elements
-    ElementBackground = Color3.fromHex("#FFFFFF"),
-    ElementBackgroundTransparency = .96,
-
-    ElementBackgroundHover =
-        WindUI.Creator:AddColor("ElementBackground", "#FFFFFF", 1 / 13),
-
-    ElementTitle = Color3.fromHex("#F4F4F5"),
-    ElementDesc = Color3.fromHex("#8F8F98"),
-
-    -- ทำให้ Icon ชัดขึ้น
-    ElementIcon = Color3.fromHex("#F4F4F5"),
-
-    -- Popup
-    PopupBackground = Color3.fromHex("#111113"),
-    PopupBackgroundTransparency = "BackgroundTransparency",
-
-    PopupTitle = Color3.fromHex("#F4F4F5"),
-    PopupContent = Color3.fromHex("#A1A1AA"),
-    PopupIcon = Color3.fromHex("#D4D4D8"),
-
-    -- Dialog
-    DialogBackground = Color3.fromHex("#111113"),
-    DialogBackgroundTransparency = "BackgroundTransparency",
-
-    DialogTitle = Color3.fromHex("#FAFAFA"),
-    DialogContent = Color3.fromHex("#A1A1AA"),
-    DialogIcon = Color3.fromHex("#D4D4D8"),
-
+    ElementBackground = Color3.fromHex("#6B21A8"),
+    ElementBackgroundTransparency = 0.85,
+    ElementBackgroundHover = Color3.fromHex("#C084FC"),
+    ElementTitle = Color3.fromHex("#F0E7FF"),
+    ElementDesc = Color3.fromHex("#D8B4FE"),
+    ElementIcon = Color3.fromHex("#F0E7FF"),
+    -- Button
+    Button = Color3.fromHex("#8B5CF6"),
+    ButtonTransparency = 0,
+    ButtonHover = Color3.fromHex("#C084FC"),
+    ButtonText = Color3.fromHex("#FFFFFF"),
+    ButtonTitle = Color3.fromHex("#FFFFFF"),
+    ButtonIcon = Color3.fromHex("#FFFFFF"),
+    ButtonBorder = Color3.fromHex("#E9D5FF"),
+    ButtonBorderTransparency = 0.25,
+    -- Input / Textbox
+    Input = Color3.fromHex("#2A1055"),
+    InputBackground = Color3.fromHex("#2A1055"),
+    InputText = Color3.fromHex("#F7F0FF"),
+    InputPlaceholder = Color3.fromHex("#C084FC"),
+    InputBorder = Color3.fromHex("#A855F7"),
+    InputBorderTransparency = 0.40,
+    -- Dropdown
+    Dropdown = Color3.fromHex("#2A1055"),
+    DropdownBackground = Color3.fromHex("#2A1055"),
+    DropdownItem = Color3.fromHex("#E9D5FF"),
+    DropdownItemHover = Color3.fromHex("#7C3AED"),
+    DropdownItemHoverTransparency = 0.80,
+    DropdownItemActive = Color3.fromHex("#C084FC"),
+    DropdownItemText = Color3.fromHex("#FFFFFF"),
+    DropdownIcon = Color3.fromHex("#C084FC"),
+    DropdownTabBorder = Color3.fromHex("#A855F7"),
+    -- Keybind
+    Keybind = Color3.fromHex("#2A1055"),
+    KeybindBackground = Color3.fromHex("#2A1055"),
+    KeybindText = Color3.fromHex("#F0E7FF"),
+    KeybindBorder = Color3.fromHex("#A855F7"),
+    KeybindBorderTransparency = 0.40,
+    -- Colorpicker
+    Colorpicker = Color3.fromHex("#8B5CF6"),
+    ColorpickerHue = Color3.fromHex("#C084FC"),
+    ColorpickerBorder = Color3.fromHex("#E9D5FF"),
+    -- Popup (แก้ไขให้เป็นตัวเลขแล้ว)
+    PopupBackground = Color3.fromHex("#2A1055"),
+    PopupBackgroundTransparency = 0,
+    PopupTitle = Color3.fromHex("#F0E7FF"),
+    PopupContent = Color3.fromHex("#D8B4FE"),
+    PopupIcon = Color3.fromHex("#C084FC"),
+    -- Dialog (แก้ไขให้เป็นตัวเลขแล้ว)
+    DialogBackground = Color3.fromHex("#2A1055"),
+    DialogBackgroundTransparency = 0,
+    DialogTitle = Color3.fromHex("#FFFFFF"),
+    DialogContent = Color3.fromHex("#D8B4FE"),
+    DialogIcon = Color3.fromHex("#E9D5FF"),
     -- Toggle
-    Toggle = Color3.fromHex("#27272A"),
-    ToggleBar = Color3.fromRGB(255, 255, 255),
-
+    Toggle = Color3.fromHex("#C084FC"),
+    ToggleBar = Color3.fromHex("#FFFFFF"),
+    ToggleEnabled = Color3.fromHex("#C084FC"),
+    ToggleDisabled = Color3.fromHex("#3B1E69"),
     -- Checkbox
-    Checkbox = Color3.fromHex("#E4E4E7"),
-    CheckboxIcon = Color3.fromRGB(255, 255, 255),
-
-    CheckboxBorder = Color3.fromRGB(255, 255, 255),
-    CheckboxBorderTransparency = .72,
-
+    Checkbox = Color3.fromHex("#C084FC"),
+    CheckboxIcon = Color3.fromHex("#FFFFFF"),
+    CheckboxBorder = Color3.fromHex("#E9D5FF"),
+    CheckboxBorderTransparency = 0.30,
     -- Slider
-    SliderIcon = Color3.fromHex("#D4D4D8"),
-    Slider = Color3.fromHex("#E4E4E7"),
-    SliderThumb = Color3.fromRGB(255, 255, 255),
-
-    SliderIconFrom = Color3.fromHex("#52525B"),
-    SliderIconTo = Color3.fromHex("#F4F4F5"),
-
+    SliderIcon = Color3.fromHex("#F0E7FF"),
+    Slider = Color3.fromHex("#E9D5FF"),
+    SliderThumb = Color3.fromHex("#FFFFFF"),
+    SliderIconFrom = Color3.fromHex("#A855F7"),
+    SliderIconTo = Color3.fromHex("#FFFFFF"),
     -- Tooltip
-    Tooltip = Color3.fromHex("#1A1A1D"),
-    TooltipText = Color3.fromRGB(255, 255, 255),
-
-    TooltipSecondary = Color3.fromHex("#71717A"),
-    TooltipSecondaryText = Color3.fromRGB(255, 255, 255),
-
+    Tooltip = Color3.fromHex("#3B1E69"),
+    TooltipText = Color3.fromHex("#FFFFFF"),
+    TooltipSecondary = Color3.fromHex("#D8B4FE"),
+    TooltipSecondaryText = Color3.fromHex("#FFFFFF"),
     -- Sections
-    TabSectionIcon = Color3.fromHex("#D4D4D8"),
-    SectionIcon = Color3.fromHex("#D4D4D8"),
-
-    SectionExpandIcon = Color3.fromRGB(255, 255, 255),
-    SectionExpandIconTransparency = .35,
-
-    SectionBox = Color3.fromRGB(255, 255, 255),
-    SectionBoxTransparency = .965,
-
-    SectionBoxBorder = Color3.fromRGB(255, 255, 255),
-    SectionBoxBorderTransparency = .8,
-
-    SectionBoxBackground = Color3.fromRGB(255, 255, 255),
-    SectionBoxBackgroundTransparency = .975,
-
+    SectionIcon = Color3.fromHex("#D8B4FE"),
+    SectionText = Color3.fromHex("#D8B4FE"),
+    SectionTitle = Color3.fromHex("#F0E7FF"),
+    SectionExpandIcon = Color3.fromHex("#FFFFFF"),
+    SectionExpandIconTransparency = 0.15,
+    SectionBox = Color3.fromHex("#C084FC"),
+    SectionBoxTransparency = 0.82,
+    SectionBoxBorder = Color3.fromHex("#E9D5FF"),
+    SectionBoxBorderTransparency = 0.45,
+    SectionBoxBackground = Color3.fromHex("#8B5CF6"),
+    SectionBoxBackgroundTransparency = 0.85,
     -- Search
-    SearchBarBorder = Color3.fromRGB(255, 255, 255),
-    SearchBarBorderTransparency = .8,
-
+    SearchBarBorder = Color3.fromHex("#A855F7"),
+    SearchBarBorderTransparency = 0.50,
+    SearchBarText = Color3.fromHex("#F0E7FF"),
+    SearchBarPlaceholder = Color3.fromHex("#C084FC"),
+    SearchBarIcon = Color3.fromHex("#C084FC"),
     -- Notification
-    Notification = Color3.fromHex("#111113"),
-
-    NotificationTitle = Color3.fromHex("#F4F4F5"),
+    Notification = Color3.fromHex("#2A1055"),
+    NotificationTitle = Color3.fromHex("#F0E7FF"),
     NotificationTitleTransparency = 0,
-
-    NotificationContent = Color3.fromHex("#A1A1AA"),
-    NotificationContentTransparency = .3,
-
-    NotificationDuration = Color3.fromRGB(255, 255, 255),
-    NotificationDurationTransparency = .9,
-
-    NotificationBorder = Color3.fromRGB(255, 255, 255),
-    NotificationBorderTransparency = .8,
-
-    DropdownTabBorder = Color3.fromRGB(255, 255, 255),
-
-    LabelBackground = Color3.fromRGB(255, 255, 255),
-    LabelBackgroundTransparency = .96,
+    NotificationContent = Color3.fromHex("#D8B4FE"),
+    NotificationContentTransparency = 0.10,
+    NotificationDuration = Color3.fromHex("#D8B4FE"),
+    NotificationDurationTransparency = 0.10,
+    NotificationBorder = Color3.fromHex("#C084FC"),
+    NotificationBorderTransparency = 0.40,
+    NotificationIcon = Color3.fromHex("#D8B4FE"),
+    -- Label
+    LabelBackground = Color3.fromHex("#C084FC"),
+    LabelBackgroundTransparency = 0.82,
+    LabelText = Color3.fromHex("#FFFFFF"),
+    -- Scrollbar
+    Scrollbar = Color3.fromHex("#C084FC"),
+    ScrollbarBackground = Color3.fromHex("#2A1055"),
+    ScrollbarTransparency = 0.25,
+    -- Divider / Line
+    Divider = Color3.fromHex("#A855F7"),
+    DividerTransparency = 0.60,
+    Line = Color3.fromHex("#A855F7"),
+    LineTransparency = 0.60,
 })
-
 
 local windowSuccess, Window = pcall(function()
     return WindUI:CreateWindow({
         Title = "Project Destiny [v3.0]",
-        Icon = "rbxassetid://97596339693490",
+        Icon = "rbxassetid://82953555902230",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
         Size = UDim2.fromOffset(620, 520),
-        Theme = "Obsidian Glass",
+        Theme = "Destiny Neon Violet",
         Resizable = true,
         SideBarWidth = 200,
         HideSearchBar = false,
         ScrollBarEnabled = true,
     })
 end)
+
+
+Window:SetIconSize(40) 
+
 
 getgenv().__WindUIWindow = Window
 
@@ -217,46 +228,7 @@ task.spawn(function()
 end)
 
 
-Config:Button({
-    Title = "Save Configuration",
-    Desc = "บันทึกการตั้งค่าปัจจุบันทั้งหมด",
-    Callback = function()
-        if MyConfig and typeof(MyConfig.Save) == "function" then
-            MyConfig:Save()
-            WindUI:Notify({
-                Title = "System Saved",
-                Content = "บันทึกการตั้งค่าลงระบบเรียบร้อยแล้ว!",
-                Icon = "bell-ring",
-                Duration = 3,
-            })
-        else
-            WindUI:Notify({
-                Title = "Error",
-                Content = "ไม่พบระบบ Config หรือยังไม่ได้โหลด!",
-                Icon = "x",
-                Duration = 3,
-            })
-        end
-    end,
-})
 
-Config:Button({
-    Title = "Reset Configuration",
-    Desc = "ลบไฟล์เซฟและคืนค่าเริ่มต้น",
-    Callback = function()
-        pcall(function()
-            if MyConfig and typeof(MyConfig.Delete) == "function" then
-                MyConfig:Delete()
-            end
-        end)
-        WindUI:Notify({
-            Title = "System Warning",
-            Content = "ล้างค่าการตั้งค่าทั้งหมดเรียบร้อยแล้ว!",
-            Icon = "bell-ring", 
-            Duration = 3,
-        })
-    end,
-})
 
 
 
@@ -272,13 +244,6 @@ local executorName =
     or (getexecutorname and getexecutorname())
     or "Unknown"
 
--- Device
-local device = "PC"
-if UIS.TouchEnabled and not UIS.KeyboardEnabled then
-    device = "Mobile"
-elseif UIS.TouchEnabled and UIS.KeyboardEnabled then
-    device = "Laptop"
-end
 
 -- Player
 local username = LP.Name
@@ -286,34 +251,25 @@ local displayName = LP.DisplayName
 
 local dashboardText = [[
 
-<font color="#555555">━━━━━━━━━━━━━━━━━━━━━━━━</font>
 <font color="#FFFFFF"><b> SYSTEM INFORMATION</b></font>
-
-<font color="#777777">●</font> Status     : <font color="#00FF88"><b>ONLINE</b></font>
-<font color="#777777">●</font> Executor   : <font color="#00BFFF">]] .. executorName .. [[</font>
-<font color="#777777">●</font> Device     : <font color="#FFA500">]] .. device .. [[</font>
 <font color="#555555">━━━━━━━━━━━━━━━━━━━━━━━━</font>
+<font color="#777777">●</font> Executor   : <font color="#00BFFF">]] .. executorName .. [[</font>
+
 <font color="#FFFFFF"><b> SCRIPT INFORMATION</b></font>
 
-<font color="#777777">●</font> Version    : <font color="#B57CFF"><b>v2.0.0</b></font>
-<font color="#777777">●</font> Status     : <font color="#00FF88"><b>UP TO DATE</b></font>
-<font color="#777777">●</font> Creator    : <font color="#FF7043">Destiny Hub</font>
-
-<font color="#555555">━━━━━━━━━━━━━━━━━━━━━━━━</font>
 <font color="#888888">Welcome back, <font color="#FFFFFF">]] .. displayName .. [[</font>.
 Enjoy your experience with <font color="#B57CFF">Destiny Hub</font>.</font>
 ]]
-
 
 
 Home:Paragraph({
     Title = "● Destiny Hub | Dashboard",
     Desc = dashboardText,
 
-    ImageSize = 23,
+    ImageSize = 50,
 
-    Thumbnail = "rbxassetid://79823581173943",
-    ThumbnailSize = 48,
+    Thumbnail = "rbxassetid://71825656372618",
+    ThumbnailSize = 70,
         Buttons = {
             {
                 Title = "Copy Discord",
@@ -334,6 +290,49 @@ Home:Paragraph({
     
 })
 
+
+local Group = Config:Group({})
+Group:Button({
+    Title = "Save",
+    Icon  = "save",
+    Callback = function()
+        if MyConfig and typeof(MyConfig.Save) == "function" then
+            MyConfig:Save()
+            WindUI:Notify({
+                Title = "System Saved",
+                Content = "บันทึกการตั้งค่าลงระบบเรียบร้อยแล้ว!",
+                Icon = "bell-ring",
+                Duration = 3,
+            })
+        else
+            WindUI:Notify({
+                Title = "Error",
+                Content = "ไม่พบระบบ Config หรือยังไม่ได้โหลด!",
+                Icon = "x",
+                Duration = 3,
+            })
+        end
+    end,
+})
+
+Group:Button({
+    Title = "Reset",
+    Icon  = "rotate-ccw",
+    Callback = function()
+        pcall(function()
+            if MyConfig and typeof(MyConfig.Delete) == "function" then
+                MyConfig:Delete()
+            end
+        end)
+        WindUI:Notify({
+            Title = "System Warning",
+            Content = "ล้างค่าการตั้งค่าทั้งหมดเรียบร้อยแล้ว!",
+            Icon = "bell-ring", 
+            Duration = 3,
+        })
+    end,
+})
+Config:Divider() 
 
 getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
 getgenv().SilentAimMode = getgenv().SilentAimMode or "FOV"
@@ -681,7 +680,6 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -691,14 +689,6 @@ getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
 local cachedPart = nil
 local lastTarget = nil
-
--- รายชื่อ Remote ที่ห้ามแก้ไข Arguments (เพิ่มชื่อ Remote ที่ไม่ใช่สกิลตรงนี้ได้เลย)
-local ignoredRemotes = {
-    ["GetPlayerData"] = true,
-    ["GetData"] = true,
-    ["LoadData"] = true,
-    -- สามารถเพิ่มชื่อ Remote อื่นๆ ที่ไม่อยากให้โดนดักได้ที่นี่
-}
 
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
@@ -717,16 +707,42 @@ local function getTargetCFrame()
 end
 
 task.spawn(function()
-    task.wait(5)
+      local Character = LocalPlayer.Character
+
+    if not Character then
+        Character = LocalPlayer.CharacterAdded:Wait()
+    end
+
+    -- รอ Character ให้พร้อมจริง ๆ
+    local Humanoid = Character:WaitForChild("Humanoid")
+    local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+    -- รอจน Character เข้า Workspace
+    repeat
+        task.wait()
+    until Character:IsDescendantOf(workspace)
+
+    -- รอจนตัวละครมีชีวิต
+    repeat
+        task.wait()
+    until Humanoid.Parent
+        and RootPart.Parent
+        and Humanoid.Health > 0
+
+    -- ==========================================
+    -- GET MOUSE
+    -- ==========================================
 
     local success, Mouse = pcall(function()
         return LocalPlayer:GetMouse()
     end)
-    if not success or not Mouse then return end
+
+    if not success or not Mouse then
+        return
+    end
 
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        -- ดักเฉพาะ Mouse เท่านั้น และป้องกันการดักมั่วกับ Remote/Instance อื่น
         if getgenv().SkillRedirectEnabled and self == Mouse then
             local rootPart = getTargetCFrame()
             if rootPart then
@@ -750,11 +766,6 @@ task.spawn(function()
         local rootPart = getTargetCFrame()
 
         if enabled and rootPart and (method == "FireServer" or method == "InvokeServer") then
-            -- ข้าม Remote ที่อยู่ในรายการยกเว้น (เช่น GetPlayerData)
-            if self and self.Name and ignoredRemotes[self.Name] then
-                return oldNamecall(self, ...)
-            end
-
             local targetCFrame = rootPart.CFrame
             local targetPos = targetCFrame.Position
             local args = { ... }
@@ -775,7 +786,6 @@ task.spawn(function()
         return oldNamecall(self, ...)
     end))
 end)
-
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
@@ -947,32 +957,39 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
+
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 11
+getgenv().HitboxSize = 8
 
--- ==========================================
-RunService.RenderStepped:Connect(function()
-    if not getgenv().HitboxEnabled then return end
+task.spawn(function()
+    while true do
+        if getgenv().HitboxEnabled then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character then
+                    local char = p.Character
+                    local hum = char:FindFirstChildOfClass("Humanoid")
 
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character then
-            local char = p.Character
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            
-            if hum and hum.Health > 0 then
-                local head = char:FindFirstChild("Head")
-                if head then
-                    head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                    head.Transparency = 1
-                    head.CanCollide = false
-                    head.CastShadow = false
+                    if hum and hum.Health > 0 then
+                        local head = char:FindFirstChild("Head")
+
+                        if head then
+                            head.Size = Vector3.new(
+                                getgenv().HitboxSize,
+                                getgenv().HitboxSize,
+                                getgenv().HitboxSize
+                            )
+                            head.Transparency = 1
+                            head.CanCollide = false
+                            head.CastShadow = false
+                        end
+                    end
                 end
             end
         end
+
+        task.wait(1)
     end
 end)
-
-
 
 
 local function initializeSkillSettings()
@@ -992,10 +1009,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
-if not Remotes then
-    warn("❌ ไม่พบ ReplicatedStorage.Remotes")
-    return
-end
 
 local CommF = Remotes:WaitForChild("CommF_", 10)
 local commE = Remotes:WaitForChild("CommE", 10)
@@ -2198,6 +2211,7 @@ local ShieldToggle = System:Toggle({
         end
     end
 })
+
 local HPRestoreSlider = System:Slider({
     Title = "Resume Health Percent",
     Desc = "HP percentage required to resume normal operations",
@@ -2276,7 +2290,6 @@ local Input = System:Input({
 })
 
 
-Config:Divider()
 local Configjson = Config:Section({ 
     Title = "Config.json", 
     Icon = "file" -- หรือใช้ "folder", "save" ก็ได้ครับ
@@ -2353,27 +2366,33 @@ Config:Button({
         end)
     end,
 })
-
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 
 local FPSTag = Window:Tag({
     Title = "FPS: --",
     Icon = "gauge",
-    Color = Color3.fromRGB(240, 240, 240),
+    Color = Color3.fromHex("#C4B5FD"), -- ม่วงอ่อนสดใส
 })
 
 local frameCount, lastUpdate = 0, os.clock()
-
 RunService.RenderStepped:Connect(function()
     frameCount = frameCount + 1
     local now = os.clock()
     local elapsed = now - lastUpdate
     
-    -- เปลี่ยนจาก 0.5 เป็น 1.0 วินาที เพื่อลดการคำนวณซ้ำบ่อยเกินไป
     if elapsed >= 1.0 then
         local fps = math.floor(frameCount / elapsed)
         FPSTag:SetTitle(string.format("FPS: %d", fps))
+        
+        -- เปลี่ยนสีตามระดับ FPS เพิ่มเติมให้สวยขึ้น
+        if fps >= 90 then
+            FPSTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงสด (ดีเยี่ยม)
+        elseif fps >= 60 then
+            FPSTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงอ่อน (ดี)
+        else
+            FPSTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงขาว (ปกติ)
+        end
         
         frameCount = 0
         lastUpdate = now
@@ -2383,7 +2402,7 @@ end)
 local PingTag = Window:Tag({
     Title = "Ping: --ms",
     Icon = "wifi",
-    Color = Color3.fromRGB(180, 180, 180),
+    Color = Color3.fromHex("#A855F7"), -- ม่วงหลัก
 })
 
 task.spawn(function()
@@ -2401,6 +2420,15 @@ task.spawn(function()
         
         if success and ping then
             PingTag:SetTitle(string.format("Ping: %dms", ping))
+            
+            -- เปลี่ยนสีตามค่า Ping เพิ่มความมีชีวิต
+            if ping <= 50 then
+                PingTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงสด (เร็ว)
+            elseif ping <= 100 then
+                PingTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงปกติ
+            else
+                PingTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงเข้ม (ช้า)
+            end
         end
         
         task.wait(2)
@@ -2767,17 +2795,18 @@ GeneralTab:Toggle({
         SetAutoRaceAbility(state)
     end,
 })
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
--- จัดเก็บสถานะและฟังก์ชันกลาง
 local IceWalkConfig = {
     GiantFloor = nil,
     FloorConnection = nil,
-    FloorRunning = false
+    FloorRunning = false,
+    LastPosition = nil,
+    LastSeaLevel = nil,
+    LastState = nil
 }
 
 local IceWalkUtils = {}
@@ -2787,28 +2816,44 @@ function IceWalkUtils.Cleanup()
         IceWalkConfig.FloorConnection:Disconnect()
         IceWalkConfig.FloorConnection = nil
     end
+
     if IceWalkConfig.GiantFloor then
         IceWalkConfig.GiantFloor:Destroy()
         IceWalkConfig.GiantFloor = nil
     end
+
+    IceWalkConfig.LastPosition = nil
+    IceWalkConfig.LastSeaLevel = nil
+    IceWalkConfig.LastState = nil
+
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
+
     if hum then
         hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
     end
 end
 
 function IceWalkUtils.GetOrCreateFloor()
-    if not IceWalkConfig.GiantFloor or not IceWalkConfig.GiantFloor.Parent then
+    if not IceWalkConfig.GiantFloor
+        or not IceWalkConfig.GiantFloor.Parent then
+
         local part = Instance.new("Part")
-        part.Size = Vector3.new(1000, 1, 1000) -- ขยายขนาดให้กว้างขึ้นเล็กน้อยเพื่อรองรับการพุ่ง/วาปไม่ให้ตก
+        part.Name = "IceWalkFloor"
+        part.Size = Vector3.new(1000, 1, 1000)
         part.Anchored = true
         part.CanCollide = true
-        part.Transparency = 1 
+        part.CanTouch = false
+        part.CanQuery = false
+        part.CastShadow = false
+        part.Transparency = 1
         part.Material = Enum.Material.SmoothPlastic
         part.Parent = Workspace
+
         IceWalkConfig.GiantFloor = part
     end
+
     return IceWalkConfig.GiantFloor
 end
 
@@ -2817,6 +2862,7 @@ GeneralTab:Toggle({
     Desc = "Does not sink; Soru and warping work normally.",
     Flag = "IceWalk",
     Value = false,
+
     Callback = function(state)
         IceWalkConfig.FloorRunning = state
 
@@ -2826,54 +2872,137 @@ GeneralTab:Toggle({
         end
 
         local floorPart = IceWalkUtils.GetOrCreateFloor()
+
         local raycastParams = RaycastParams.new()
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 
-        IceWalkConfig.FloorConnection = RunService.RenderStepped:Connect(function(dt)
-            if not IceWalkConfig.FloorRunning then return end
+        -- อัปเดตประมาณ 20 ครั้ง/วินาที แทนทุกเฟรม
+        local UPDATE_RATE = 0.05
+        local elapsed = 0
 
-            local character = LocalPlayer.Character
-            if not character or not character:FindFirstChild("HumanoidRootPart") then 
-                if floorPart.Parent then floorPart.Parent = nil end
-                return 
-            end
+        IceWalkConfig.FloorConnection =
+            RunService.Heartbeat:Connect(function(dt)
 
-            if floorPart.Parent ~= Workspace then
-                floorPart.Parent = Workspace
-            end
+                if not IceWalkConfig.FloorRunning then
+                    return
+                end
 
-            local rootPart = character.HumanoidRootPart
-            local hum = character:FindFirstChildOfClass("Humanoid")
+                elapsed = elapsed + dt
 
-            raycastParams.FilterDescendantsInstances = {character}
-            local seaLevel = - 2.8
+                if elapsed < UPDATE_RATE then
+                    return
+                end
 
-            -- ยิง Raycast หาผิวน้ำ
-            local rayResult = Workspace:Raycast(rootPart.Position + Vector3.new(0, 5, 0), Vector3.new(0, -50, 0), raycastParams)
-            if rayResult and rayResult.Material == Enum.Material.Water then
-                seaLevel = rayResult.Position.Y
-            end
+                elapsed = 0
 
-            -- ติดตามผู้เล่นทันทีเมื่อมีการวาปหรือพุ่ง (Lerp เร็วขึ้นเพื่อไม่ให้ดีเลย์)
-            local targetPos = Vector3.new(rootPart.Position.X, seaLevel - 2, rootPart.Position.Z)
-            floorPart.Position = floorPart.Position:Lerp(targetPos, 0.8)
+                local character = LocalPlayer.Character
 
-            -- บังคับป้องกันการจมน้ำและสถานะว่ายน้ำเด็ดขาด
-            if hum then
-                hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
-                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                
-                if hum:GetState() == Enum.HumanoidStateType.Swimming or rootPart.Position.Y < (seaLevel + 3.5) then
-                    hum:ChangeState(Enum.HumanoidStateType.Running)
-                    -- ดึงตัวละครขึ้นมาเหนือผิวน้ำทันทีถ้าหลุดลงไป
+                if not character then
+                    return
+                end
+
+                local rootPart =
+                    character:FindFirstChild("HumanoidRootPart")
+
+                local hum =
+                    character:FindFirstChildOfClass("Humanoid")
+
+                if not rootPart or not hum then
+                    return
+                end
+
+                if floorPart.Parent ~= Workspace then
+                    floorPart.Parent = Workspace
+                end
+
+                raycastParams.FilterDescendantsInstances = { character }
+
+                local seaLevel = -2.8
+
+                -- Raycast เฉพาะตามช่วงเวลา ไม่ใช่ทุก Frame
+                local rayResult = Workspace:Raycast(
+                    rootPart.Position + Vector3.new(0, 5, 0),
+                    Vector3.new(0, -50, 0),
+                    raycastParams
+                )
+
+                if rayResult
+                    and rayResult.Material == Enum.Material.Water then
+
+                    seaLevel = rayResult.Position.Y
+                end
+
+                -- ถ้าระดับน้ำไม่เปลี่ยน ไม่ต้องคำนวณซ้ำ
+                if IceWalkConfig.LastSeaLevel ~= seaLevel then
+                    IceWalkConfig.LastSeaLevel = seaLevel
+                end
+
+                local currentPos = rootPart.Position
+
+                -- ตรวจจับการเคลื่อนที่ / วาร์ป
+                local moved = false
+
+                if IceWalkConfig.LastPosition then
+                    local distance =
+                        (currentPos - IceWalkConfig.LastPosition).Magnitude
+
+                    moved = distance > 1
+                else
+                    moved = true
+                end
+
+                IceWalkConfig.LastPosition = currentPos
+
+                if moved or not floorPart.Parent then
+                    local targetPos = Vector3.new(
+                        currentPos.X,
+                        seaLevel - 2,
+                        currentPos.Z
+                    )
+
+                    -- ตรงทันที ลดภาระจาก Lerp ทุกเฟรม
+                    floorPart.Position = targetPos
+                end
+
+                -- ตั้งค่า State แค่ครั้งเดียว
+                if IceWalkConfig.LastState ~= false then
+                    hum:SetStateEnabled(
+                        Enum.HumanoidStateType.Swimming,
+                        false
+                    )
+
+                    hum:SetStateEnabled(
+                        Enum.HumanoidStateType.FallingDown,
+                        false
+                    )
+
+                    IceWalkConfig.LastState = false
+                end
+
+                -- ป้องกันตกน้ำ
+                if rootPart.Position.Y < seaLevel + 3.5 then
+
+                    if hum:GetState()
+                        == Enum.HumanoidStateType.Swimming then
+
+                        hum:ChangeState(
+                            Enum.HumanoidStateType.Running
+                        )
+                    end
+
                     if rootPart.Position.Y < seaLevel then
-                        rootPart.CFrame = CFrame.new(rootPart.Position.X, seaLevel + 4, rootPart.Position.Z)
+                        rootPart.CFrame = CFrame.new(
+                            currentPos.X,
+                            seaLevel + 4,
+                            currentPos.Z
+                        )
                     end
                 end
-            end
-        end)
+            end)
     end,
 })
+
+
 
 GeneralTab:Divider() 
 
@@ -3308,18 +3437,17 @@ local defenseProtocolEnabled = false
 local isEmergencyAscending = false
 local cachedNearestTarget = nil
 local lastTargetSearchTime = 0
-local targetSearchInterval = 0.5  -- ⚡ เพิ่มจาก 0.3 เป็น 0.5 วินาที
+local targetSearchInterval = 0.5
 local selectedFaction = "Pirates"
 local teamCheckInProgress = false
 local isTeamSwitchVerified = false
 local teamCheckLoopRunning = false
 local ascentVelocity = 220
 
-
--- ⚡ Cache สำหรับผู้เล่น (เลี่ยงการ GetPlayers ทุกครั้ง)
+-- ✅ Cache สำหรับผู้เล่น (เลี่ยงการ GetPlayers ทุกครั้ง)
 local playerCache = {}
 local lastPlayerCacheTime = 0
-local playerCacheInterval = 1  -- อัพเดทลิสต์ผู้เล่นทุก 1 วินาที
+local playerCacheInterval = 0.5
 
 local function updatePlayerCache()
     local now = tick()
@@ -3381,7 +3509,7 @@ local function checkAndSwitchTeam()
     teamCheckInProgress = false
 end
 
--- ⚡ ลดการหน่วงเวลา
+-- ✅ ลดการหน่วงเวลา
 local function pressKey(keyName)
     pcall(function()
         if type(keyName) == "table" then
@@ -3391,7 +3519,7 @@ local function pressKey(keyName)
                     local keyCode = Enum.KeyCode[targetKey]
                     if keyCode then
                         VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-                        task.wait(0.01)  -- ⚡ ลดจาก 0.02
+                        task.wait(0.01)
                         VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
                     end
                 end
@@ -3400,19 +3528,27 @@ local function pressKey(keyName)
             local keyCode = Enum.KeyCode[keyName]
             if keyCode then
                 VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-                task.wait(0.01)  -- ⚡ ลดจาก 0.02
+                task.wait(0.01)
                 VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
             end
         end
     end)
 end
 
--- ⚡ เก็บ CheckMatch ไว้ใน Table เพื่อเลี่ยงการทำซ้ำ
+-- ✅ เก็บ CheckMatch ไว้ใน Table พร้อมจำกัด Size
 local toolTypeCache = {}
+local MAX_TOOL_CACHE = 500
+
+local function addToToolCache(toolId, typeName)
+    if table.getn(toolTypeCache) >= MAX_TOOL_CACHE then
+        table.clear(toolTypeCache)
+    end
+    toolTypeCache[toolId] = typeName
+end
+
 local function checkMatch(tool, typeName)
     local toolId = tool:GetFullName()
     
-    -- ใช้ cache ถ้ามี
     if toolTypeCache[toolId] then
         return toolTypeCache[toolId] == typeName
     end
@@ -3438,7 +3574,7 @@ local function checkMatch(tool, typeName)
     end
     
     if result then
-        toolTypeCache[toolId] = typeName
+        addToToolCache(toolId, typeName)
     end
     
     return result
@@ -3502,12 +3638,12 @@ local function executeSkills(skillTable, toolType)
     if not hasValid then return end
     
     equipToolByType(toolType)
-    task.wait(0.03)  -- ⚡ ลดเวลา
+    task.wait(0.03)
     
     for _, skill in ipairs(skillTable) do
         if skill ~= "None" then
             pressKey(skill)
-            task.wait(0.03)  -- ⚡ ลดเวลา
+            task.wait(0.03)
         end
     end
 end
@@ -3518,8 +3654,10 @@ local comboCooldown = 1
 local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceToTarget)
     local localPlayer = game:GetService("Players").LocalPlayer
     local myChar = localPlayer.Character
-    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
-    local myRoot = myChar.HumanoidRootPart
+    if not myChar then return end
+    
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
 
     local humanoid = myChar:FindFirstChildOfClass("Humanoid")
     if humanoid then
@@ -3534,12 +3672,12 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
     
     if distance <= maxDistance then
-        if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-            local targetRoot = targetChar.HumanoidRootPart
-            myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 3, enemyDistanceOffset)
-        else
-            myRoot.CFrame = CFrame.new(myRoot.Position, targetPos) * CFrame.new(0, 3, enemyDistanceOffset)
-        end
+        -- ✅ เก็บ targetRoot ไปใช้ซ้ำ (เรียกเพียงครั้งเดียว)
+        local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+        
+        myRoot.CFrame = targetRoot
+            and targetRoot.CFrame * CFrame.new(0, 3, enemyDistanceOffset)
+            or CFrame.new(myRoot.Position, targetPos) * CFrame.new(0, 3, enemyDistanceOffset)
         
         myRoot.Velocity = Vector3.zero
         myRoot.AssemblyLinearVelocity = Vector3.zero
@@ -3571,24 +3709,23 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
             end
         end
         return
-        
-    elseif distance > maxDistance then
+    end
+
+    -- ✅ เพิ่มเช็ค Distance เพื่อเลี่ยง Calculation ที่ไม่จำเป็น
+    if distance > 0 then
         local direction = (targetPos - currentPos).Unit
         local currentSpeed = speed or flySpeed
         local clampedSpeed = math.min(currentSpeed, 220)
         
         myRoot.AssemblyLinearVelocity = direction * clampedSpeed
         myRoot.AssemblyAngularVelocity = Vector3.zero
-        
-        if direction.Magnitude > 0 then
-            myRoot.CFrame = CFrame.lookAt(currentPos, currentPos + direction)
-        end
+        myRoot.CFrame = CFrame.lookAt(currentPos, currentPos + direction)
     end
 end
 
 local hopServersEnabled = false
 
--- ⚡ ลด GetPlayers() calls ไม่ให้เกิดจากหลายฟังก์ชัน
+-- ✅ ลด GetPlayers() calls ไม่ให้เกิดจากหลายฟังก์ชัน
 local function shouldSkipTarget(targetPlayer, LocalPlayer)
     if not targetPlayer or targetPlayer == LocalPlayer then return true end
     if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
@@ -3628,16 +3765,17 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
     local nearestTargetPlayer = nil
     local shortestDistance = math.huge
 
-    -- ⚡ ใช้ cached players list
+    -- ✅ ใช้ cached players list
     local playerList = updatePlayerCache()
 
     for _, targetPlayer in ipairs(playerList) do
         if not shouldSkipTarget(targetPlayer, LocalPlayer) then
             local char = targetPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local targetHum = char:FindFirstChildOfClass("Humanoid")
+            if char then
+                -- ✅ เก็บ Reference ไปใช้ซ้ำ แทนเรียก FindFirstChild ซ้ำ
                 local targetRoot = char:FindFirstChild("HumanoidRootPart")
-
+                local targetHum = char:FindFirstChildOfClass("Humanoid")
+                
                 if targetHum and targetHum.Health > 0 and targetRoot then
                     local inSafeZone = false
                     pcall(function()
@@ -3689,51 +3827,54 @@ local function runAutoBounty(deltaTime)
     if not LocalPlayer then return end
 
     local myChar = LocalPlayer.Character
-    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") or not myChar:FindFirstChildOfClass("Humanoid") then return end
+    if not myChar then return end
     
-    local rootPart = myChar.HumanoidRootPart
+    local rootPart = myChar:FindFirstChild("HumanoidRootPart")
     local charHumanoid = myChar:FindFirstChildOfClass("Humanoid")
+    
+    if not rootPart or not charHumanoid then return end
 
     local TweenService = game:GetService("TweenService")
 
     if defenseProtocolEnabled and charHumanoid and charHumanoid.Health > 0 and rootPart then
-    local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
-    local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
+        local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
+        local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
 
-    if currentHpRatio <= healthTriggerThreshold and not isEmergencyAscending then
-        isEmergencyAscending = true
+        if currentHpRatio <= healthTriggerThreshold and not isEmergencyAscending then
+            isEmergencyAscending = true
 
-        charHumanoid.PlatformStand = true
-        rootPart.AssemblyLinearVelocity = Vector3.zero
-        rootPart.AssemblyAngularVelocity = Vector3.zero
-
-        local destinationCFrame = rootPart.CFrame + Vector3.new(0, 800, 0)
-        local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        local riseTween = TweenService:Create(rootPart, transitionInfo, {CFrame = destinationCFrame})
-        riseTween:Play()
-    end
-
-    if isEmergencyAscending then
-        charHumanoid.PlatformStand = true
-        rootPart.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
-        rootPart.AssemblyAngularVelocity = Vector3.zero
-        
-        if rootPart.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
-            rootPart.CFrame = rootPart.CFrame + Vector3.new(0, 100, 0)
-        end
-        
-        if (currentHpRatio >= healthRecoveryThreshold) then
-            isEmergencyAscending = false
-            charHumanoid.PlatformStand = false
+            charHumanoid.PlatformStand = true
             rootPart.AssemblyLinearVelocity = Vector3.zero
+            rootPart.AssemblyAngularVelocity = Vector3.zero
+
+            local destinationCFrame = rootPart.CFrame + Vector3.new(0, 800, 0)
+            local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local riseTween = TweenService:Create(rootPart, transitionInfo, {CFrame = destinationCFrame})
+            riseTween:Play()
         end
-        
-        return 
+
+        if isEmergencyAscending then
+            charHumanoid.PlatformStand = true
+            rootPart.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
+            rootPart.AssemblyAngularVelocity = Vector3.zero
+            
+            if rootPart.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
+                rootPart.CFrame = rootPart.CFrame + Vector3.new(0, 100, 0)
+            end
+            
+            if (currentHpRatio >= healthRecoveryThreshold) then
+                isEmergencyAscending = false
+                charHumanoid.PlatformStand = false
+                rootPart.AssemblyLinearVelocity = Vector3.zero
+            end
+            
+            return 
+        end
     end
-end
+
     if not autoBountyEnabled then return end
 
-    -- ⚡ ส่ง cache เข้าไปเพื่อลด GetPlayers calls
+    -- ✅ ส่ง cache เข้าไปเพื่อลด GetPlayers calls
     local myLevel = getPlayerLevel(LocalPlayer)
     local targetData = findNearestTarget(LocalPlayer, rootPart, myLevel)
     local nearestTargetRoot = targetData and targetData.root
@@ -3825,60 +3966,56 @@ end
     end
 end
 
+local Toggle = Bounty:Toggle({
+    Title = "Auto Bounty",
+    Desc = "Automatically hunt bounty for you",
+    Flag = "AutoBounty_Toggle",
+    Callback = function(state)
+        autoBountyEnabled = state
 
+        if bountyConnection then
+            bountyConnection:Disconnect()
+            bountyConnection = nil
+        end
 
-    local Toggle = Bounty:Toggle({
-        Title = "Auto Bounty",
-        Desc = "Automatically hunt bounty for you",
-        Flag = "AutoBounty_Toggle",
-        Callback = function(state)
-            autoBountyEnabled = state
-
-            if bountyConnection then
-                bountyConnection:Disconnect()
-                bountyConnection = nil
-            end
-
-            if autoBountyEnabled then
-                isTeamSwitchVerified = false  
-                lastTargetSearchTime = 0
-                cachedNearestTarget = nil
-                
-                teamCheckLoopRunning = true
-                task.spawn(function()
-                    while autoBountyEnabled and teamCheckLoopRunning do
-                        if not verifyTeamSwitch() then
-                            checkAndSwitchTeam()
-                        else
-                            isTeamSwitchVerified = true
-                        end
-                        task.wait(2)
+        if autoBountyEnabled then
+            isTeamSwitchVerified = false  
+            lastTargetSearchTime = 0
+            cachedNearestTarget = nil
+            
+            teamCheckLoopRunning = true
+            task.spawn(function()
+                while autoBountyEnabled and teamCheckLoopRunning do
+                    if not verifyTeamSwitch() then
+                        checkAndSwitchTeam()
+                    else
+                        isTeamSwitchVerified = true
                     end
-                end)
-                
-                bountyConnection = RunService.Heartbeat:Connect(function(deltaTime)
-                    runAutoBounty(deltaTime)
-                end)
-            else
-                teamCheckLoopRunning = false
-                if localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                    localPlayer.Character.Humanoid.PlatformStand = false
+                    task.wait(2)
                 end
+            end)
+            
+            bountyConnection = RunService.Heartbeat:Connect(function(deltaTime)
+                runAutoBounty(deltaTime)
+            end)
+        else
+            teamCheckLoopRunning = false
+            if localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                localPlayer.Character.Humanoid.PlatformStand = false
             end
         end
-    })
+    end
+})
 
-    local ToggleHop = Bounty:Toggle({
-        Title = "Hop Servers",
-        Desc = "Automatically hop servers when no target found",
-        Flag = "HopServers_Toggle",
-        Default = false,
-        Callback = function(state)
-            hopServersEnabled = state
-        end
-    })
-
-
+local ToggleHop = Bounty:Toggle({
+    Title = "Hop Servers",
+    Desc = "Automatically hop servers when no target found",
+    Flag = "HopServers_Toggle",
+    Default = false,
+    Callback = function(state)
+        hopServersEnabled = state
+    end
+})
 
 local Toggle = Bounty:Toggle({
     Title = "Enable PvP",
@@ -3909,7 +4046,7 @@ local DropdownMyFaction = Bounty:Dropdown({
     Title = "Auto Team",
     Desc = "Select your faction. The system will check and switch automatically.",
     Values = {"Marines", "Pirates"},
-    Value = selectedFaction, -- ใช้ค่าจากตัวแปรหลัก
+    Value = selectedFaction,
     Multi = false,
     Locked = false,
     Flag = "my_faction_select",
@@ -3918,67 +4055,64 @@ local DropdownMyFaction = Bounty:Dropdown({
     end
 })
 
+local UtilitySection = Bounty:Section({ 
+    Title = "Settings Skills", 
+    Icon = "settings" 
+})
+Bounty:Divider() 
 
+local DropdownMelee = Bounty:Dropdown({
+    Title = "Melee",
+    Desc = "Select Melee skills (Supports all fighting styles in the game)",
+    Values = {"Z", "X", "C"},
+    Multi = true,
+    AllowNone = true,
+    Flag = "melee_skill_multi",
+    Callback = function(selected)
+        selectedMeleeSkills = selected
+    end
+})
 
-    local UtilitySection = Bounty:Section({ 
-        Title = "Settings Skills", 
-        Icon = "settings" 
-    })
-    Bounty:Divider() 
+local DropdownSword = Bounty:Dropdown({
+    Title = "Sword",
+    Desc = "Select Sword skills (Supports all swords in the game)",
+    Values = {"Z", "X"},
+    Multi = true,
+    AllowNone = true,
+    Flag = "sword_skill_multi",
+    Callback = function(selected)
+        selectedSwordSkills = selected
+    end
+})
 
-        local DropdownMelee = Bounty:Dropdown({
-            Title = "Melee",
-            Desc = "Select Melee skills (Supports all fighting styles in the game)",
-            Values = {"Z", "X", "C"},
-            Multi = true,
-            AllowNone = true,
-            Flag = "melee_skill_multi",
-            Callback = function(selected)
-                selectedMeleeSkills = selected
-            end
-        })
+local DropdownFruit = Bounty:Dropdown({
+    Title = "Blox Fruit",
+    Desc = "Select Blox Fruit skills (Supports all fruits in the game)",
+    Values = {"Z", "X", "C", "V", "F"},
+    Multi = true,
+    AllowNone = true,
+    Flag = "fruit_skill_multi",
+    Callback = function(selected)
+        selectedFruitSkills = selected
+    end
+})
 
-        local DropdownSword = Bounty:Dropdown({
-            Title = "Sword",
-            Desc = "Select Sword skills (Supports all swords in the game)",
-            Values = {"Z", "X"},
-            Multi = true,
-            AllowNone = true,
-            Flag = "sword_skill_multi",
-            Callback = function(selected)
-                selectedSwordSkills = selected
-            end
-        })
-
-        local DropdownFruit = Bounty:Dropdown({
-            Title = "Blox Fruit",
-            Desc = "Select Blox Fruit skills (Supports all fruits in the game)",
-            Values = {"Z", "X", "C", "V", "F"},
-            Multi = true,
-            AllowNone = true,
-            Flag = "fruit_skill_multi",
-            Callback = function(selected)
-                selectedFruitSkills = selected
-            end
-        })
-
-        local DropdownGun = Bounty:Dropdown({
-            Title = "Gun",
-            Desc = "Select Gun skills (Supports all guns in the game)",
-            Values = {"Z", "X"},
-            Multi = true,
-            AllowNone = true,
-            Flag = "gun_skill_multi",
-            Callback = function(selected)
-                selectedGunSkills = selected
-            end
-        })
+local DropdownGun = Bounty:Dropdown({
+    Title = "Gun",
+    Desc = "Select Gun skills (Supports all guns in the game)",
+    Values = {"Z", "X"},
+    Multi = true,
+    AllowNone = true,
+    Flag = "gun_skill_multi",
+    Callback = function(selected)
+        selectedGunSkills = selected
+    end
+})
 
 local UtilitySection = Bounty:Section({ 
     Title = "Manually initiate the hunt.", 
     Icon = "sword" 
 })
-
 
 Bounty:Divider() 
 
@@ -4171,9 +4305,12 @@ Players.PlayerRemoving:Connect(function(player)
     safeZoneCache[player] = nil
 end)
 
+-- ✅ ปรับปรุง Bounty_MoveTo เพื่อลดการเรียก FindFirstChild
 local function Bounty_MoveTo(targetCFrame, speed, targetCharacter)
     local character = LocalPlayer.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not character then return end
+    
+    local root = character:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -4189,8 +4326,8 @@ local function Bounty_MoveTo(targetCFrame, speed, targetCharacter)
         (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
 
     if distance <= maxDistance then
-        local targetRoot =
-            targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
+        -- ✅ เก็บ targetRoot ไปใช้ซ้ำ (เรียกเพียงครั้งเดียว)
+        local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
 
         root.CFrame = targetRoot
             and targetRoot.CFrame * CFrame.new(0, 3, offset)
@@ -4226,30 +4363,32 @@ local function Bounty_MoveTo(targetCFrame, speed, targetCharacter)
         return
     end
 
-    local direction = targetPos - root.Position
-    if direction.Magnitude <= 0 then return end
+    -- ✅ เพิ่มเช็ค Distance เพื่อเลี่ยง Calculation ที่ไม่จำเป็น
+    if distance > 0 then
+        local direction = targetPos - root.Position
+        if direction.Magnitude > 0 then
+            direction = direction.Unit
+            local finalSpeed = math.min(speed or flySpeed or 50, 220)
 
-    direction = direction.Unit
-    local finalSpeed = math.min(speed or flySpeed or 50, 220)
-
-    root.AssemblyLinearVelocity = direction * finalSpeed
-    root.AssemblyAngularVelocity = Vector3.zero
-    root.CFrame = CFrame.lookAt(root.Position, root.Position + direction)
+            root.AssemblyLinearVelocity = direction * finalSpeed
+            root.AssemblyAngularVelocity = Vector3.zero
+            root.CFrame = CFrame.lookAt(root.Position, root.Position + direction)
+        end
+    end
 end
 
-
-
-
+-- ✅ ปรับปรุง Bounty_Defense เพื่อลดการค้นหา Character ซ้ำ
 local function Bounty_Defense()
-    -- ถ้าปิดสวิตช์ Safety Mode ให้หยุดทำงานทันที
     if not defenseProtocolEnabled then
         isEmergencyAscending = false
         return false
     end
 
     local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not character then return false end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local root = character:FindFirstChild("HumanoidRootPart")
 
     if not humanoid or humanoid.Health <= 0 or not root then
         isEmergencyAscending = false
@@ -4263,7 +4402,6 @@ local function Bounty_Defense()
 
     local healthPercent = (humanoid.Health / maxHealth) * 100
 
-    -- 🚨 HP ต่ำ → เริ่มหนี
     if healthPercent <= healthTriggerThreshold and not isEmergencyAscending then
         isEmergencyAscending = true
         humanoid.PlatformStand = true
@@ -4275,9 +4413,7 @@ local function Bounty_Defense()
         root.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
     end
 
-    -- 🛡️ กำลังหนีขึ้นฟ้า
     if isEmergencyAscending then
-        -- เช็คอีกรอบเผื่อผู้ใช้กดปิดระหว่างกำลังลอย
         if not defenseProtocolEnabled then
             isEmergencyAscending = false
             humanoid.PlatformStand = false
@@ -4298,7 +4434,6 @@ local function Bounty_Defense()
             root.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
         end
 
-        -- ❤️ HP เต็มตามค่าที่ตั้งไว้ → หยุดหนี
         if healthPercent >= healthRecoveryThreshold then
             isEmergencyAscending = false
             humanoid.PlatformStand = false
