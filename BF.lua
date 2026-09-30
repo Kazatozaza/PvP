@@ -1,17 +1,25 @@
 local _version = "1.6.66"
-
+if getgenv().DestinyHub_IsLoading then
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Destiny Hub",
+        Text = "กำลังโหลดสคริปต์อยู่, กรุณารอสักครู่...",
+        Duration = 3,
+    })
+    return
+end
+getgenv().DestinyHub_IsLoading = true
+if getgenv().DestinyHub_Loaded then
+    getgenv().DestinyHub_IsLoading = nil
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Destiny Hub",
+        Text = "Destiny Hub ถูกรันไปแล้ว!",
+        Duration = 3,
+    })
+    return
+end
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
-
-if getgenv().__WindUIWindow then
-    pcall(function()
-        getgenv().__WindUIWindow:Destroy()
-    end)
-
-    getgenv().__WindUIWindow = nil
-end
-
 local WindUI = loadstring(
     game:HttpGet(
         "https://github.com/Footagesus/WindUI/releases/download/"
@@ -19,163 +27,155 @@ local WindUI = loadstring(
         .. "/main.lua"
     )
 )()
-
-WindUI:AddTheme({
-    Name = "Destiny Neon Violet",
-    Primary = Color3.fromHex("#F0E7FF"),
-    White = Color3.fromHex("#FFFFFF"),
-    Black = Color3.fromHex("#030108"),
-    Dialog = Color3.fromHex("#120722"),
-    Background = Color3.fromHex("#080312"),
-    BackgroundTransparency = 0,
-    Hover = Color3.fromHex("#4A2080"),
-    PanelBackground = Color3.fromHex("#8B5CF6"),
-    PanelBackgroundTransparency = 0.82,
-    WindowBackground = Color3.fromHex("#080312"),
-    WindowShadow = Color3.fromHex("#C084FC"),
-    WindowTopbarTitle = Color3.fromHex("#F7F0FF"),
-    WindowTopbarAuthor = Color3.fromHex("#DDD6FE"),
-    WindowTopbarIcon = Color3.fromHex("#C084FC"),
-    WindowTopbarButtonIcon = Color3.fromHex("#E9D5FF"),
-    WindowSearchBarBackground = Color3.fromHex("#2A1055"),
-    -- Tabs
-    TabBackground = Color3.fromHex("#6B21A8"),
-    TabBackgroundHover = Color3.fromHex("#8B5CF6"),
-    TabBackgroundHoverTransparency = 0.80,
-    TabBackgroundActive = Color3.fromHex("#C084FC"),
-    TabBackgroundActiveTransparency = 0.70,
-    TabText = Color3.fromHex("#E9D5FF"),
-    TabTextTransparency = 0.12,
-    TabTextTransparencyActive = 0,
-    TabTitle = Color3.fromHex("#FFFFFF"),
-    TabIcon = Color3.fromHex("#D8B4FE"),
-    TabIconTransparency = 0.10,
-    TabIconTransparencyActive = 0,
-    TabBorderTransparency = 1,
-    TabBorderTransparencyActive = 0.25,
-    TabBorder = Color3.fromHex("#E9D5FF"),
-    TabSectionText = Color3.fromHex("#C4B5FD"),
-    TabSectionIcon = Color3.fromHex("#D8B4FE"),
-    -- Elements
-    ElementBackground = Color3.fromHex("#6B21A8"),
-    ElementBackgroundTransparency = 0.85,
-    ElementBackgroundHover = Color3.fromHex("#C084FC"),
-    ElementTitle = Color3.fromHex("#F0E7FF"),
-    ElementDesc = Color3.fromHex("#D8B4FE"),
-    ElementIcon = Color3.fromHex("#F0E7FF"),
-    -- Button
-    Button = Color3.fromHex("#8B5CF6"),
-    ButtonTransparency = 0,
-    ButtonHover = Color3.fromHex("#C084FC"),
-    ButtonText = Color3.fromHex("#FFFFFF"),
-    ButtonTitle = Color3.fromHex("#FFFFFF"),
-    ButtonIcon = Color3.fromHex("#FFFFFF"),
-    ButtonBorder = Color3.fromHex("#E9D5FF"),
-    ButtonBorderTransparency = 0.25,
-    -- Input / Textbox
-    Input = Color3.fromHex("#2A1055"),
-    InputBackground = Color3.fromHex("#2A1055"),
-    InputText = Color3.fromHex("#F7F0FF"),
-    InputPlaceholder = Color3.fromHex("#C084FC"),
-    InputBorder = Color3.fromHex("#A855F7"),
-    InputBorderTransparency = 0.40,
-    -- Dropdown
-    Dropdown = Color3.fromHex("#2A1055"),
-    DropdownBackground = Color3.fromHex("#2A1055"),
-    DropdownItem = Color3.fromHex("#E9D5FF"),
-    DropdownItemHover = Color3.fromHex("#7C3AED"),
-    DropdownItemHoverTransparency = 0.80,
-    DropdownItemActive = Color3.fromHex("#C084FC"),
-    DropdownItemText = Color3.fromHex("#FFFFFF"),
-    DropdownIcon = Color3.fromHex("#C084FC"),
-    DropdownTabBorder = Color3.fromHex("#A855F7"),
-    -- Keybind
-    Keybind = Color3.fromHex("#2A1055"),
-    KeybindBackground = Color3.fromHex("#2A1055"),
-    KeybindText = Color3.fromHex("#F0E7FF"),
-    KeybindBorder = Color3.fromHex("#A855F7"),
-    KeybindBorderTransparency = 0.40,
-    -- Colorpicker
-    Colorpicker = Color3.fromHex("#8B5CF6"),
-    ColorpickerHue = Color3.fromHex("#C084FC"),
-    ColorpickerBorder = Color3.fromHex("#E9D5FF"),
-    -- Popup (แก้ไขให้เป็นตัวเลขแล้ว)
-    PopupBackground = Color3.fromHex("#2A1055"),
-    PopupBackgroundTransparency = 0,
-    PopupTitle = Color3.fromHex("#F0E7FF"),
-    PopupContent = Color3.fromHex("#D8B4FE"),
-    PopupIcon = Color3.fromHex("#C084FC"),
-    -- Dialog (แก้ไขให้เป็นตัวเลขแล้ว)
-    DialogBackground = Color3.fromHex("#2A1055"),
-    DialogBackgroundTransparency = 0,
-    DialogTitle = Color3.fromHex("#FFFFFF"),
-    DialogContent = Color3.fromHex("#D8B4FE"),
-    DialogIcon = Color3.fromHex("#E9D5FF"),
-    -- Toggle
-    Toggle = Color3.fromHex("#C084FC"),
-    ToggleBar = Color3.fromHex("#FFFFFF"),
-    ToggleEnabled = Color3.fromHex("#C084FC"),
-    ToggleDisabled = Color3.fromHex("#3B1E69"),
-    -- Checkbox
-    Checkbox = Color3.fromHex("#C084FC"),
-    CheckboxIcon = Color3.fromHex("#FFFFFF"),
-    CheckboxBorder = Color3.fromHex("#E9D5FF"),
-    CheckboxBorderTransparency = 0.30,
-    -- Slider
-    SliderIcon = Color3.fromHex("#F0E7FF"),
-    Slider = Color3.fromHex("#E9D5FF"),
-    SliderThumb = Color3.fromHex("#FFFFFF"),
-    SliderIconFrom = Color3.fromHex("#A855F7"),
-    SliderIconTo = Color3.fromHex("#FFFFFF"),
-    -- Tooltip
-    Tooltip = Color3.fromHex("#3B1E69"),
-    TooltipText = Color3.fromHex("#FFFFFF"),
-    TooltipSecondary = Color3.fromHex("#D8B4FE"),
-    TooltipSecondaryText = Color3.fromHex("#FFFFFF"),
-    -- Sections
-    SectionIcon = Color3.fromHex("#D8B4FE"),
-    SectionText = Color3.fromHex("#D8B4FE"),
-    SectionTitle = Color3.fromHex("#F0E7FF"),
-    SectionExpandIcon = Color3.fromHex("#FFFFFF"),
-    SectionExpandIconTransparency = 0.15,
-    SectionBox = Color3.fromHex("#C084FC"),
-    SectionBoxTransparency = 0.82,
-    SectionBoxBorder = Color3.fromHex("#E9D5FF"),
-    SectionBoxBorderTransparency = 0.45,
-    SectionBoxBackground = Color3.fromHex("#8B5CF6"),
-    SectionBoxBackgroundTransparency = 0.85,
-    -- Search
-    SearchBarBorder = Color3.fromHex("#A855F7"),
-    SearchBarBorderTransparency = 0.50,
-    SearchBarText = Color3.fromHex("#F0E7FF"),
-    SearchBarPlaceholder = Color3.fromHex("#C084FC"),
-    SearchBarIcon = Color3.fromHex("#C084FC"),
-    -- Notification
-    Notification = Color3.fromHex("#2A1055"),
-    NotificationTitle = Color3.fromHex("#F0E7FF"),
-    NotificationTitleTransparency = 0,
-    NotificationContent = Color3.fromHex("#D8B4FE"),
-    NotificationContentTransparency = 0.10,
-    NotificationDuration = Color3.fromHex("#D8B4FE"),
-    NotificationDurationTransparency = 0.10,
-    NotificationBorder = Color3.fromHex("#C084FC"),
-    NotificationBorderTransparency = 0.40,
-    NotificationIcon = Color3.fromHex("#D8B4FE"),
-    -- Label
-    LabelBackground = Color3.fromHex("#C084FC"),
-    LabelBackgroundTransparency = 0.82,
-    LabelText = Color3.fromHex("#FFFFFF"),
-    -- Scrollbar
-    Scrollbar = Color3.fromHex("#C084FC"),
-    ScrollbarBackground = Color3.fromHex("#2A1055"),
-    ScrollbarTransparency = 0.25,
-    -- Divider / Line
-    Divider = Color3.fromHex("#A855F7"),
-    DividerTransparency = 0.60,
-    Line = Color3.fromHex("#A855F7"),
-    LineTransparency = 0.60,
+WindUI:Notify({
+    Title = "Destiny Hub",
+    Content = "กำลังโหลดข้อมูล, กรุณารอสักครู่...",
+    Duration = 3,
 })
-
+task.wait(1)
+WindUI:Notify({
+    Title = "Destiny Hub",
+    Content = "โหลดข้อมูลสำเร็จ!",
+    Duration = 3,
+})
+getgenv().DestinyHub_Loaded = true
+getgenv().DestinyHub_IsLoading = nil
+WindUI:AddTheme({
+Name = "Destiny Neon Violet",
+Primary = Color3.fromHex("#F5EEFF"),
+White = Color3.fromHex("#FFFFFF"),
+Black = Color3.fromHex("#020007"),
+Dialog = Color3.fromHex("#0F0524"),
+Background = Color3.fromHex("#06020F"),
+BackgroundTransparency = 0,
+Hover = Color3.fromHex("#5B21B6"),
+PanelBackground = Color3.fromHex("#7C3AED"),
+PanelBackgroundTransparency = 0.88,
+WindowBackground = Color3.fromHex("#07030F"),
+WindowShadow = Color3.fromHex("#A855F7"),
+WindowTopbarTitle = Color3.fromHex("#FFFFFF"),
+WindowTopbarAuthor = Color3.fromHex("#C4B5FD"),
+WindowTopbarIcon = Color3.fromHex("#E879F9"),
+WindowTopbarButtonIcon = Color3.fromHex("#F3E8FF"),
+WindowSearchBarBackground = Color3.fromHex("#1A0B3D"),
+TabBackground = Color3.fromHex("#4C1D95"),
+TabBackgroundHover = Color3.fromHex("#7C3AED"),
+TabBackgroundHoverTransparency = 0.78,
+TabBackgroundActive = Color3.fromHex("#C084FC"),
+TabBackgroundActiveTransparency = 0.62,
+TabText = Color3.fromHex("#DDD0FF"),
+TabTextTransparency = 0.15,
+TabTextTransparencyActive = 0,
+TabTitle = Color3.fromHex("#FFFFFF"),
+TabIcon = Color3.fromHex("#C4B5FD"),
+TabIconTransparency = 0.15,
+TabIconTransparencyActive = 0,
+TabBorderTransparency = 1,
+TabBorderTransparencyActive = 0.15,
+TabBorder = Color3.fromHex("#67E8F9"),
+TabSectionText = Color3.fromHex("#A78BFA"),
+TabSectionIcon = Color3.fromHex("#C4B5FD"),
+ElementBackground = Color3.fromHex("#5B21B6"),
+ElementBackgroundTransparency = 0.88,
+ElementBackgroundHover = Color3.fromHex("#A855F7"),
+ElementTitle = Color3.fromHex("#F5EEFF"),
+ElementDesc = Color3.fromHex("#C4B5FD"),
+ElementIcon = Color3.fromHex("#E9D5FF"),
+Button = Color3.fromHex("#9333EA"),
+ButtonTransparency = 0,
+ButtonHover = Color3.fromHex("#D946EF"),
+ButtonText = Color3.fromHex("#E879F9"),
+ButtonTitle = Color3.fromHex("#C4B5FD"),
+ButtonIcon = Color3.fromHex("#C4B5FD"),
+ButtonBorder = Color3.fromHex("#F0ABFC"),
+ButtonBorderTransparency = 0.35,
+Input = Color3.fromHex("#1A0B3D"),
+InputBackground = Color3.fromHex("#1A0B3D"),
+InputText = Color3.fromHex("#FFFFFF"),
+InputPlaceholder = Color3.fromHex("#8B6FD1"),
+InputBorder = Color3.fromHex("#A855F7"),
+InputBorderTransparency = 0.45,
+Dropdown = Color3.fromHex("#1A0B3D"),
+DropdownBackground = Color3.fromHex("#1A0B3D"),
+DropdownItem = Color3.fromHex("#DDD0FF"),
+DropdownItemHover = Color3.fromHex("#7C3AED"),
+DropdownItemHoverTransparency = 0.75,
+DropdownItemActive = Color3.fromHex("#D946EF"),
+DropdownItemText = Color3.fromHex("#FFFFFF"),
+DropdownIcon = Color3.fromHex("#E879F9"),
+DropdownTabBorder = Color3.fromHex("#A855F7"),
+Keybind = Color3.fromHex("#1A0B3D"),
+KeybindBackground = Color3.fromHex("#1A0B3D"),
+KeybindText = Color3.fromHex("#F5EEFF"),
+KeybindBorder = Color3.fromHex("#A855F7"),
+KeybindBorderTransparency = 0.45,
+Colorpicker = Color3.fromHex("#9333EA"),
+ColorpickerHue = Color3.fromHex("#E879F9"),
+ColorpickerBorder = Color3.fromHex("#F0ABFC"),
+PopupBackground = Color3.fromHex("#1A0B3D"),
+PopupBackgroundTransparency = 0,
+PopupTitle = Color3.fromHex("#FFFFFF"),
+PopupContent = Color3.fromHex("#C4B5FD"),
+PopupIcon = Color3.fromHex("#E879F9"),
+DialogBackground = Color3.fromHex("#1A0B3D"),
+DialogBackgroundTransparency = 0,
+DialogTitle = Color3.fromHex("#FFFFFF"),
+DialogContent = Color3.fromHex("#C4B5FD"),
+DialogIcon = Color3.fromHex("#F0ABFC"),
+Toggle = Color3.fromHex("#D946EF"),
+ToggleBar = Color3.fromHex("#FFFFFF"),
+ToggleEnabled = Color3.fromHex("#D946EF"),
+ToggleDisabled = Color3.fromHex("#2E1A57"),
+Checkbox = Color3.fromHex("#D946EF"),
+CheckboxIcon = Color3.fromHex("#FFFFFF"),
+CheckboxBorder = Color3.fromHex("#F0ABFC"),
+CheckboxBorderTransparency = 0.35,
+SliderIcon = Color3.fromHex("#F5EEFF"),
+Slider = Color3.fromHex("#E879F9"),
+SliderThumb = Color3.fromHex("#FFFFFF"),
+SliderIconFrom = Color3.fromHex("#A855F7"),
+SliderIconTo = Color3.fromHex("#F0ABFC"),
+Tooltip = Color3.fromHex("#2E1A57"),
+TooltipText = Color3.fromHex("#FFFFFF"),
+TooltipSecondary = Color3.fromHex("#A855F7"),
+TooltipSecondaryText = Color3.fromHex("#FFFFFF"),
+SectionIcon = Color3.fromHex("#E879F9"),
+SectionText = Color3.fromHex("#C4B5FD"),
+SectionTitle = Color3.fromHex("#F5EEFF"),
+SectionExpandIcon = Color3.fromHex("#FFFFFF"),
+SectionExpandIconTransparency = 0.2,
+SectionBox = Color3.fromHex("#A855F7"),
+SectionBoxTransparency = 0.86,
+SectionBoxBorder = Color3.fromHex("#C084FC"),
+SectionBoxBorderTransparency = 0.5,
+SectionBoxBackground = Color3.fromHex("#7C3AED"),
+SectionBoxBackgroundTransparency = 0.9,
+SearchBarBorder = Color3.fromHex("#A855F7"),
+SearchBarBorderTransparency = 0.5,
+SearchBarText = Color3.fromHex("#F5EEFF"),
+SearchBarPlaceholder = Color3.fromHex("#8B6FD1"),
+SearchBarIcon = Color3.fromHex("#E879F9"),
+Notification = Color3.fromHex("#1A0838"),
+NotificationTitle = Color3.fromHex("#FFFFFF"),
+NotificationTitleTransparency = 0,
+NotificationContent = Color3.fromHex("#FFFFFF"),
+NotificationContentTransparency = 0,
+NotificationDuration = Color3.fromHex("#7C3AED"),
+NotificationDurationTransparency = 0.55,
+NotificationBorder = Color3.fromHex("#C084FC"),
+NotificationBorderTransparency = 0.40,
+NotificationIcon = Color3.fromHex("#FFFFFF"),
+LabelBackground = Color3.fromHex("#A855F7"),
+LabelBackgroundTransparency = 0.85,
+LabelText = Color3.fromHex("#FFFFFF"),
+Scrollbar = Color3.fromHex("#D946EF"),
+ScrollbarBackground = Color3.fromHex("#1A0B3D"),
+ScrollbarTransparency = 0.2,
+Divider = Color3.fromHex("#A855F7"),
+DividerTransparency = 0.65,
+Line = Color3.fromHex("#A855F7"),
+LineTransparency = 0.65,
+    })
 local windowSuccess, Window = pcall(function()
     return WindUI:CreateWindow({
         Title = "Project Destiny [v3.0]",
@@ -190,12 +190,15 @@ local windowSuccess, Window = pcall(function()
         ScrollBarEnabled = true,
     })
 end)
+Window:DisableTopbarButtons({
+    "Close",
+    "Minimize",
+    "Fullscreen"
+})
 
 
 Window:SetIconSize(40) 
 
-
-getgenv().__WindUIWindow = Window
 
 Window:Section({ Title = "Control Panel" })
 
@@ -218,6 +221,48 @@ local Config = Window:Tab({ Title = "Settings Config", Icon = "wrench" })
 GeneralTab:Select()
 
 
+local isOpen = true
+
+
+
+Window:CreateTopbarButton(
+    "Settings",
+    "cog",
+    function()
+        Config:Select()
+    end,
+    1,     
+    true,  
+    Color3.fromHex("#C4B5FD"),    
+    17
+)
+
+Window:CreateTopbarButton(
+    "Search",
+    "scan-search",
+    function()
+
+    end,
+    2,
+    true,
+    Color3.fromHex("#A78BFA"),
+    17
+)
+
+Window:CreateTopbarButton(
+    "ToggleMinimize", 
+    "minimize-2", 
+    function()
+        Window:Close()
+    end, 
+    3,    
+    true, 
+    Color3.fromHex("#E9D5FF"), 
+    17
+)
+
+
+
 local MyConfig = Window.ConfigManager:Config("DestinyConfig")
 
 task.spawn(function()
@@ -227,87 +272,40 @@ task.spawn(function()
     end)
 end)
 
+local Group = Config:Group({})
 
-
-
-
-
-
-
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local LP = Players.LocalPlayer
-
--- Executor
-local executorName =
-    (identifyexecutor and identifyexecutor())
-    or (getexecutorname and getexecutorname())
-    or "Unknown"
-
-
--- Player
-local username = LP.Name
-local displayName = LP.DisplayName
-
-local dashboardText = [[
-
-<font color="#FFFFFF"><b> SYSTEM INFORMATION</b></font>
-<font color="#555555">━━━━━━━━━━━━━━━━━━━━━━━━</font>
-<font color="#777777">●</font> Executor   : <font color="#00BFFF">]] .. executorName .. [[</font>
-
-<font color="#FFFFFF"><b> SCRIPT INFORMATION</b></font>
-
-<font color="#888888">Welcome back, <font color="#FFFFFF">]] .. displayName .. [[</font>.
-Enjoy your experience with <font color="#B57CFF">Destiny Hub</font>.</font>
-]]
-
-
-Home:Paragraph({
-    Title = "● Destiny Hub | Dashboard",
-    Desc = dashboardText,
-
-    ImageSize = 50,
-
-    Thumbnail = "rbxassetid://71825656372618",
-    ThumbnailSize = 70,
-        Buttons = {
-            {
-                Title = "Copy Discord",
-                Icon = "link",
-
-                Callback = function()
-                    local ok, err = pcall(function()
-                        setclipboard("https://discord.gg/hUMaVECvBz")
-                    end)
-
-                    if ok then
-                    else
-                        warn("[Destiny Hub] Clipboard error: " .. tostring(err))
-                    end
-                end
-            }
-        }
-    
+local Progress = Config:ProgressBar({
+    Title = "files...",
+    Value = { Min = 0, Max = 100, Default = 0 },
+    DisplayMode = "Value",
+    Width = 220,
 })
 
-
-local Group = Config:Group({})
 Group:Button({
     Title = "Save",
-    Icon  = "save",
+    Desc = "Save settings",
+    Icon = "save",
     Callback = function()
         if MyConfig and typeof(MyConfig.Save) == "function" then
+            Progress:Set(30)
+            task.wait(0.3)
             MyConfig:Save()
+            Progress:Set(70)
+            task.wait(0.3)
+            Progress:Set(100)
             WindUI:Notify({
                 Title = "System Saved",
-                Content = "บันทึกการตั้งค่าลงระบบเรียบร้อยแล้ว!",
+                Content = "Saved successfully!",
                 Icon = "bell-ring",
                 Duration = 3,
             })
+            task.delay(1.5, function()
+                Progress:Set(0)
+            end)
         else
             WindUI:Notify({
                 Title = "Error",
-                Content = "ไม่พบระบบ Config หรือยังไม่ได้โหลด!",
+                Content = "Config not found!",
                 Icon = "x",
                 Duration = 3,
             })
@@ -317,6 +315,7 @@ Group:Button({
 
 Group:Button({
     Title = "Reset",
+    Desc = "Reset to default",
     Icon  = "rotate-ccw",
     Callback = function()
         pcall(function()
@@ -326,12 +325,13 @@ Group:Button({
         end)
         WindUI:Notify({
             Title = "System Warning",
-            Content = "ล้างค่าการตั้งค่าทั้งหมดเรียบร้อยแล้ว!",
+            Content = "Settings reset!",
             Icon = "bell-ring", 
             Duration = 3,
         })
     end,
 })
+
 Config:Divider() 
 
 getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
@@ -494,6 +494,39 @@ local function isPlayerInCombat(player, character)
 
     combatCache[player] = false
     return false
+end
+
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local function isPlayerInCombasad()
+    local inCombat = false
+    local inSafeZone = false
+    
+    for _, obj in ipairs(PlayerGui:GetDescendants()) do
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+            -- เช็คเฉพาะ UI ที่เปิดแสดงผลอยู่ (Visible == true) เท่านั้น
+            if obj.Visible then
+                local text = string.lower(obj.Text or "")
+                local fullName = obj:GetFullName()
+                
+                -- ตัดพวกปุ่มตั้งค่าหรือเมนู Setting ออก เพื่อไม่ให้บันทึกซ้อน
+                if not fullName:find("Settings") and not fullName:find("HUDButtonBar") then
+                    
+                    -- เช็คคำว่าติดคอมแบทจากข้อความแจ้งเตือนจริงๆ บนจอ (เช่น "In Combat - Honor at risk!")
+                    if text:find("in combat", 1, true) then
+                        inCombat = true
+                        -- print("⚠️ กำลังติด Combat จริงๆ จาก UI:", obj.Text, "| Path:", fullName)
+                    end
+                end
+                
+                -- เช็ค Safe Zone
+                if text:find("safe zone", 1, true) then
+                    inSafeZone = true
+                end
+            end
+        end
+    end
+    
+    return inCombat
 end
 
 local function isInSafeZoneRadius(character)
@@ -787,6 +820,8 @@ task.spawn(function()
     end))
 end)
 
+
+
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
@@ -959,7 +994,7 @@ end)
 
 
 getgenv().HitboxEnabled = true
-getgenv().HitboxSize = 8
+getgenv().HitboxSize = 30
 
 task.spawn(function()
     while true do
@@ -987,21 +1022,12 @@ task.spawn(function()
             end
         end
 
-        task.wait(1)
+        task.wait(0.5)
     end
 end)
 
 
 local function initializeSkillSettings()
-
--- 🛡️ Cleanup
-if _G.XodusConnections then
-    for _, connection in pairs(_G.XodusConnections) do
-        pcall(function() connection:Disconnect() end)
-    end
-end
-
-_G.XodusConnections = {}
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1072,8 +1098,6 @@ local function SetAutoRaceAbility(state)
             end
         end)
     end)
-
-    table.insert(_G.XodusConnections, autoRaceConnection)
 end
 
 -- ==================== Auto Race V4 ====================
@@ -1112,8 +1136,6 @@ local function SetAutoRaceV4(state)
             end
         end)
     end)
-
-    table.insert(_G.XodusConnections, autoRaceV4Connection)
 end
 
 -- ==================== Main Loop ====================
@@ -1136,8 +1158,6 @@ local renderConnection = RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
-table.insert(_G.XodusConnections, renderConnection)
-
 -- ==================== Buso ====================
 
 local function CheckAndEnableBuso()
@@ -1155,8 +1175,6 @@ local function CheckAndEnableBuso()
     end
 end
 
-
-
 getgenv().ESPConfig = getgenv().ESPConfig or {
     ShowName = true,
     ShowDistance = true,
@@ -1164,7 +1182,7 @@ getgenv().ESPConfig = getgenv().ESPConfig or {
     ShowBounty = true,
     ShowHealth = true,
     ShowStatus = true,
-    ShowAllTeams = false,
+    ShowAllTeams = true,
     Pirates = true,
     Marines = true
 }
@@ -1174,8 +1192,11 @@ getgenv().COLORS = {
     Marines = Color3.fromRGB(0, 190, 255),
     Neutral = Color3.fromRGB(230, 230, 240),
     White = Color3.fromRGB(255, 255, 255),
-    HP = Color3.fromRGB(0, 255, 120),
+    Muted = Color3.fromRGB(170, 170, 190),
     HPBG = Color3.fromRGB(8, 8, 14),
+    HPHigh = Color3.fromRGB(0, 255, 120),
+    HPMid = Color3.fromRGB(255, 220, 0),
+    HPLow = Color3.fromRGB(255, 35, 65),
     Level = Color3.fromRGB(255, 220, 0),
     Bounty = Color3.fromRGB(255, 60, 210),
     PvPOn = Color3.fromRGB(50, 255, 100),
@@ -1183,35 +1204,70 @@ getgenv().COLORS = {
     SafeZoneOn = Color3.fromRGB(0, 235, 255),
     SafeZoneOff = Color3.fromRGB(255, 125, 30),
     Combat = Color3.fromRGB(255, 215, 0),
-    Outline = Color3.fromRGB(5, 5, 10),
-    Glow = Color3.fromRGB(255, 255, 255)
+    Outline = Color3.fromRGB(5, 5, 10)
 }
 
-local ESP = getgenv().ESPConfig
-local C = getgenv().COLORS
+local ENV = getgenv()
+local ESP = ENV.ESPConfig
+local C = ENV.COLORS
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
-local ActiveESPs = {}
+-- ล้างของรอบก่อนก่อนรันใหม่
+if ENV.__ESPCleanup then
+    pcall(ENV.__ESPCleanup)
+end
+
+local Registry = {}
+local GlobalConns = {}
 local SafeZones = {}
 local SafeZoneCacheTime = 0
 
+----------------------------------------------------------------
+-- Helpers
+----------------------------------------------------------------
+local function Hex(c)
+    return string.format(
+        "#%02X%02X%02X",
+        math.floor(c.R * 255 + 0.5),
+        math.floor(c.G * 255 + 0.5),
+        math.floor(c.B * 255 + 0.5)
+    )
+end
+
+local function Colored(text, color)
+    return string.format('<font color="%s">%s</font>', Hex(color), tostring(text))
+end
+
+local function FormatNumber(n)
+    if type(n) ~= "number" then return tostring(n) end
+    if n >= 1e9 then return string.format("%.1fB", n / 1e9) end
+    if n >= 1e6 then return string.format("%.1fM", n / 1e6) end
+    if n >= 1e3 then return string.format("%.1fK", n / 1e3) end
+    return tostring(n)
+end
+
+----------------------------------------------------------------
+-- Safe zones
+----------------------------------------------------------------
 local function RefreshSafeZones()
     SafeZones = {}
 
     local origin = Workspace:FindFirstChild("_WorldOrigin")
     local folder = origin and origin:FindFirstChild("SafeZones")
-
-    if not folder then return end
+    if not folder then
+        SafeZoneCacheTime = tick()
+        return
+    end
 
     for _, zone in ipairs(folder:GetChildren()) do
         if zone:IsA("BasePart") then
             local mesh = zone:FindFirstChildOfClass("SpecialMesh")
-            local radius = mesh
-                and mesh.Scale.X * 0.5
+            local radius = mesh and mesh.Scale.X * 0.5
                 or math.max(zone.Size.X, zone.Size.Z) * 0.5
 
             SafeZones[#SafeZones + 1] = {
@@ -1236,7 +1292,6 @@ local function IsSafeZone(character)
 
     for _, zone in ipairs(SafeZones) do
         local d = root.Position - zone.Position
-
         if d.X * d.X + d.Y * d.Y + d.Z * d.Z <= zone.Radius ^ 2 then
             return true
         end
@@ -1245,6 +1300,9 @@ local function IsSafeZone(character)
     return false
 end
 
+----------------------------------------------------------------
+-- Player data
+----------------------------------------------------------------
 local function GetTeam(player)
     if not player or not player.Parent then
         return "Player", C.White, false
@@ -1270,7 +1328,6 @@ end
 local function GetLevel(player)
     local data = player:FindFirstChild("Data")
     local level = data and data:FindFirstChild("Level")
-
     if level then return level.Value end
 
     local stats = player:FindFirstChild("leaderstats")
@@ -1282,175 +1339,189 @@ end
 local function GetBounty(player)
     local stats = player:FindFirstChild("leaderstats")
     local bounty = stats and stats:FindFirstChild("Bounty/Honor")
-
     return bounty and bounty.Value or 0
-end
-
-local function FormatNumber(n)
-    if type(n) ~= "number" then return tostring(n) end
-    if n >= 1e9 then return string.format("%.1fB", n / 1e9) end
-    if n >= 1e6 then return string.format("%.1fM", n / 1e6) end
-    if n >= 1e3 then return string.format("%.1fK", n / 1e3) end
-    return tostring(n)
 end
 
 local function GetStatus(player)
     local pvpOff = player:GetAttribute("PvpDisabled") == true
-    local pvpText = pvpOff and "OFF" or "ON"
-    local pvpColor = pvpOff and C.PvPOff or C.PvPOn
-
     local char = player.Character
+
     local safe =
         player:GetAttribute("SafeZone") == true
         or (char and char:GetAttribute("SafeZone") == true)
         or IsSafeZone(char)
         or (char and char:FindFirstChild("TempSafeZone") ~= nil)
 
-    local safeText = safe and "SAFE" or "NORMAL"
-    local safeColor = safe and C.SafeZoneOn or C.SafeZoneOff
-
     local combat = player:GetAttribute("InCombat")
-
     if char then
         combat = combat or char:GetAttribute("InCombat")
     end
-
     combat = combat == true or combat == 1 or combat == "1"
 
     return
-        pvpText, pvpColor,
-        safeText, safeColor,
-        combat and "COMBAT" or "READY",
-        combat and C.Combat or C.White
+        pvpOff and "OFF" or "ON", pvpOff and C.PvPOff or C.PvPOn,
+        safe and "SAFE" or "NORMAL", safe and C.SafeZoneOn or C.SafeZoneOff,
+        combat and "COMBAT" or "READY", combat and C.Combat or C.Muted
 end
 
-local function New(class, parent, name, size, pos)
-    local obj = Instance.new(class)
-    obj.Name = name
-    obj.Size = size
-    obj.Position = pos or UDim2.new()
-    obj.Parent = parent
-    return obj
-end
-
-local function SetupLabel(label, size, font)
+----------------------------------------------------------------
+-- UI
+----------------------------------------------------------------
+local function MakeLabel(parent, name, order, height, textSize)
+    local label = Instance.new("TextLabel")
+    label.Name = name
+    label.LayoutOrder = order
+    label.Size = UDim2.new(1, 0, 0, height)
     label.BackgroundTransparency = 1
-    label.TextStrokeTransparency = 0.05
-    label.TextStrokeColor3 = C.Outline
     label.RichText = true
-    label.TextSize = size
-    label.Font = font or Enum.Font.GothamBold
+    label.Text = ""
+    label.TextSize = textSize
+    label.Font = Enum.Font.GothamBold
+    label.TextColor3 = C.White
+    label.TextStrokeColor3 = C.Outline
+    label.TextStrokeTransparency = 0
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.TextYAlignment = Enum.TextYAlignment.Center
+    label.Parent = parent
+    return label
 end
 
-local function BuildUI(parent)
-    local name = New("TextLabel", parent, "Name", UDim2.new(1, 0, 0, 18))
-    SetupLabel(name, 12)
-    name.Visible = ESP.ShowName
+local function BuildUI(gui)
+    -- การ์ดโปร่งใส ยึดขอบล่าง ขยายขึ้นด้านบนเมื่อเปิดหลายแถว
+    local card = Instance.new("Frame")
+    card.Name = "Card"
+    card.AnchorPoint = Vector2.new(0.5, 1)
+    card.Position = UDim2.new(0.5, 0, 1, 0)
+    card.Size = UDim2.new(0, 190, 0, 0)
+    card.AutomaticSize = Enum.AutomaticSize.Y
+    card.BackgroundTransparency = 1
+    card.BorderSizePixel = 0
+    card.Parent = gui
 
-    local status = New(
-        "TextLabel", parent, "Status",
-        UDim2.new(1, 0, 0, 14),
-        UDim2.new(0, 0, 0, 19)
-    )
-    SetupLabel(status, 9)
-    status.Visible = ESP.ShowStatus
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 6)
+    padding.PaddingBottom = UDim.new(0, 6)
+    padding.PaddingLeft = UDim.new(0, 8)
+    padding.PaddingRight = UDim.new(0, 8)
+    padding.Parent = card
 
-    local level = New(
-        "TextLabel", parent, "Level",
-        UDim2.new(1, 0, 0, 14),
-        UDim2.new(0, 0, 0, 34)
-    )
-    SetupLabel(level, 9)
-    level.TextColor3 = C.Level
-    level.Visible = ESP.ShowLevel
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.Padding = UDim.new(0, 3)
+    layout.Parent = card
 
-    local bounty = New(
-        "TextLabel", parent, "Bounty",
-        UDim2.new(1, 0, 0, 14),
-        UDim2.new(0, 0, 0, 49)
-    )
-    SetupLabel(bounty, 9)
-    bounty.TextColor3 = C.Bounty
-    bounty.Visible = ESP.ShowBounty
+    local name = MakeLabel(card, "Name", 1, 16, 12)
+    local status = MakeLabel(card, "Status", 2, 12, 9)
+    local info = MakeLabel(card, "Info", 3, 13, 10)
 
-    local hpBG = New(
-        "Frame", parent, "HPBG",
-        UDim2.new(0.65, 0, 0, 4),
-        UDim2.new(0.21, 0, 0, 66)
-    )
-
+    -- แถบเลือด
+    local hpBG = Instance.new("Frame")
+    hpBG.Name = "HPBG"
+    hpBG.LayoutOrder = 4
+    hpBG.Size = UDim2.new(1, 0, 0, 11)
     hpBG.BackgroundColor3 = C.HPBG
-    hpBG.BackgroundTransparency = 0.15
+    hpBG.BackgroundTransparency = 0.1
     hpBG.BorderSizePixel = 0
-    hpBG.Visible = ESP.ShowHealth
-
-    local bgCorner = Instance.new("UICorner")
-    bgCorner.CornerRadius = UDim.new(1, 0)
-    bgCorner.Parent = hpBG
-
-    local bgStroke = Instance.new("UIStroke")
-    bgStroke.Thickness = 1
-    bgStroke.Color = C.HP
-    bgStroke.Parent = hpBG
-
-    local hp = New("Frame", hpBG, "HP", UDim2.new(1, 0, 1, 0))
-    hp.BackgroundColor3 = C.HP
-    hp.BorderSizePixel = 0
-
-    local hpCorner = Instance.new("UICorner")
-    hpCorner.CornerRadius = UDim.new(1, 0)
-    hpCorner.Parent = hp
+    hpBG.ClipsDescendants = true
+    hpBG.Parent = card
+    Instance.new("UICorner", hpBG).CornerRadius = UDim.new(1, 0)
 
     local hpStroke = Instance.new("UIStroke")
     hpStroke.Thickness = 1
-    hpStroke.Color = C.HP
-    hpStroke.Parent = hp
+    hpStroke.Color = Color3.fromRGB(60, 60, 80)
+    hpStroke.Parent = hpBG
 
-    return name, status, level, bounty, hpBG, hp
+    local fill = Instance.new("Frame")
+    fill.Name = "Fill"
+    fill.Size = UDim2.new(1, 0, 1, 0)
+    fill.BackgroundColor3 = C.HPHigh
+    fill.BorderSizePixel = 0
+    fill.Parent = hpBG
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+    local fillGradient = Instance.new("UIGradient")
+    fillGradient.Rotation = 90
+    fillGradient.Color = ColorSequence.new(
+        Color3.fromRGB(255, 255, 255),
+        Color3.fromRGB(150, 150, 150)
+    )
+    fillGradient.Parent = fill
+
+    local hpText = Instance.new("TextLabel")
+    hpText.Name = "HPText"
+    hpText.Size = UDim2.new(1, 0, 1, 0)
+    hpText.BackgroundTransparency = 1
+    hpText.Text = ""
+    hpText.TextSize = 8
+    hpText.Font = Enum.Font.GothamBold
+    hpText.TextColor3 = C.White
+    hpText.TextStrokeColor3 = C.Outline
+    hpText.TextStrokeTransparency = 0.3
+    hpText.ZIndex = 3
+    hpText.Parent = hpBG
+
+    return {
+        Card = card,
+        Name = name,
+        Status = status,
+        Info = info,
+        HPBG = hpBG,
+        Fill = fill,
+        HPText = hpText
+    }
 end
 
+----------------------------------------------------------------
+-- ESP per player
+----------------------------------------------------------------
+local HP_TWEEN = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
 local function CreateESP(player)
-    if player == LocalPlayer or ActiveESPs[player] then return end
+    if player == LocalPlayer or Registry[player] then return end
 
-    local connections = {}
-    local token = 0
+    local entry = {
+        Conns = {},
+        CharConns = {},
+        Token = 0
+    }
+    Registry[player] = entry
 
-    local function Disconnect()
-        for _, c in ipairs(connections) do
-            if c.Connected then c:Disconnect() end
-        end
-        table.clear(connections)
+   local function ClearCharacter()
+    for _, c in ipairs(entry.CharConns) do
+        c:Disconnect()
     end
+    table.clear(entry.CharConns)
 
-    local function Cleanup()
-        local data = ActiveESPs[player]
+    -- เปลี่ยนมาใช้แบบนี้
+    if entry["Gui"] then
+        entry["Gui"]:Destroy()
+        entry["Gui"] = nil
+    end
+    entry["Update"] = nil
+end
 
-        if data then
-            if data.HealthConnection and data.HealthConnection.Connected then
-                data.HealthConnection:Disconnect()
-            end
-
-            if data.Gui then data.Gui:Destroy() end
-            ActiveESPs[player] = nil
+    entry.Destroy = function()
+        entry.Token = entry.Token + 1
+        ClearCharacter()
+        for _, c in ipairs(entry.Conns) do
+            c:Disconnect()
         end
+        table.clear(entry.Conns)
+        Registry[player] = nil
     end
 
     local function Setup(character)
-        token = token + 1
-        local currentToken = token
+        entry.Token = entry.Token + 1
+        local token = entry.Token
 
-        Cleanup()
+        ClearCharacter()
 
         if not character or not character.Parent then return end
 
         local head, humanoid
-
         for _ = 1, 30 do
-            if currentToken ~= token or not character.Parent then
-                return
-            end
+            if token ~= entry.Token or not character.Parent then return end
 
             head = character:FindFirstChild("Head")
             humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -1460,6 +1531,7 @@ local function CreateESP(player)
         end
 
         if not head or not humanoid or not player.Parent then return end
+        if token ~= entry.Token then return end
 
         local old = head:FindFirstChild("PlayerESP")
         if old then old:Destroy() end
@@ -1469,46 +1541,39 @@ local function CreateESP(player)
         local gui = Instance.new("BillboardGui")
         gui.Name = "PlayerESP"
         gui.Adornee = head
-        gui.Size = UDim2.fromOffset(210, 86)
-        gui.StudsOffset = Vector3.new(0, 3, 0)
+        gui.Size = UDim2.fromOffset(220, 110)
+        gui.StudsOffset = Vector3.new(0, 2.6, 0)
         gui.AlwaysOnTop = true
         gui.LightInfluence = 0
         gui.MaxDistance = 10000000
         gui.Enabled = enabled
         gui.Parent = head
 
-        local container = New(
-            "Frame",
-            gui,
-            "Container",
-            UDim2.new(1, 0, 1, 0)
-        )
+        entry.Gui = gui
 
-        container.BackgroundTransparency = 1
-
-        local name, status, level, bounty, hpBG, hp =
-            BuildUI(container)
+        local ui = BuildUI(gui)
 
         local function UpdateHealth(value)
-            if not hp.Parent then return end
+            if not ui.Fill.Parent then return end
 
             local max = math.max(humanoid.MaxHealth, 1)
-            local percent = math.clamp((tonumber(value) or 0) / max, 0, 1)
+            local hp = math.clamp(tonumber(value) or 0, 0, max)
+            local percent = hp / max
 
-            hp.Size = UDim2.new(percent, 0, 1, 0)
+            local color = percent > 0.65 and C.HPHigh
+                or percent > 0.30 and C.HPMid
+                or C.HPLow
 
-            local color =
-                percent > 0.65 and Color3.fromRGB(0, 255, 120)
-                or percent > 0.30 and Color3.fromRGB(255, 220, 0)
-                or Color3.fromRGB(255, 35, 65)
+            TweenService:Create(ui.Fill, HP_TWEEN, {
+                Size = UDim2.new(percent, 0, 1, 0),
+                BackgroundColor3 = color
+            }):Play()
 
-            hp.BackgroundColor3 = color
-
-            local stroke = hp:FindFirstChildOfClass("UIStroke")
-            if stroke then stroke.Color = color end
-
-            stroke = hpBG:FindFirstChildOfClass("UIStroke")
-            if stroke then stroke.Color = color end
+            ui.HPText.Text = string.format(
+                "%s / %s",
+                FormatNumber(math.floor(hp)),
+                FormatNumber(math.floor(max))
+            )
         end
 
         local function Update()
@@ -1516,100 +1581,68 @@ local function CreateESP(player)
 
             local teamName, teamColor, teamEnabled = GetTeam(player)
             gui.Enabled = teamEnabled
+            if not teamEnabled then return end
 
-            name.Visible = ESP.ShowName
-            status.Visible = ESP.ShowStatus
-            level.Visible = ESP.ShowLevel
-            bounty.Visible = ESP.ShowBounty
-            hpBG.Visible = ESP.ShowHealth
+            ui.Name.Visible = ESP.ShowName
+            ui.Status.Visible = ESP.ShowStatus
+            ui.HPBG.Visible = ESP.ShowHealth
+            ui.Info.Visible = ESP.ShowLevel or ESP.ShowBounty
 
+            -- ชื่อ + ระยะ
             local distanceText = ""
-
             if ESP.ShowDistance and LocalPlayer.Character then
                 local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                 local targetRoot = character:FindFirstChild("HumanoidRootPart")
 
                 if myRoot and targetRoot then
-                    local distance = math.floor(
-                        (myRoot.Position - targetRoot.Position).Magnitude
-                    )
-
-                    distanceText = string.format(
-                        ' <font color="rgb(170,170,190)">[%dm]</font>',
-                        distance
-                    )
+                    local distance = math.floor((myRoot.Position - targetRoot.Position).Magnitude)
+                    distanceText = "  " .. Colored(distance .. "m", C.Muted)
                 end
             end
 
-            local r = math.floor(teamColor.R * 255)
-            local g = math.floor(teamColor.G * 255)
-            local b = math.floor(teamColor.B * 255)
-
-            name.Text = string.format(
-                '<font color="rgb(%d,%d,%d)">[%s]</font> <font color="rgb(255,255,255)">%s</font>%s',
-                r, g, b,
-                tostring(teamName),
-                tostring(player.DisplayName),
+            ui.Name.Text = string.format(
+                "%s %s%s",
+                Colored("[" .. string.upper(tostring(teamName)) .. "]", teamColor),
+                Colored(player.DisplayName, C.White),
                 distanceText
             )
 
-            local pvpText, pvpColor,
-                safeText, safeColor,
-                combatText, combatColor = GetStatus(player)
+            -- สถานะ
+            local pvpText, pvpColor, safeText, safeColor, combatText, combatColor = GetStatus(player)
+            local sep = Colored("  |  ", C.Muted)
 
-            status.Text = string.format(
-                '⚡ <font color="rgb(255,255,255)">PvP</font>:<font color="rgb(%d,%d,%d)">%s</font> | <font color="rgb(%d,%d,%d)">%s</font> | <font color="rgb(%d,%d,%d)">%s</font>',
-                pvpColor.R * 255,
-                pvpColor.G * 255,
-                pvpColor.B * 255,
-                pvpText,
-                safeColor.R * 255,
-                safeColor.G * 255,
-                safeColor.B * 255,
-                safeText,
-                combatColor.R * 255,
-                combatColor.G * 255,
-                combatColor.B * 255,
-                combatText
-            )
+            ui.Status.Text = table.concat({
+                Colored("PvP ", C.Muted) .. Colored(pvpText, pvpColor),
+                Colored(safeText, safeColor),
+                Colored(combatText, combatColor)
+            }, sep)
 
-            level.Text = "⚡ LVL: " .. tostring(GetLevel(player))
-            bounty.Text = "💎 BOUNTY: " .. FormatNumber(GetBounty(player))
+            -- เลเวล + ค่าหัว
+            local parts = {}
+            if ESP.ShowLevel then
+                parts[#parts + 1] = Colored("LVL " .. tostring(GetLevel(player)), C.Level)
+            end
+            if ESP.ShowBounty then
+                parts[#parts + 1] = Colored("💎 " .. FormatNumber(GetBounty(player)), C.Bounty)
+            end
+            ui.Info.Text = table.concat(parts, sep)
         end
 
         Update()
         UpdateHealth(humanoid.Health)
 
-        local healthConnection =
-            humanoid.HealthChanged:Connect(UpdateHealth)
+        table.insert(entry.CharConns, humanoid.HealthChanged:Connect(UpdateHealth))
+        table.insert(entry.CharConns, humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(function()
+            UpdateHealth(humanoid.Health)
+        end))
 
-        ActiveESPs[player] = {
-            Gui = gui,
-            Update = Update,
-            HealthConnection = healthConnection
-        }
-
-        local stats = player:FindFirstChild("leaderstats")
-
-        if stats then
-            local bountyValue = stats:FindFirstChild("Bounty/Honor")
-
-            if bountyValue then
-                table.insert(connections, bountyValue.Changed:Connect(function(value)
-                    if ActiveESPs[player] then
-                        bounty.Text = "💎 BOUNTY: " .. FormatNumber(value)
-                    end
-                end))
-            end
-        end
-
-        table.insert(connections, player:GetPropertyChangedSignal("Team"):Connect(Update))
+        entry.Update = Update
     end
 
     local function SafeSetup(character)
         task.spawn(function()
-            local success, err = pcall(Setup, character)
-            if not success then
+            local ok, err = pcall(Setup, character)
+            if not ok then
                 warn("[ESP]", err)
             end
         end)
@@ -1619,35 +1652,48 @@ local function CreateESP(player)
         SafeSetup(player.Character)
     end
 
-    table.insert(
-        connections,
-        player.CharacterAdded:Connect(SafeSetup)
-    )
-
-    table.insert(connections, player.Destroying:Connect(function()
-    token = token + 1
-    Disconnect()
-    Cleanup()
-end))
-
+    table.insert(entry.Conns, player.CharacterAdded:Connect(SafeSetup))
 end
 
-RunService.Heartbeat:Connect(function()
-    for player, data in pairs(ActiveESPs) do
-        if data.Gui and data.Gui.Parent and data.Update then
-            data.Update()
-        elseif not player.Parent then
-            ActiveESPs[player] = nil
+----------------------------------------------------------------
+-- Loop / lifecycle
+----------------------------------------------------------------
+local acc = 0
+table.insert(GlobalConns, RunService.Heartbeat:Connect(function(dt)
+    acc += dt
+    if acc < 0.1 then return end -- อัปเดต 10 ครั้ง/วินาที พอสำหรับข้อความ
+    acc = 0
+
+    for _, entry in pairs(Registry) do
+        if entry.Update then
+            local ok, err = pcall(entry.Update)
+            if not ok then warn("[ESP]", err) end
         end
     end
-end)
+end))
+
+table.insert(GlobalConns, Players.PlayerAdded:Connect(CreateESP))
+
+table.insert(GlobalConns, Players.PlayerRemoving:Connect(function(player)
+    local entry = Registry[player]
+    if entry then entry.Destroy() end
+end))
 
 for _, player in ipairs(Players:GetPlayers()) do
     CreateESP(player)
 end
 
-Players.PlayerAdded:Connect(CreateESP)
+ENV.__ESPCleanup = function()
+    for _, c in ipairs(GlobalConns) do
+        pcall(function() c:Disconnect() end)
+    end
+    table.clear(GlobalConns)
 
+    for _, entry in pairs(Registry) do
+        pcall(entry.Destroy)
+    end
+    table.clear(Registry)
+end
 
 
 local Players = game:GetService("Players")
@@ -1818,7 +1864,11 @@ local function Follow_ShouldIgnoreTarget(targetCharacter, targetPlayer)
     return false
 end
 
--- หาเป้าหมายที่ใกล้ที่สุด
+local TweenService = game:GetService("TweenService")
+
+local TELEPORT_DURATION = 0.05 
+local activeTween = nil
+
 local function GetClosestPlayerTarget()
     local character = LocalPlayer.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -1833,7 +1883,10 @@ local function GetClosestPlayerTarget()
             
             if targetChar and not Follow_ShouldIgnoreTarget(targetChar, otherPlayer) then
                 local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-                if targetRoot then
+                local targetHumanoid = targetChar:FindFirstChildOfClass("Humanoid")
+                
+                -- เช็คเพิ่มว่าเป้าหมายยังมีชีวิตอยู่จริงไหม
+                if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
                     local distance = (rootPart.Position - targetRoot.Position).Magnitude
                     
                     if distance < shortestDistance then
@@ -1848,27 +1901,29 @@ local function GetClosestPlayerTarget()
     return closestTarget
 end
 
--- ปิดระบบติดตาม (ใช้รูปแบบแจ้งเตือนที่คุณกำหนด)
 local function DisableFollowSystem(notificationText)
     if not FollowEnabled then return end
     FollowEnabled = false
     currentTarget = nil
 
-    if WindUI and WindUI.Notify then
-        WindUI:Notify({
-            Title = "Destiny Hub [HARDCORE]",
-            Content = notificationText or "Target destroyed! System off.",
-            Icon = "rbxassetid://97596339693490",
-            Duration = 1.5,
-        })
+    if activeTween then
+        activeTween:Cancel()
+        activeTween = nil
     end
-    
+
+    if WindUI and WindUI.Notify then
+    WindUI:Notify({
+        Title = "Destiny Hub [HARDCORE]",
+        Content = notificationText or "Target destroyed! System off.",
+        Icon = "power-off", 
+        Duration = 1.5,
+    })
+    end
     if FollowToggle and FollowToggle.Set then
         FollowToggle:Set(false)
     end
 end
 
--- ติดตามเป้าหมาย (หากเป้าหมายเลือดหมดหรือไม่มี Humanoid จะคืนค่า false และสั่งปิดระบบทันที)
 local function FollowTarget(targetPlayer)
     if not targetPlayer or not targetPlayer.Character then 
         DisableFollowSystem("Target lost! System off.")
@@ -1884,7 +1939,6 @@ local function FollowTarget(targetPlayer)
     local targetHumanoid = targetChar:FindFirstChildOfClass("Humanoid")
     local myHumanoid = character:FindFirstChildOfClass("Humanoid")
     
-    -- ถ้าเป้าหมายเลือดหมด ตาย หรือไม่มี Humanoid ให้สั่งปิดระบบทันที
     if not targetRoot or not targetHumanoid or targetHumanoid.Health <= 0 then 
         DisableFollowSystem("Target destroyed! System off.")
         return false 
@@ -1895,12 +1949,16 @@ local function FollowTarget(targetPlayer)
         return false
     end
     
-    -- คำนวณตำแหน่งด้านหลังเป้าหมาย
     local targetCFrame = targetRoot.CFrame
     local behindCFrame = targetCFrame * CFrame.new(0, 0, TpBehindDistance)
-    
-    -- ทำการวาป
-    rootPart.CFrame = behindCFrame
+
+    if activeTween then
+        activeTween:Cancel()
+    end
+
+    local tweenInfo = TweenInfo.new(TELEPORT_DURATION, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    activeTween = TweenService:Create(rootPart, tweenInfo, {CFrame = behindCFrame})
+    activeTween:Play()
     
     return true
 end
@@ -1908,6 +1966,10 @@ end
 RunService.RenderStepped:Connect(function()
     if not FollowEnabled then
         currentTarget = nil
+        if activeTween then
+            activeTween:Cancel()
+            activeTween = nil
+        end
         return
     end
 
@@ -1929,7 +1991,10 @@ RunService.RenderStepped:Connect(function()
         
         local function IsTargetValid(player)
             if not player or not player.Character then return false end
-            return not Follow_ShouldIgnoreTarget(player.Character, player)
+            local tChar = player.Character
+            local tHum = tChar:FindFirstChildOfClass("Humanoid")
+            if not tHum or tHum.Health <= 0 then return false end
+            return not Follow_ShouldIgnoreTarget(tChar, player)
         end
 
         if not currentTarget or not IsTargetValid(currentTarget) then
@@ -1937,7 +2002,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- ติดตามเป้าหมาย
     if currentTarget then
         local success = FollowTarget(currentTarget)
         if not success then
@@ -1962,13 +2026,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             end
 
             if WindUI and WindUI.Notify then
-                WindUI:Notify({
-                    Title = "Destiny Hub",
-                    Content = FollowEnabled and "HARDCORE ON [LOCKED]" or "HARDCORE OFF",
-                    Icon = FollowEnabled and "zap" or "zap-off",
-                    Duration = 1.5,
-                })
-            end
+            WindUI:Notify({
+                Title = "Destiny Hub",
+                Content = FollowEnabled and "HARDCORE ON [LOCKED]" or "HARDCORE OFF",
+                Icon = FollowEnabled and "power" or "power-off", -- ใช้ไอคอนล็อกเมื่อเปิด และปลดล็อกเมื่อปิด (หรือเปลี่ยนเป็น "check" กับ "x")
+                Duration = 1.5,
+            })
+        end
             
             if FollowToggle and FollowToggle.Set then
                 FollowToggle:Set(FollowEnabled)
@@ -1978,85 +2042,73 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 
-
-
-
-
-
 local toggleState = false
-local soruCooldown = 1 -- ค่าเริ่มต้น 1 วินาที
+local soruCooldown = 1
+local MIN_COOLDOWN = 0.1
+local runId = 0
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local function setSoru(soruScript, on)
+    pcall(function() soruScript.Enabled = on end)
+    pcall(function() soruScript.Disabled = not on end)
+end
+
+-- หา Soru แบบครั้งเดียว ไม่รอ (ไม่เจอจะได้ nil)
+local function findSoru()
+    local char = player.Character
+    local soruScript = char and char:FindFirstChild("Soru")
+    if soruScript then return soruScript end
+
+    local characters = workspace:FindFirstChild("Characters")
+    local charFolder = characters and characters:FindFirstChild(player.Name)
+    return charFolder and charFolder:FindFirstChild("Soru")
+end
 
 local Toggle = System:Toggle({
     Title = "Infinite Soru",
-    Desc = "สแปม Soru อัตโนมัติด้วยคูลดาวน์ที่กำหนด",
+    Desc = "Unlimited Soru Latest update",
     Icon = "wind",
     Flag = "SoruToggle",
+
     Callback = function(state)
         toggleState = state
-        
-        local player = game.Players.LocalPlayer
-        local characters = workspace:FindFirstChild("Characters")
-        local soruScript = nil
-        
-        -- ค้นหา Soru Script ในตัวละคร
-        local myChar = player.Character or player.CharacterAdded:Wait()
-        if myChar then
-            soruScript = myChar:FindFirstChild("Soru")
-        end
-        
-        if not soruScript and characters then
-            local charFolder = characters:FindFirstChild(player.Name)
-            if charFolder then
-                soruScript = charFolder:FindFirstChild("Soru")
-            end
-        end
-        
-        if not soruScript then 
-            warn("ไม่พบ Soru Script ในตัวละครของคุณ")
-            return 
-        end
-        
-        if state then
-            task.spawn(function()
-                while toggleState do
-                    soruScript.Enabled = true
-                    soruScript.Disabled = false
-                    
-                    -- ใช้ค่าคูลดาวน์จากตัวแปร soruCooldown (หารครึ่งสำหรับการเปิด/ปิด)
-                    local waitTime = tonumber(soruCooldown) or 1
-                    task.wait(waitTime / 2)
-                    
-                    if not toggleState then break end
-                    
-                    soruScript.Enabled = false
-                    soruScript.Disabled = true
-                    task.wait(waitTime / 2)
-                end
-            end)
-        else
-            -- เมื่อปิด Toggle ให้คืนค่าปกติ
-            soruScript.Enabled = false
-            soruScript.Disabled = false
-        end
-    end
-})
+        runId = runId + 1 -- ให้ลูปเก่าหยุด
 
-local Input = System:Input({
-    Title = "Soru Delay (Seconds)",
-    Desc = "rate/cooldown (seconds)", 
-    Icon = "clock", 
-    Type = "Default",
-    Placeholder = "1 or 0.5...", 
-    Value = "1", 
-    Locked = false, 
-    Flag = "SoruCooldownInput", 
-    Callback = function(text)
-        local num = tonumber(text)
-        if num and num > 0 then
-            soruCooldown = num
-        else
-            soruCooldown = 1 -- ค่าสำรองถ้ากรอกไม่ถูกต้อง
+        if not state then
+            return
         end
+
+        local myId = runId
+
+        task.spawn(function()
+            local lastSoru = nil
+
+            while toggleState and runId == myId do
+                local soruScript = findSoru()
+
+                if soruScript then
+                    lastSoru = soruScript
+                    local half = math.max(tonumber(soruCooldown) or 1, MIN_COOLDOWN) / 2
+
+                    setSoru(soruScript, true)
+                    task.wait(half)
+                    if not toggleState or runId ~= myId then break end
+
+                    setSoru(soruScript, false)
+                    task.wait(half)
+                else
+                    -- ยังไม่เจอ Soru (กำลังรีสปอน) ลองใหม่เรื่อยๆ ไม่หยุดลูป
+                    task.wait(1)
+                end
+            end
+
+            -- ปิดสวิตช์แล้ว: คืนสถานะเปิดปกติ (ถ้าไม่มีรอบใหม่มาแทน)
+            if runId == myId and lastSoru and lastSoru.Parent then
+                setSoru(lastSoru, true)
+            end
+        end)
     end
 })
 
@@ -2067,84 +2119,65 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
-
---// =========================================================
---// SAFETY MODE SETTINGS
---// =========================================================
-
-local defenseProtocolEnabled = false
+local defenseProtocolEnabled = false 
 local isEmergencyAscending = false
 
-local healthTriggerThreshold = 20
-local healthRecoveryThreshold = 100
-local ascentVelocity = 220
+local healthTriggerThreshold = 30 
+local healthRecoveryThreshold = 100 
+local ascentVelocity = 250 
 
+local blockedStates = {
+    Enum.HumanoidStateType.Ragdoll,   
+    Enum.HumanoidStateType.FallingDown,  
+    Enum.HumanoidStateType.Physics,    
+    Enum.HumanoidStateType.PlatformStanding 
+}
 
---// =========================================================
---// SAFETY MODE FUNCTION
---// =========================================================
-
-local function executeDefenseProtocol(humanoid, rootPart)
-    if not defenseProtocolEnabled
-        or not humanoid
-        or humanoid.Health <= 0
-        or not rootPart then
+local function executeDefenseProtocol(character, humanoid, rootPart)
+    if not defenseProtocolEnabled or not humanoid or humanoid.Health <= 0 or not rootPart then
         return
     end
 
     local maxHealth = humanoid.MaxHealth > 0 and humanoid.MaxHealth or 100
     local healthPercent = (humanoid.Health / maxHealth) * 100
-
-    --// HP ต่ำ → เริ่มหนี
-    if healthPercent <= healthTriggerThreshold
-        and not isEmergencyAscending then
-
+    if healthPercent <= healthTriggerThreshold and not isEmergencyAscending then
         isEmergencyAscending = true
-
-        humanoid.PlatformStand = true
-
-        rootPart.AssemblyLinearVelocity = Vector3.zero
-        rootPart.AssemblyAngularVelocity = Vector3.zero
-
-        local destination = rootPart.CFrame + Vector3.new(0, 550, 0)
-
+        
+        pcall(function()
+            humanoid.PlatformStand = true
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end)
+        local destination = rootPart.CFrame + Vector3.new(0, 400, 0)
         local tween = TweenService:Create(
             rootPart,
-            TweenInfo.new(
-                0.5,
-                Enum.EasingStyle.Quad,
-                Enum.EasingDirection.Out
-            ),
-            {
-                CFrame = destination
-            }
+            TweenInfo.new(0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out),
+            {CFrame = destination}
         )
-
         tween:Play()
     end
-
-    --// กำลังหนีขึ้นฟ้า
     if isEmergencyAscending then
-        humanoid.PlatformStand = true
-
-        rootPart.AssemblyLinearVelocity =
-            Vector3.new(0, ascentVelocity, 0)
-
+        pcall(function()
+            humanoid.PlatformStand = true
+            for _, state in ipairs(blockedStates) do
+                humanoid:SetStateEnabled(state, false)
+            end
+        end)
+        rootPart.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
         rootPart.AssemblyAngularVelocity = Vector3.zero
-
-        --// ป้องกันตกต่ำเกินไป
         local destroyHeight = workspace.FallenPartsDestroyHeight or -500
-
         if rootPart.Position.Y < destroyHeight + 400 then
-            rootPart.CFrame =
-                rootPart.CFrame + Vector3.new(0, 100, 0)
+            rootPart.CFrame = rootPart.CFrame + Vector3.new(0, 150, 0)
         end
-
-        --// HP กลับถึงค่าที่กำหนด
         if healthPercent >= healthRecoveryThreshold then
             isEmergencyAscending = false
-
-            humanoid.PlatformStand = false
+            
+            pcall(function()
+                humanoid.PlatformStand = false
+                for _, state in ipairs(blockedStates) do
+                    humanoid:SetStateEnabled(state, true)
+                end
+            end)
+            
             rootPart.AssemblyLinearVelocity = Vector3.zero
         end
 
@@ -2152,21 +2185,17 @@ local function executeDefenseProtocol(humanoid, rootPart)
     end
 end
 
-RunService.RenderStepped:Connect(function()
-    if not defenseProtocolEnabled then
-        return
-    end
+RunService.Heartbeat:Connect(function()
+    if not defenseProtocolEnabled then return end
 
     local character = LocalPlayer.Character
-    if not character then
-        return
-    end
+    if not character then return end
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local rootPart = character:FindFirstChild("HumanoidRootPart")
 
     if humanoid and rootPart then
-        executeDefenseProtocol(humanoid, rootPart)
+        executeDefenseProtocol(character, humanoid, rootPart)
     end
 end)
 
@@ -2189,7 +2218,6 @@ local ShieldToggle = System:Toggle({
     Callback = function(value)
         defenseProtocolEnabled = value
 
-        -- สั่งยกเลิกสถานะทันทีเมื่อกดปิด
         if not value then
             isEmergencyAscending = false
 
@@ -2203,7 +2231,6 @@ local ShieldToggle = System:Toggle({
                 end
 
                 if root then
-                    -- หยุดแรงลอยทันที เพื่อให้ตัวละครร่วงลงมาตามปกติ
                     root.AssemblyLinearVelocity = Vector3.zero
                     root.AssemblyAngularVelocity = Vector3.zero
                 end
@@ -2221,7 +2248,6 @@ local HPRestoreSlider = System:Slider({
         Max = 80,
         Default = 30
     },
-
     Step = 1,
     Locked = false,
     Flag = "defense_restore_percent_slider",
@@ -2288,7 +2314,6 @@ local Input = System:Input({
         end
     end
 })
-
 
 local Configjson = Config:Section({ 
     Title = "Config.json", 
@@ -2366,83 +2391,16 @@ Config:Button({
         end)
     end,
 })
-local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats")
 
-local FPSTag = Window:Tag({
-    Title = "FPS: --",
-    Icon = "gauge",
-    Color = Color3.fromHex("#C4B5FD"), -- ม่วงอ่อนสดใส
-})
-
-local frameCount, lastUpdate = 0, os.clock()
-RunService.RenderStepped:Connect(function()
-    frameCount = frameCount + 1
-    local now = os.clock()
-    local elapsed = now - lastUpdate
-    
-    if elapsed >= 1.0 then
-        local fps = math.floor(frameCount / elapsed)
-        FPSTag:SetTitle(string.format("FPS: %d", fps))
-        
-        -- เปลี่ยนสีตามระดับ FPS เพิ่มเติมให้สวยขึ้น
-        if fps >= 90 then
-            FPSTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงสด (ดีเยี่ยม)
-        elseif fps >= 60 then
-            FPSTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงอ่อน (ดี)
-        else
-            FPSTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงขาว (ปกติ)
-        end
-        
-        frameCount = 0
-        lastUpdate = now
-    end
-end)
-
-local PingTag = Window:Tag({
-    Title = "Ping: --ms",
-    Icon = "wifi",
-    Color = Color3.fromHex("#A855F7"), -- ม่วงหลัก
-})
-
-task.spawn(function()
-    local serverStats = Stats:FindFirstChild("Network") 
-        and Stats.Network:FindFirstChild("ServerStatsItem")
-    local dataPing = serverStats and serverStats:FindFirstChild("Data Ping")
-    
-    while true do
-        local success, ping = pcall(function()
-            if dataPing then
-                return math.floor(dataPing:GetValue())
-            end
-            return 0
-        end)
-        
-        if success and ping then
-            PingTag:SetTitle(string.format("Ping: %dms", ping))
-            
-            -- เปลี่ยนสีตามค่า Ping เพิ่มความมีชีวิต
-            if ping <= 50 then
-                PingTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงสด (เร็ว)
-            elseif ping <= 100 then
-                PingTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงปกติ
-            else
-                PingTag:SetColor(Color3.fromHex("#C4B5FD")) -- ม่วงเข้ม (ช้า)
-            end
-        end
-        
-        task.wait(2)
-    end
-end)
 
 CombatTab:Toggle({
     Title = "CamLock (PC/Mobile)",
     Desc  = "Lock onto targets instantly.",
     Flag  = "camlock_toggle",
     Value = getgenv().CamlockEnabled,
-    Callback = function(Value)
-        getgenv().CamlockEnabled = Value
-        if not Value then
+    Callback = function(state)
+        getgenv().CamlockEnabled = state
+        if not state then
             getgenv().CurrentTarget = nil
         end
     end,
@@ -2454,9 +2412,9 @@ CombatTab:Toggle({
     Desc  = "Hit shots without precise crosshairs.",
     Flag  = "silent_aim_toggle",
     Value = getgenv().SilentAimEnabled,
-    Callback = function(Value)
-        getgenv().SilentAimEnabled = Value
-        if not Value and not getgenv().CamlockEnabled then
+    Callback = function(state)
+        getgenv().SilentAimEnabled = state
+        if not state and not getgenv().CamlockEnabled then
             getgenv().CurrentTarget = nil
             if Snapline then 
                 Snapline.Visible = false 
@@ -2507,16 +2465,15 @@ CombatTab:Slider({
         Max     = 1000,
         Default = getgenv().FOVRadius
     },
-    Callback = function(Value)
+    Callback = function(state)
         
-        getgenv().FOVRadius = Value
+        getgenv().FOVRadius = state
         
         if getgenv().SilentAimMode == "FOV" then
-            getgenv().SavedFOVRadius = Value
+            getgenv().SavedFOVRadius = state
         end
     end,
 })
-
 
 CombatTab:Dropdown({
     Title = "FOV Position",
@@ -2535,10 +2492,10 @@ CombatTab:Toggle({
     Desc  = "Display FOV circle boundary.",
     Flag  = "show_fov_toggle",
     Value = getgenv().ShowFOV,
-    Callback = function(Value)
-        getgenv().ShowFOV = Value
+    Callback = function(state)
+        getgenv().ShowFOV = state
         if FOVUI then 
-            FOVUI.Visible = Value 
+            FOVUI.Visible = state 
         end
     end,
 })
@@ -2546,7 +2503,7 @@ CombatTab:Toggle({
 CombatTab:Divider() 
 local VisualsSection = CombatTab:Section({ 
     Title = "Visuals & Filters", 
-    Icon = "eye" -- หรือใช้ "palette", "sparkles" ก็ได้ครับ
+    Icon = "eye" 
 })
 
 CombatTab:Toggle({
@@ -2554,9 +2511,9 @@ CombatTab:Toggle({
     Desc  = "Render line to active target.",
     Flag  = "show_snapline_toggle",
     Value = getgenv().ShowTracer,
-    Callback = function(Value)
-        getgenv().ShowTracer = Value
-        if not Value and Snapline then
+    Callback = function(state)
+        getgenv().ShowTracer = state
+        if not state and Snapline then
             Snapline.Visible = false
         end
     end,
@@ -2572,8 +2529,8 @@ CombatTab:Slider({
         Max     = 1000,
         Default = getgenv().MaxDistance
     },
-    Callback = function(Value)
-        getgenv().MaxDistance = Value
+    Callback = function(state)
+        getgenv().MaxDistance = state
     end,
 })
 
@@ -2590,7 +2547,6 @@ CombatTab:Dropdown({
         getgenv().TargetMode = mode
     end,
 })
-
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -2804,12 +2760,16 @@ local IceWalkConfig = {
     GiantFloor = nil,
     FloorConnection = nil,
     FloorRunning = false,
-    LastPosition = nil,
-    LastSeaLevel = nil,
-    LastState = nil
+    LastSeaLevel = nil,      -- ระดับน้ำล่าสุดที่เจอจริง
+    LastHumanoid = nil,
 }
 
 local IceWalkUtils = {}
+
+function IceWalkUtils.SetStates(hum, enabled)
+    hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, enabled)
+    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, enabled)
+end
 
 function IceWalkUtils.Cleanup()
     if IceWalkConfig.FloorConnection then
@@ -2822,39 +2782,31 @@ function IceWalkUtils.Cleanup()
         IceWalkConfig.GiantFloor = nil
     end
 
-    IceWalkConfig.LastPosition = nil
-    IceWalkConfig.LastSeaLevel = nil
-    IceWalkConfig.LastState = nil
-
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-
-    if hum then
-        hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
-        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+    local hum = IceWalkConfig.LastHumanoid
+    if hum and hum.Parent then
+        IceWalkUtils.SetStates(hum, true)
     end
+
+    IceWalkConfig.LastSeaLevel = nil
+    IceWalkConfig.LastHumanoid = nil
 end
 
 function IceWalkUtils.GetOrCreateFloor()
-    if not IceWalkConfig.GiantFloor
-        or not IceWalkConfig.GiantFloor.Parent then
-
-        local part = Instance.new("Part")
-        part.Name = "IceWalkFloor"
-        part.Size = Vector3.new(1000, 1, 1000)
-        part.Anchored = true
-        part.CanCollide = true
-        part.CanTouch = false
-        part.CanQuery = false
-        part.CastShadow = false
-        part.Transparency = 1
-        part.Material = Enum.Material.SmoothPlastic
-        part.Parent = Workspace
-
-        IceWalkConfig.GiantFloor = part
+    local floor = IceWalkConfig.GiantFloor
+    if not floor or not floor.Parent then
+        floor = Instance.new("Part")
+        floor.Name = "IceWalkFloor"
+        floor.Size = Vector3.new(2048, 2, 2048)
+        floor.Anchored = true
+        floor.CanCollide = true
+        floor.CanTouch = false
+        floor.CanQuery = false
+        floor.CastShadow = false
+        floor.Transparency = 1
+        floor.Parent = Workspace
+        IceWalkConfig.GiantFloor = floor
     end
-
-    return IceWalkConfig.GiantFloor
+    return floor
 end
 
 GeneralTab:Toggle({
@@ -2875,134 +2827,76 @@ GeneralTab:Toggle({
 
         local raycastParams = RaycastParams.new()
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        raycastParams.IgnoreWater = false
 
-        -- อัปเดตประมาณ 20 ครั้ง/วินาที แทนทุกเฟรม
-        local UPDATE_RATE = 0.05
-        local elapsed = 0
+        local RAY_RATE = 0.1       -- Raycast ทุก 0.1 วินาที
+        local rayElapsed = RAY_RATE -- ให้ยิงทันทีในเฟรมแรก
+        local DEFAULT_SEA = -2.8
 
-        IceWalkConfig.FloorConnection =
-            RunService.Heartbeat:Connect(function(dt)
+        -- ใช้ Stepped: ทำงานก่อนฟิสิกส์คำนวณ พื้นจะได้อยู่ที่เดิมทันเวลา
+        IceWalkConfig.FloorConnection = RunService.Stepped:Connect(function(_, dt)
+            if not IceWalkConfig.FloorRunning then return end
 
-                if not IceWalkConfig.FloorRunning then
-                    return
-                end
+            local character = LocalPlayer.Character
+            if not character then return end
 
-                elapsed = elapsed + dt
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            local hum = character:FindFirstChildOfClass("Humanoid")
+            if not rootPart or not hum then return end
 
-                if elapsed < UPDATE_RATE then
-                    return
-                end
+            if not floorPart.Parent then
+                floorPart = IceWalkUtils.GetOrCreateFloor()
+            end
 
-                elapsed = 0
+            -- Humanoid ตัวใหม่ (หลังตาย/รีสปอน) -> ปิด State ใหม่
+            if IceWalkConfig.LastHumanoid ~= hum then
+                IceWalkConfig.LastHumanoid = hum
+                IceWalkUtils.SetStates(hum, false)
+            end
 
-                local character = LocalPlayer.Character
+            local pos = rootPart.Position
 
-                if not character then
-                    return
-                end
+            -- Raycast แบบจำกัดความถี่ + เริ่มยิงจากสูงขึ้น กันกรณีตัวจมไปแล้ว
+           -- Raycast แบบจำกัดความถี่ + เริ่มยิงจากสูงขึ้น กันกรณีตัวจมไปแล้ว
+            rayElapsed = rayElapsed + dt
+            if rayElapsed >= RAY_RATE then
+                rayElapsed = 0
+                raycastParams.FilterDescendantsInstances = { character, floorPart }
 
-                local rootPart =
-                    character:FindFirstChild("HumanoidRootPart")
-
-                local hum =
-                    character:FindFirstChildOfClass("Humanoid")
-
-                if not rootPart or not hum then
-                    return
-                end
-
-                if floorPart.Parent ~= Workspace then
-                    floorPart.Parent = Workspace
-                end
-
-                raycastParams.FilterDescendantsInstances = { character }
-
-                local seaLevel = -2.8
-
-                -- Raycast เฉพาะตามช่วงเวลา ไม่ใช่ทุก Frame
-                local rayResult = Workspace:Raycast(
-                    rootPart.Position + Vector3.new(0, 5, 0),
-                    Vector3.new(0, -50, 0),
+                local result = Workspace:Raycast(
+                    pos + Vector3.new(0, 30, 0),
+                    Vector3.new(0, -120, 0),
                     raycastParams
                 )
 
-                if rayResult
-                    and rayResult.Material == Enum.Material.Water then
+                if result and result.Material == Enum.Material.Water then
+                    IceWalkConfig.LastSeaLevel = result.Position.Y
+                end
+            end
 
-                    seaLevel = rayResult.Position.Y
+            -- ถ้ายังไม่เคยเจอน้ำ ใช้ค่า default / ถ้าเจอแล้วจำค่าล่าสุดไว้
+            local seaLevel = IceWalkConfig.LastSeaLevel or DEFAULT_SEA
+
+            -- พื้นตามตัวทุกเฟรม (แค่เซ็ต Position ไม่หนัก)
+            -- ผิวบนของพื้น = seaLevel (พื้นหนา 2 จึงเลื่อนลง 1)
+            floorPart.Position = Vector3.new(pos.X, seaLevel - 1, pos.Z)
+
+            -- กันจม: ถ้าต่ำกว่าผิวน้ำ (และอยู่ในช่วงที่เป็นน้ำจริง) ให้ดึงขึ้น
+            if pos.Y < seaLevel + 1 and pos.Y > seaLevel - 40 then
+                if hum:GetState() == Enum.HumanoidStateType.Swimming then
+                    hum:ChangeState(Enum.HumanoidStateType.Running)
                 end
 
-                -- ถ้าระดับน้ำไม่เปลี่ยน ไม่ต้องคำนวณซ้ำ
-                if IceWalkConfig.LastSeaLevel ~= seaLevel then
-                    IceWalkConfig.LastSeaLevel = seaLevel
-                end
-
-                local currentPos = rootPart.Position
-
-                -- ตรวจจับการเคลื่อนที่ / วาร์ป
-                local moved = false
-
-                if IceWalkConfig.LastPosition then
-                    local distance =
-                        (currentPos - IceWalkConfig.LastPosition).Magnitude
-
-                    moved = distance > 1
-                else
-                    moved = true
-                end
-
-                IceWalkConfig.LastPosition = currentPos
-
-                if moved or not floorPart.Parent then
-                    local targetPos = Vector3.new(
-                        currentPos.X,
-                        seaLevel - 2,
-                        currentPos.Z
+                if pos.Y < seaLevel + 0.5 then
+                    rootPart.CFrame = rootPart.CFrame + Vector3.new(0, (seaLevel + 4) - pos.Y, 0)
+                    rootPart.AssemblyLinearVelocity = Vector3.new(
+                        rootPart.AssemblyLinearVelocity.X, 0, rootPart.AssemblyLinearVelocity.Z
                     )
-
-                    -- ตรงทันที ลดภาระจาก Lerp ทุกเฟรม
-                    floorPart.Position = targetPos
                 end
-
-                -- ตั้งค่า State แค่ครั้งเดียว
-                if IceWalkConfig.LastState ~= false then
-                    hum:SetStateEnabled(
-                        Enum.HumanoidStateType.Swimming,
-                        false
-                    )
-
-                    hum:SetStateEnabled(
-                        Enum.HumanoidStateType.FallingDown,
-                        false
-                    )
-
-                    IceWalkConfig.LastState = false
-                end
-
-                -- ป้องกันตกน้ำ
-                if rootPart.Position.Y < seaLevel + 3.5 then
-
-                    if hum:GetState()
-                        == Enum.HumanoidStateType.Swimming then
-
-                        hum:ChangeState(
-                            Enum.HumanoidStateType.Running
-                        )
-                    end
-
-                    if rootPart.Position.Y < seaLevel then
-                        rootPart.CFrame = CFrame.new(
-                            currentPos.X,
-                            seaLevel + 4,
-                            currentPos.Z
-                        )
-                    end
-                end
-            end)
+            end
+        end)
     end,
 })
-
-
 
 GeneralTab:Divider() 
 
@@ -3027,8 +2921,8 @@ GeneralTab:Slider({
         Max = 10,
         Default = 1
     },
-    Callback = function(value)
-        JumpMultiplier = value
+    Callback = function(state)
+        JumpMultiplier = state
     end,
 })
 
@@ -3054,8 +2948,8 @@ GeneralTab:Slider({
         Max = 10,
         Default = 1
     },
-    Callback = function(value)
-        DashMultiplier = value
+    Callback = function(state)
+        DashMultiplier = state
     end,
 })
 
@@ -3185,20 +3079,18 @@ local UIKeybind = Config:Keybind({
     end
 })
 
-
-
-
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local localPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
+local noclipConnection = nil
 
-local function setSafeNoclip(state)
-    local character = localPlayer.Character
-    if character then
-        for _, part in ipairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = not state
-            end
+local function setNoclip(state)
+    local character = LocalPlayer.Character
+    if not character then return end
+
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not state
         end
     end
 end
@@ -3208,21 +3100,32 @@ Config:Toggle({
     Desc = "Walk through walls.",
     Flag = "NoclipToggle",
     Value = false,
+
     Callback = function(state)
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+
         if state then
-            _G.NoclipConnection = RunService.Stepped:Connect(function()
-                setSafeNoclip(true)
+            setNoclip(true)
+
+            noclipConnection = RunService.Stepped:Connect(function()
+                setNoclip(true)
             end)
         else
-            if _G.NoclipConnection then
-                _G.NoclipConnection:Disconnect()
-                _G.NoclipConnection = nil
-            end
-            setSafeNoclip(false)
+            setNoclip(false)
         end
     end,
 })
 
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+
+    if noclipConnection then
+        setNoclip(true)
+    end
+end)
 
 
 local CoreGui = game:GetService("CoreGui")
@@ -3238,120 +3141,189 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CustomMobileTogglesStyle"
 screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local function createDraggableButton(text, accentColor, defaultPosition, callback)
+local BTN_W, BTN_H = 148, 42
+local DRAG_THRESHOLD = 8
+
+local OFF_BG = Color3.fromRGB(20, 20, 26)
+local OFF_BG2 = Color3.fromRGB(30, 30, 38)
+local OFF_STROKE = Color3.fromRGB(55, 55, 68)
+local OFF_TEXT = Color3.fromRGB(170, 170, 185)
+local OFF_TRACK = Color3.fromRGB(50, 50, 62)
+local OFF_KNOB = Color3.fromRGB(190, 190, 205)
+local OFF_STATUS = Color3.fromRGB(100, 100, 115)
+
+local KNOB_OFF = UDim2.new(0, 3, 0.5, 0)
+local KNOB_ON = UDim2.new(1, -15, 0.5, 0)
+
+local function tween(obj, time, props)
+    TweenService:Create(
+        obj,
+        TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        props
+    ):Play()
+end
+
+local function createDraggableButton(text, accentColor, defaultX, defaultY, callback)
+    local center = Vector2.new(defaultX + BTN_W / 2, defaultY + BTN_H / 2)
+
     local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 120, 0, 38)
-    button.Position = defaultPosition
-    button.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-    button.BackgroundTransparency = 0.15
+    button.AnchorPoint = Vector2.new(0.5, 0.5)
+    button.Size = UDim2.new(0, BTN_W, 0, BTN_H)
+    button.Position = UDim2.new(0, center.X, 0, center.Y)
+    button.BackgroundColor3 = Color3.new(1, 1, 1)
+    button.BackgroundTransparency = 0.08
     button.BorderSizePixel = 0
     button.AutoButtonColor = false
     button.Text = ""
     button.Active = true
     button.Parent = screenGui
 
-    local uiCorner = Instance.new("UICorner")
-    uiCorner.CornerRadius = UDim.new(0, 10)
-    uiCorner.Parent = button
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 12)
 
-    local shadow = Instance.new("UIStroke")
-    shadow.Name = "Shadow"
-    shadow.Parent = button
-    shadow.Color = Color3.fromRGB(0, 0, 0)
-    shadow.Transparency = 0.5
-    shadow.Thickness = 2.5
-    shadow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    local scale = Instance.new("UIScale")
+    scale.Scale = 1
+    scale.Parent = button
 
-    local uiStroke = Instance.new("UIStroke")
-    uiStroke.Name = "Border"
-    uiStroke.Parent = button
-    uiStroke.Color = Color3.fromRGB(45, 45, 55)
-    uiStroke.Thickness = 1.5
-    uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+    local gradient = Instance.new("UIGradient")
+    gradient.Rotation = 90
+    gradient.Color = ColorSequence.new(OFF_BG2, OFF_BG)
+    gradient.Parent = button
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = OFF_STROKE
+    stroke.Thickness = 1.5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = button
+
+    local accentBar = Instance.new("Frame")
+    accentBar.AnchorPoint = Vector2.new(0, 0.5)
+    accentBar.Size = UDim2.new(0, 3, 0, 18)
+    accentBar.Position = UDim2.new(0, 8, 0.5, 0)
+    accentBar.BackgroundColor3 = OFF_STROKE
+    accentBar.BorderSizePixel = 0
+    accentBar.Parent = button
+    Instance.new("UICorner", accentBar).CornerRadius = UDim.new(1, 0)
 
     local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, -20, 1, 0)
-    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.Size = UDim2.new(1, -74, 0, 18)
+    textLabel.Position = UDim2.new(0, 20, 0, 6)
     textLabel.BackgroundTransparency = 1
     textLabel.Text = text
-    textLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+    textLabel.TextColor3 = OFF_TEXT
     textLabel.TextSize = 12
     textLabel.Font = Enum.Font.GothamBold
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.Parent = button
 
-    local indicator = Instance.new("Frame")
-    indicator.Size = UDim2.new(0, 6, 0, 6)
-    indicator.Position = UDim2.new(1, -14, 0.5, -3)
-    indicator.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
-    indicator.BorderSizePixel = 0
-    indicator.Parent = button
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(1, -74, 0, 12)
+    statusLabel.Position = UDim2.new(0, 20, 0, 24)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "OFF"
+    statusLabel.TextColor3 = OFF_STATUS
+    statusLabel.TextSize = 10
+    statusLabel.Font = Enum.Font.GothamMedium
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statusLabel.Parent = button
 
-    local indCorner = Instance.new("UICorner")
-    indCorner.CornerRadius = UDim.new(1, 0)
-    indCorner.Parent = indicator
+    local track = Instance.new("Frame")
+    track.AnchorPoint = Vector2.new(0, 0.5)
+    track.Size = UDim2.new(0, 32, 0, 18)
+    track.Position = UDim2.new(1, -42, 0.5, 0)
+    track.BackgroundColor3 = OFF_TRACK
+    track.BorderSizePixel = 0
+    track.ClipsDescendants = true
+    track.Parent = button
+    Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
 
-    -- ระบบลากปุ่มแบบรวบรัดตัวแปร
-    local dragging, dragInput, dragStart, startPos, isDragging = false, nil, nil, nil, false
+    local knob = Instance.new("Frame")
+    knob.AnchorPoint = Vector2.new(0, 0.5)
+    knob.Size = UDim2.new(0, 12, 0, 12)
+    knob.Position = KNOB_OFF
+    knob.BackgroundColor3 = OFF_KNOB
+    knob.BorderSizePixel = 0
+    knob.Parent = track
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    -- ระบบลาก
+    local dragging, dragInput, dragStart, startCenter = false, nil, nil, nil
+    local isDragging = false
 
     button.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging, dragStart, startPos, isDragging = true, input.Position, button.AbsolutePosition, false
-            
-            TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0, 114, 0, 35)
-            }):Play()
-            
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            isDragging = false
+            dragStart = input.Position
+            startCenter = center
+            tween(scale, 0.1, {Scale = 0.95})
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
-                    TweenService:Create(button, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                        Size = UDim2.new(0, 120, 0, 38)
-                    }):Play()
+                    tween(scale, 0.12, {Scale = 1})
                 end
             end)
         end
     end)
 
     button.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            if math.abs(delta.X) > 5 or math.abs(delta.Y) > 5 then
-                isDragging = true
+        if input ~= dragInput or not dragging then return end
+
+        local delta = input.Position - dragStart
+
+        -- ยังไม่เลยเกณฑ์ลาก = ไม่ขยับปุ่ม
+        if not isDragging then
+            if math.abs(delta.X) < DRAG_THRESHOLD and math.abs(delta.Y) < DRAG_THRESHOLD then
+                return
             end
-            
-            local screenSize = Camera.ViewportSize
-            local newX = math.clamp(startPos.X + delta.X, 0, screenSize.X - button.AbsoluteSize.X)
-            local newY = math.clamp(startPos.Y + delta.Y, 0, screenSize.Y - button.AbsoluteSize.Y)
-            
-            button.Position = UDim2.new(0, newX, 0, newY)
+            isDragging = true
         end
+
+        local screenSize = Camera.ViewportSize
+        local newX = math.clamp(startCenter.X + delta.X, BTN_W / 2, screenSize.X - BTN_W / 2)
+        local newY = math.clamp(startCenter.Y + delta.Y, BTN_H / 2, screenSize.Y - BTN_H / 2)
+
+        center = Vector2.new(newX, newY)
+        button.Position = UDim2.new(0, newX, 0, newY)
     end)
 
     local activeState = false
     button.MouseButton1Click:Connect(function()
         if isDragging then return end
         activeState = not activeState
-        
-        local tInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
         if activeState then
-            TweenService:Create(button, tInfo, {BackgroundColor3 = Color3.fromRGB(28, 28, 36)}):Play()
-            TweenService:Create(uiStroke, tInfo, {Color = accentColor}):Play()
-            TweenService:Create(textLabel, tInfo, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-            TweenService:Create(indicator, tInfo, {BackgroundColor3 = accentColor}):Play()
+            gradient.Color = ColorSequence.new(
+                accentColor:Lerp(Color3.new(0, 0, 0), 0.72),
+                Color3.fromRGB(16, 16, 22)
+            )
+            tween(stroke, 0.2, {Color = accentColor, Thickness = 2})
+            tween(accentBar, 0.2, {BackgroundColor3 = accentColor, Size = UDim2.new(0, 3, 0, 26)})
+            tween(textLabel, 0.2, {TextColor3 = Color3.new(1, 1, 1)})
+            tween(track, 0.2, {BackgroundColor3 = accentColor})
+            tween(knob, 0.2, {Position = KNOB_ON, BackgroundColor3 = Color3.new(1, 1, 1)})
+            statusLabel.Text = "ON"
+            tween(statusLabel, 0.2, {TextColor3 = accentColor})
         else
-            TweenService:Create(button, tInfo, {BackgroundColor3 = Color3.fromRGB(18, 18, 22)}):Play()
-            TweenService:Create(uiStroke, tInfo, {Color = Color3.fromRGB(45, 45, 55)}):Play()
-            TweenService:Create(textLabel, tInfo, {TextColor3 = Color3.fromRGB(200, 200, 210)}):Play()
-            TweenService:Create(indicator, tInfo, {BackgroundColor3 = Color3.fromRGB(70, 70, 80)}):Play()
+            gradient.Color = ColorSequence.new(OFF_BG2, OFF_BG)
+            tween(stroke, 0.2, {Color = OFF_STROKE, Thickness = 1.5})
+            tween(accentBar, 0.2, {BackgroundColor3 = OFF_STROKE, Size = UDim2.new(0, 3, 0, 18)})
+            tween(textLabel, 0.2, {TextColor3 = OFF_TEXT})
+            tween(track, 0.2, {BackgroundColor3 = OFF_TRACK})
+            tween(knob, 0.2, {Position = KNOB_OFF, BackgroundColor3 = OFF_KNOB})
+            statusLabel.Text = "OFF"
+            tween(statusLabel, 0.2, {TextColor3 = OFF_STATUS})
         end
 
         if callback then callback(activeState) end
@@ -3360,34 +3332,24 @@ local function createDraggableButton(text, accentColor, defaultPosition, callbac
     return button
 end
 
-local camlockBtn = createDraggableButton("Camera Lock", Color3.fromRGB(0, 229, 255), UDim2.new(0, 20, 0, 20), function(Value)
+local camlockBtn = createDraggableButton("Camera Lock", Color3.fromRGB(0, 229, 255), 20, 20, function(Value)
     getgenv().CamlockEnabled = Value
     if not Value then getgenv().CurrentTarget = nil end
 end)
 
-local teleportBtn = createDraggableButton("Teleport Player", Color3.fromRGB(0, 229, 255), UDim2.new(0, 20, 0, 68), function(state)
-    FollowEnabled = not FollowEnabled 
-    
-    if FollowEnabled then
-        currentTarget = GetClosestPlayerTarget()
-    else
-        currentTarget = nil
-        getgenv().CurrentTarget = nil
-    end
+local teleportBtn = createDraggableButton("Teleport Player", Color3.fromRGB(180, 110, 255), 20, 72, function(state)
+    FollowEnabled = state
 
     if WindUI and WindUI.Notify then
         WindUI:Notify({
             Title = "Destiny Hub",
             Content = FollowEnabled and "HARDCORE ON [LOCKED]" or "HARDCORE OFF",
-            Icon = FollowEnabled and "zap" or "zap-off",
+            Icon = FollowEnabled and "power" or "power-off",
             Duration = 1.5,
         })
     end
-    
-    if FollowToggle and FollowToggle.Set then
-        FollowToggle:Set(FollowEnabled)
-    end
 end)
+
 
 if typeof(Config) == "table" then
     Config:Toggle({
@@ -3410,11 +3372,9 @@ if typeof(Config) == "table" then
         end,
     })
 end
+
 end
-
 initializeSkillSettings()
-
-
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -3444,7 +3404,6 @@ local isTeamSwitchVerified = false
 local teamCheckLoopRunning = false
 local ascentVelocity = 220
 
--- ✅ Cache สำหรับผู้เล่น (เลี่ยงการ GetPlayers ทุกครั้ง)
 local playerCache = {}
 local lastPlayerCacheTime = 0
 local playerCacheInterval = 0.5
@@ -3535,7 +3494,6 @@ local function pressKey(keyName)
     end)
 end
 
--- ✅ เก็บ CheckMatch ไว้ใน Table พร้อมจำกัด Size
 local toolTypeCache = {}
 local MAX_TOOL_CACHE = 500
 
@@ -3660,8 +3618,10 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     if not myRoot then return end
 
     local humanoid = myChar:FindFirstChildOfClass("Humanoid")
-    if humanoid then
+    if humanoid and humanoid.Health > 0 then
         humanoid.PlatformStand = true
+    else
+        return
     end
 
     local targetPos = targetCFrame.Position
@@ -3671,61 +3631,75 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local maxDistance = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 150
     local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
     
+    -- หากอยู่ในระยะ Max Distance ให้ทำการล็อคตำแหน่งด้านหลังศัตรูแบบสมูท
     if distance <= maxDistance then
-        -- ✅ เก็บ targetRoot ไปใช้ซ้ำ (เรียกเพียงครั้งเดียว)
         local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
         
-        myRoot.CFrame = targetRoot
+        local desiredCFrame = targetRoot 
             and targetRoot.CFrame * CFrame.new(0, 3, enemyDistanceOffset)
             or CFrame.new(myRoot.Position, targetPos) * CFrame.new(0, 3, enemyDistanceOffset)
         
+        myRoot.CFrame = myRoot.CFrame:Lerp(desiredCFrame, math.clamp((deltaTime or 0.016) * 15, 0.1, 1))
+        
+        -- ป้องกันแรงเหวี่ยง
         myRoot.Velocity = Vector3.zero
         myRoot.AssemblyLinearVelocity = Vector3.zero
         myRoot.AssemblyAngularVelocity = Vector3.zero
 
-        if distance <= 100 then
-            if tick() - lastComboTime >= comboCooldown then
-                lastComboTime = tick()
-                
-                if selectedMeleeSkills and selectedMeleeSkills[1] ~= "None" then
+        -- 🛠 ระบบเช็คระยะกดสกิลแยกตามแต่ละสาย (ดึงจาก Flags หรือใช้ค่า Default)
+        if tick() - lastComboTime >= comboCooldown then
+            lastComboTime = tick()
+            
+            -- ดึงค่าระยะจาก Settings / Flags (ถ้าไม่มีใช้ค่ามาตรฐานที่กำหนดไว้)
+            local meleeRange = (Bounty and Bounty.Flags and Bounty.Flags.MeleeRange) or 100
+            local swordRange = (Bounty and Bounty.Flags and Bounty.Flags.SwordRange) or 500
+            local fruitRange = (Bounty and Bounty.Flags and Bounty.Flags.FruitRange) or 300
+            local gunRange   = (Bounty and Bounty.Flags and Bounty.Flags.GunRange) or 400
+            
+            task.spawn(function()
+                -- 🥊 หมัด
+                if distance <= meleeRange and selectedMeleeSkills and selectedMeleeSkills[1] ~= "None" then
                     executeSkills(selectedMeleeSkills, "Melee")
-                    task.wait(0.05)
+                    task.wait(0.02)
                 end
                 
-                if selectedSwordSkills and selectedSwordSkills[1] ~= "None" then
+                -- 🗡️ ดาบ
+                if distance <= swordRange and selectedSwordSkills and selectedSwordSkills[1] ~= "None" then
                     executeSkills(selectedSwordSkills, "Sword")
-                    task.wait(0.05)
+                    task.wait(0.02)
                 end
                 
-                if selectedFruitSkills and selectedFruitSkills[1] ~= "None" then
+                -- 🍎 ผลไม้
+                if distance <= fruitRange and selectedFruitSkills and selectedFruitSkills[1] ~= "None" then
                     executeSkills(selectedFruitSkills, "Fruit")
-                    task.wait(0.05)
+                    task.wait(0.02)
                 end
                 
-                if selectedGunSkills and selectedGunSkills[1] ~= "None" then
+                -- 🔫 ปืน
+                if distance <= gunRange and selectedGunSkills and selectedGunSkills[1] ~= "None" then
                     executeSkills(selectedGunSkills, "Gun")
-                    task.wait(0.05)
                 end
-            end
+            end)
         end
         return
     end
 
-    -- ✅ เพิ่มเช็ค Distance เพื่อเลี่ยง Calculation ที่ไม่จำเป็น
     if distance > 0 then
         local direction = (targetPos - currentPos).Unit
-        local currentSpeed = speed or flySpeed
+        local currentSpeed = speed or flySpeed or 100
         local clampedSpeed = math.min(currentSpeed, 220)
         
-        myRoot.AssemblyLinearVelocity = direction * clampedSpeed
+        local targetVelocity = direction * clampedSpeed
+        myRoot.AssemblyLinearVelocity = myRoot.AssemblyLinearVelocity:Lerp(targetVelocity, math.clamp((deltaTime or 0.016) * 12, 0.1, 1))
         myRoot.AssemblyAngularVelocity = Vector3.zero
-        myRoot.CFrame = CFrame.lookAt(currentPos, currentPos + direction)
+        
+        local lookAtCFrame = CFrame.lookAt(currentPos, targetPos)
+        myRoot.CFrame = myRoot.CFrame:Lerp(lookAtCFrame, math.clamp((deltaTime or 0.016) * 10, 0.1, 1))
     end
 end
 
 local hopServersEnabled = false
 
--- ✅ ลด GetPlayers() calls ไม่ให้เกิดจากหลายฟังก์ชัน
 local function shouldSkipTarget(targetPlayer, LocalPlayer)
     if not targetPlayer or targetPlayer == LocalPlayer then return true end
     if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
@@ -3746,57 +3720,105 @@ local function getPlayerLevel(player)
     return success and lvl or nil
 end
 
+
+
+local targetKillCount = {}
+local MAX_KILLS_PER_TARGET = 3
+
+local function isTargetBlocked(player)
+    if not player then
+        return true
+    end
+
+    return (targetKillCount[player.UserId] or 0) >= MAX_KILLS_PER_TARGET
+end
+
+local function registerTargetKill(player)
+    if not player then
+        return
+    end
+
+    local userId = player.UserId
+    targetKillCount[userId] = (targetKillCount[userId] or 0) + 1
+end
+
+local function resetTargetKillCount(player)
+    if player then
+        targetKillCount[player.UserId] = nil
+    end
+end
+
 local function findNearestTarget(LocalPlayer, myRoot, myLevel)
     local now = tick()
-    
+
     if now - lastTargetSearchTime < targetSearchInterval then
         return cachedNearestTarget
     end
-    
+
     lastTargetSearchTime = now
-    
-    if not myRoot then 
+
+    if not myRoot then
         cachedNearestTarget = nil
         return nil
     end
-    
+
     local nearestTargetRoot = nil
     local nearestTargetChar = nil
     local nearestTargetPlayer = nil
     local shortestDistance = math.huge
 
-    -- ✅ ใช้ cached players list
     local playerList = updatePlayerCache()
 
     for _, targetPlayer in ipairs(playerList) do
-        if not shouldSkipTarget(targetPlayer, LocalPlayer) then
+
+        if not shouldSkipTarget(targetPlayer, LocalPlayer)
+            and not isTargetBlocked(targetPlayer) then
+
             local char = targetPlayer.Character
+
             if char then
-                -- ✅ เก็บ Reference ไปใช้ซ้ำ แทนเรียก FindFirstChild ซ้ำ
                 local targetRoot = char:FindFirstChild("HumanoidRootPart")
                 local targetHum = char:FindFirstChildOfClass("Humanoid")
-                
-                if targetHum and targetHum.Health > 0 and targetRoot then
+
+                if targetHum
+                    and targetHum.Health > 0
+                    and targetRoot then
+
                     local inSafeZone = false
+
                     pcall(function()
-                        if isPlayerInSafeZone then inSafeZone = isPlayerInSafeZone(targetPlayer, char) end
+                        if isPlayerInSafeZone then
+                            inSafeZone =
+                                isPlayerInSafeZone(targetPlayer, char)
+                        end
                     end)
 
                     if not inSafeZone then
-                        local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled") or char:GetAttribute("PvpDisabled")
+                        local pvpDisabled =
+                            targetPlayer:GetAttribute("PvpDisabled")
+                            or char:GetAttribute("PvpDisabled")
+
                         if pvpDisabled ~= true then
-                            local targetLevel = getPlayerLevel(targetPlayer)
+                            local targetLevel =
+                                getPlayerLevel(targetPlayer)
+
                             local isLevelValid = true
-                            
-                            if type(myLevel) == "number" and type(targetLevel) == "number" then
+
+                            if type(myLevel) == "number"
+                                and type(targetLevel) == "number" then
+
                                 if math.abs(myLevel - targetLevel) > 800 then
                                     isLevelValid = false
                                 end
                             end
 
                             if isLevelValid then
-                                local distance = (targetRoot.Position - myRoot.Position).Magnitude
-                                if distance <= 15000 and distance < shortestDistance then
+                                local distance =
+                                    (targetRoot.Position - myRoot.Position).Magnitude
+
+                                if distance <= 15000
+                                    and distance < shortestDistance then
+
                                     shortestDistance = distance
                                     nearestTargetRoot = targetRoot
                                     nearestTargetChar = char
@@ -3809,161 +3831,260 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
             end
         end
     end
-    
-    cachedNearestTarget = {root = nearestTargetRoot, char = nearestTargetChar, distance = shortestDistance, player = nearestTargetPlayer}
+
+    cachedNearestTarget = {
+        root = nearestTargetRoot,
+        char = nearestTargetChar,
+        distance = shortestDistance,
+        player = nearestTargetPlayer
+    }
 
     return cachedNearestTarget
 end
 
-local function runAutoBounty(deltaTime)
-    if not autoBountyEnabled then return end
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-    if not isTeamSwitchVerified then
+local combatUI
+
+local function findCombatUI()
+    if combatUI and combatUI.Parent then
+        return combatUI
+    end
+
+    combatUI = nil
+
+    for _, obj in ipairs(PlayerGui:GetDescendants()) do
+        if (obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox"))
+            and not obj:GetFullName():find("Settings")
+            and not obj:GetFullName():find("HUDButtonBar") then
+
+            if string.lower(obj.Text or ""):find("in combat", 1, true) then
+                combatUI = obj
+                break
+            end
+        end
+    end
+
+    return combatUI
+end
+
+local function isPlayerInCombat2()
+    local ui = findCombatUI()
+    return ui ~= nil and ui.Parent ~= nil and ui.Visible == true
+end
+
+local function runAutoBounty(deltaTime)
+    if not autoBountyEnabled or not isTeamSwitchVerified then
         return
     end
 
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
-    if not LocalPlayer then return end
-
     local myChar = LocalPlayer.Character
     if not myChar then return end
-    
+
     local rootPart = myChar:FindFirstChild("HumanoidRootPart")
     local charHumanoid = myChar:FindFirstChildOfClass("Humanoid")
-    
     if not rootPart or not charHumanoid then return end
 
-    local TweenService = game:GetService("TweenService")
+    if defenseProtocolEnabled and charHumanoid.Health > 0 then
+        local maxHp = charHumanoid.MaxHealth > 0
+            and charHumanoid.MaxHealth
+            or 100
 
-    if defenseProtocolEnabled and charHumanoid and charHumanoid.Health > 0 and rootPart then
-        local maxHpValue = charHumanoid.MaxHealth > 0 and charHumanoid.MaxHealth or 100
-        local currentHpRatio = (charHumanoid.Health / maxHpValue) * 100
+        local hpPercent = (charHumanoid.Health / maxHp) * 100
 
-        if currentHpRatio <= healthTriggerThreshold and not isEmergencyAscending then
-            isEmergencyAscending = true
+        if hpPercent <= healthTriggerThreshold then
+            if not isEmergencyAscending then
+                isEmergencyAscending = true
 
-            charHumanoid.PlatformStand = true
-            rootPart.AssemblyLinearVelocity = Vector3.zero
-            rootPart.AssemblyAngularVelocity = Vector3.zero
+                getgenv().EmergencyY = rootPart.Position.Y + 800
 
-            local destinationCFrame = rootPart.CFrame + Vector3.new(0, 800, 0)
-            local transitionInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            local riseTween = TweenService:Create(rootPart, transitionInfo, {CFrame = destinationCFrame})
-            riseTween:Play()
+                rootPart.AssemblyLinearVelocity = Vector3.zero
+                rootPart.AssemblyAngularVelocity = Vector3.zero
+                charHumanoid.PlatformStand = true
+            end
         end
 
         if isEmergencyAscending then
             charHumanoid.PlatformStand = true
-            rootPart.AssemblyLinearVelocity = Vector3.new(0, ascentVelocity, 0)
+
+            local pos = rootPart.Position
+            local targetY = getgenv().EmergencyY or (pos.Y + 800)
+
+            if pos.Y < targetY then
+                local newY = math.min(
+                    pos.Y + (ascentVelocity * deltaTime),
+                    targetY
+                )
+
+                rootPart.CFrame = CFrame.new(
+                    pos.X,
+                    newY,
+                    pos.Z
+                )
+            end
+
+            rootPart.AssemblyLinearVelocity = Vector3.zero
             rootPart.AssemblyAngularVelocity = Vector3.zero
-            
-            if rootPart.Position.Y < (workspace.FallenPartsDestroyHeight or -500) + 400 then
-                rootPart.CFrame = rootPart.CFrame + Vector3.new(0, 100, 0)
+
+            local destroyHeight = workspace.FallenPartsDestroyHeight or -500
+
+            if rootPart.Position.Y < destroyHeight + 400 then
+                rootPart.CFrame = rootPart.CFrame + Vector3.new(0, 300, 0)
             end
-            
-            if (currentHpRatio >= healthRecoveryThreshold) then
-                isEmergencyAscending = false
-                charHumanoid.PlatformStand = false
-                rootPart.AssemblyLinearVelocity = Vector3.zero
+
+            if hpPercent < healthRecoveryThreshold then
+                return
             end
-            
-            return 
+
+            isEmergencyAscending = false
+            getgenv().EmergencyY = nil
+
+            charHumanoid.PlatformStand = false
+            rootPart.AssemblyLinearVelocity = Vector3.zero
+            rootPart.AssemblyAngularVelocity = Vector3.zero
+
+            return
         end
     end
 
-    if not autoBountyEnabled then return end
-
-    -- ✅ ส่ง cache เข้าไปเพื่อลด GetPlayers calls
     local myLevel = getPlayerLevel(LocalPlayer)
-    local targetData = findNearestTarget(LocalPlayer, rootPart, myLevel)
+    local targetData = findNearestTarget(
+        LocalPlayer,
+        rootPart,
+        myLevel
+    )
+
     local nearestTargetRoot = targetData and targetData.root
     local nearestTargetChar = targetData and targetData.char
     local shortestDistance = targetData and targetData.distance or math.huge
 
-    if nearestTargetRoot and nearestTargetChar and charHumanoid and charHumanoid.Health > 0 and shortestDistance <= 10000 then
+    if nearestTargetRoot
+        and nearestTargetChar
+        and charHumanoid.Health > 0
+        and shortestDistance <= 10000 then
+
         pcall(function()
-            smoothFlyTo(nearestTargetRoot.CFrame, flySpeed, deltaTime, nearestTargetChar, shortestDistance)
+            smoothFlyTo(
+                nearestTargetRoot.CFrame,
+                flySpeed,
+                deltaTime,
+                nearestTargetChar,
+                shortestDistance
+            )
         end)
+
         return
     end
 
-    if not hopServersEnabled then
-        return
-    end
+    if not hopServersEnabled then return end
+    if isPlayerInCombat2() then return end
 
-    if isPlayerInCombat(LocalPlayer, myChar) then
-        return
-    end
-
-    for i = 1, 30 do 
-        if not autoBountyEnabled or not hopServersEnabled then return end
-        
-        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-            if browser then browser.Enabled = false end
-            return 
+    for i = 1, 30 do
+        if not autoBountyEnabled or not hopServersEnabled then
+            return
         end
-        
-        local nData = findNearestTarget(LocalPlayer, rootPart, myLevel)
-        if nData and nData.root and nData.distance <= 10000 then
-            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-            if browser then browser.Enabled = false end
-            return 
+
+        if isEmergencyAscending then
+            return
         end
-        
-        task.wait(0.1)
+
+        if isPlayerInCombat2() then
+            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+            if browser then
+                browser.Enabled = false
+            end
+            return
+        end
+
+        local nData = findNearestTarget(
+            LocalPlayer,
+            rootPart,
+            myLevel
+        )
+
+        if nData
+            and nData.root
+            and nData.distance <= 10000 then
+
+            local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
+            if browser then
+                browser.Enabled = false
+            end
+
+            return
+        end
+
+        task.wait(0.3)
     end
 
     if not autoBountyEnabled or not hopServersEnabled then return end
-
-    if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
-        local browser = LocalPlayer.PlayerGui:FindFirstChild("ServerBrowser")
-        if browser then browser.Enabled = false end
-        return 
-    end
+    if isPlayerInCombat2() then return end
+    if isEmergencyAscending then return end
 
     local browserGui = LocalPlayer.PlayerGui:WaitForChild("ServerBrowser")
-    browserGui.Enabled = true 
+    browserGui.Enabled = true
+
     task.wait(1)
 
     while autoBountyEnabled and hopServersEnabled do
-        if isPlayerInCombat(LocalPlayer, LocalPlayer.Character) then
+        if isEmergencyAscending then
             browserGui.Enabled = false
             return
         end
-        
-        local nData = findNearestTarget(LocalPlayer, rootPart, myLevel)
-        if nData and nData.root and nData.distance <= 10000 then
+
+        if isPlayerInCombat2() then
             browserGui.Enabled = false
             return
         end
-        
-        local joined = false
+
+        local nData = findNearestTarget(
+            LocalPlayer,
+            rootPart,
+            myLevel
+        )
+
+        if nData
+            and nData.root
+            and nData.distance <= 10000 then
+
+            browserGui.Enabled = false
+            return
+        end
+
         local frame = browserGui:FindFirstChild("Frame", true)
-        
+
         if frame then
             for _, i in ipairs(frame:GetDescendants()) do
-                if not autoBountyEnabled or not hopServersEnabled then return end
-                
-                if i:IsA("TextButton") and (i.Text == "Join" or i.Name == "JoinButton") then
-                    if firesignal then 
-                        firesignal(i.MouseButton1Click) 
-                        joined = true
+                if not autoBountyEnabled
+                    or not hopServersEnabled
+                    or isEmergencyAscending then
+
+                    browserGui.Enabled = false
+                    return
+                end
+
+                if i:IsA("TextButton")
+                    and (i.Text == "Join" or i.Name == "JoinButton") then
+
+                    if firesignal then
+                        firesignal(i.MouseButton1Click)
                     end
-                    task.wait(0.5)
+
+                    task.wait(0.3)
+
                 elseif i:IsA("ScrollingFrame") then
-                    i.CanvasPosition = i.CanvasPosition + Vector2.new(0, 150)
+                    i.CanvasPosition =
+                        i.CanvasPosition + Vector2.new(0, 150)
                 end
             end
         end
-        
-        if not joined then
-            task.wait(1) 
-        else
-            task.wait(1)
-        end
+
+        task.wait(1)
     end
+
+    browserGui.Enabled = false
 end
 
 local Toggle = Bounty:Toggle({
@@ -4027,11 +4148,13 @@ local Toggle = Bounty:Toggle({
         
         if state then
             task.spawn(function()
+                -- ป้องกันไม่ให้ลูปทับซ้อนกัน (เช็คว่ายังเป็นสถานะเปิดอยู่ไหม)
                 while _G.EnablePvPLoop do
                     local args = {
                         "EnablePvp"
                     }
-                    local success, err = pcall(function()
+                    
+                    pcall(function()
                         game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
                     end)
                     
@@ -4059,6 +4182,51 @@ local UtilitySection = Bounty:Section({
     Title = "Settings Skills", 
     Icon = "settings" 
 })
+
+Bounty:Slider({
+    Title = "Melee Skill Range",
+    Desc = "ระยะในการกดสกิลหมัด",
+    Value = { Min = 50, Max = 500, Default = 100 },
+    Step = 10,
+    Flag = "MeleeRange",
+    Callback = function(value)
+        Bounty.Flags.MeleeRange = value
+    end
+})
+
+Bounty:Slider({
+    Title = "Sword Skill Range",
+    Desc = "ระยะในการกดสกิลดาบ",
+    Value = { Min = 50, Max = 500, Default = 500 },
+    Step = 10,
+    Flag = "SwordRange",
+    Callback = function(value)
+        Bounty.Flags.SwordRange = value
+    end
+})
+
+Bounty:Slider({
+    Title = "Fruit Skill Range",
+    Desc = "ระยะในการกดสกิลผลไม้",
+    Value = { Min = 50, Max = 500, Default = 100 },
+    Step = 10,
+    Flag = "FruitRange",
+    Callback = function(value)
+        Bounty.Flags.FruitRange = value
+    end
+})
+
+Bounty:Slider({
+    Title = "Gun Skill Range",
+    Desc = "ระยะในการกดสกิลปืน",
+    Value = { Min = 50, Max = 500, Default = 100 },
+    Step = 10,
+    Flag = "GunRange",
+    Callback = function(value)
+        Bounty.Flags.GunRange = value
+    end
+})
+
 Bounty:Divider() 
 
 local DropdownMelee = Bounty:Dropdown({
@@ -4115,6 +4283,8 @@ local UtilitySection = Bounty:Section({
 })
 
 Bounty:Divider() 
+
+
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4247,17 +4417,37 @@ local function Bounty_GetBounty(player)
     return bounty and bounty.Value or 0
 end
 
+local function Bounty_FormatNumber(number)
+    number = tonumber(number) or 0
+
+    if number >= 1e9 then
+        return string.format("%.1fB", number / 1e9)
+    elseif number >= 1e6 then
+        return string.format("%.1fM", number / 1e6)
+    elseif number >= 1e3 then
+        return string.format("%.1fK", number / 1e3)
+    end
+
+    return tostring(number)
+end
+
 local function Bounty_GetDesc(player)
     local valid = Bounty_IsValid(player)
-    local color = valid and "#55FF88" or "#FF5555"
-    local status = valid and "Ready" or "Not ready"
+
+    local statusColor = valid and "#4ADE80" or "#F87171"
+    local statusText = valid and "Ready" or "Not Ready"
+
+    local level = Bounty_GetLevel(player)
+    local bounty = Bounty_FormatNumber(Bounty_GetBounty(player))
 
     return string.format(
-        'Status: <font color="%s">%s</font> | Lv. <font color="#FFFFFF">%s</font> | Bounty: <font color="#FFD166">%s</font>',
-        color,
-        status,
-        tostring(Bounty_GetLevel(player)),
-        tostring(Bounty_GetBounty(player))
+        '<font color="%s">● %s</font>  <font color="#71717A">•</font>  ' ..
+        '<font color="#A1A1AA">Lv.</font> <font color="#F4F4F5">%s</font>  <font color="#71717A">•</font>  ' ..
+        '<font color="#A1A1AA">Bounty</font> <font color="#FBBF24">%s</font>',
+        statusColor,
+        statusText,
+        tostring(level),
+        bounty
     )
 end
 
@@ -4268,10 +4458,18 @@ local function Bounty_CreatePlayer(player)
 
     selectedPlayers[player.UserId] = false
 
+    -- ชื่อสั้น กระชับ
+    local displayName = player.DisplayName
+    if #displayName > 16 then
+        displayName = string.sub(displayName, 1, 16) .. "..."
+    end
+
     playerControls[player.UserId] = Bounty:Toggle({
-        Title = string.format("%s (@%s)", player.DisplayName, player.Name),
+        Title = displayName,
+
         Desc = Bounty_GetDesc(player),
-        Icon = "check",
+
+        Icon = "user",
         Value = false,
         Type = "Toggle",
         Locked = false,
@@ -4281,6 +4479,7 @@ local function Bounty_CreatePlayer(player)
         end
     })
 end
+
 
 for _, player in ipairs(Players:GetPlayers()) do
     Bounty_CreatePlayer(player)
@@ -4314,7 +4513,11 @@ local function Bounty_MoveTo(targetCFrame, speed, targetCharacter)
     if not root then return end
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if humanoid then humanoid.PlatformStand = true end
+    if humanoid and humanoid.Health > 0 then 
+        humanoid.PlatformStand = true 
+    else
+        return
+    end
 
     local targetPos = targetCFrame.Position
     local distance = (targetPos - root.Position).Magnitude
@@ -4326,56 +4529,65 @@ local function Bounty_MoveTo(targetCFrame, speed, targetCharacter)
         (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
 
     if distance <= maxDistance then
-        -- ✅ เก็บ targetRoot ไปใช้ซ้ำ (เรียกเพียงครั้งเดียว)
         local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
-
-        root.CFrame = targetRoot
+        
+        -- คำนวณตำแหน่งเป้าหมายปลายทาง
+        local desiredCFrame = targetRoot 
             and targetRoot.CFrame * CFrame.new(0, 3, offset)
             or CFrame.new(root.Position, targetPos) * CFrame.new(0, 3, offset)
 
+        -- ✅ ใช้ Lerp เล็กน้อยแทนการย้าย CFrame ดิบๆ ป้องกันอาการตัวสั่น/กระตุก
+        root.CFrame = root.CFrame:Lerp(desiredCFrame, 0.4)
+        
+        -- ล้างแรงเหวี่ยง
         root.Velocity = Vector3.zero
         root.AssemblyLinearVelocity = Vector3.zero
         root.AssemblyAngularVelocity = Vector3.zero
 
+        -- ระบบคอมโบสกิล (ย้ายมาใช้ task.spawn และลดดีเลย์ให้รัวขึ้นแบบไม่บล็อกเฟรม)
         if distance <= 100 and tick() - lastComboTime >= comboCooldown then
             lastComboTime = tick()
 
-            if selectedMeleeSkills and selectedMeleeSkills[1] ~= "None" then
-                executeSkills(selectedMeleeSkills, "Melee")
-                task.wait(0.1)
-            end
+            task.spawn(function()
+                if selectedMeleeSkills and selectedMeleeSkills[1] ~= "None" then
+                    executeSkills(selectedMeleeSkills, "Melee")
+                    task.wait(0.02)
+                end
 
-            if selectedSwordSkills and selectedSwordSkills[1] ~= "None" then
-                executeSkills(selectedSwordSkills, "Sword")
-                task.wait(0.1)
-            end
+                if selectedSwordSkills and selectedSwordSkills[1] ~= "None" then
+                    executeSkills(selectedSwordSkills, "Sword")
+                    task.wait(0.02)
+                end
 
-            if selectedFruitSkills and selectedFruitSkills[1] ~= "None" then
-                executeSkills(selectedFruitSkills, "Fruit")
-                task.wait(0.1)
-            end
+                if selectedFruitSkills and selectedFruitSkills[1] ~= "None" then
+                    executeSkills(selectedFruitSkills, "Fruit")
+                    task.wait(0.02)
+                end
 
-            if selectedGunSkills and selectedGunSkills[1] ~= "None" then
-                executeSkills(selectedGunSkills, "Gun")
-            end
+                if selectedGunSkills and selectedGunSkills[1] ~= "None" then
+                    executeSkills(selectedGunSkills, "Gun")
+                end
+            end)
         end
 
         return
     end
 
-    -- ✅ เพิ่มเช็ค Distance เพื่อเลี่ยง Calculation ที่ไม่จำเป็น
-    if distance > 0 then
-        local direction = targetPos - root.Position
-        if direction.Magnitude > 0 then
-            direction = direction.Unit
-            local finalSpeed = math.min(speed or flySpeed or 50, 220)
+    -- ✅ ช่วงกำลังบินพุ่งเข้าหาเป้าหมาย
+    local direction = targetPos - root.Position
+    if direction.Magnitude > 0 then
+        direction = direction.Unit
+        local finalSpeed = math.min(speed or flySpeed or 50, 220)
 
-            root.AssemblyLinearVelocity = direction * finalSpeed
-            root.AssemblyAngularVelocity = Vector3.zero
-            root.CFrame = CFrame.lookAt(root.Position, root.Position + direction)
-        end
+        root.AssemblyLinearVelocity = direction * finalSpeed
+        root.AssemblyAngularVelocity = Vector3.zero
+        
+        -- ใช้ Lerp กับการหันหน้า ป้องกันหน้าจอสะบัดกระชาก
+        local lookAtCFrame = CFrame.lookAt(root.Position, root.Position + direction)
+        root.CFrame = root.CFrame:Lerp(lookAtCFrame, 0.3)
     end
 end
+
 
 -- ✅ ปรับปรุง Bounty_Defense เพื่อลดการค้นหา Character ซ้ำ
 local function Bounty_Defense()
@@ -4473,3 +4685,312 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
+
+
+
+
+
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
+
+-- =========================================================
+-- Palette
+-- =========================================================
+local C = {
+    Green  = "#4ADE80",
+    Amber  = "#FBBF24",
+    Red    = "#F87171",
+    Cyan   = "#A78BFA",
+    Purple = "#C4B5FD",
+    Muted  = "#9CA3BC",
+    Dim    = "#3B3F58",
+    White  = "#F5F3FF",
+}
+
+local function rgb(hex)
+    hex = hex:gsub("#", "")
+    return Color3.fromRGB(
+        tonumber(hex:sub(1, 2), 16),
+        tonumber(hex:sub(3, 4), 16),
+        tonumber(hex:sub(5, 6), 16)
+    )
+end
+
+local function colorFor(pct)
+    if pct >= 90 then return C.Green end
+    if pct >= 60 then return C.Amber end
+    return C.Red
+end
+
+local function gradeFor(pct)
+    if pct >= 95 then return "S" end
+    if pct >= 85 then return "A" end
+    if pct >= 70 then return "B" end
+    if pct >= 50 then return "C" end
+    return "D"
+end
+
+
+local function bar(pct, len)
+    len = len or 20
+    local n = math.clamp(math.floor(pct / 100 * len + .5), 0, len)
+
+    return string.format(
+        '<font color="%s">%s</font><font color="%s">%s</font>',
+        colorFor(pct),
+        string.rep("━", n),
+        C.Dim,
+        string.rep("─", len - n)
+    )
+end
+
+
+local function font(color, text)
+    return string.format('<font color="%s">%s</font>', color, text)
+end
+
+-- =========================================================
+-- Executor / Player info
+-- =========================================================
+local executorName = "Unknown"
+pcall(function()
+    if type(identifyexecutor) == "function" then
+        local n = identifyexecutor()
+        if n then executorName = tostring(n) end
+    elseif type(getexecutorname) == "function" then
+        local n = getexecutorname()
+        if n then executorName = tostring(n) end
+    end
+end)
+
+local username = LP and LP.Name or "Unknown"
+local displayName = LP and LP.DisplayName or username
+
+-- =========================================================
+-- Checks
+-- =========================================================
+local function isFn(v) return type(v) == "function" end
+
+local checks = {
+    -- Executor
+    { "Executor", "identifyexecutor", function() return isFn(identifyexecutor) end },
+    { "Executor", "getexecutorname",  function() return isFn(getexecutorname) end },
+
+    -- Environment
+    { "Environment", "getgenv", function() return isFn(getgenv) end },
+    { "Environment", "getfenv", function() return isFn(getfenv) end },
+    { "Environment", "setfenv", function() return isFn(setfenv) end },
+    { "Environment", "_G",      function() return type(_G) == "table" end },
+
+    -- Hooking
+    { "Hooking", "hookmetamethod",   function() return isFn(hookmetamethod) end },
+    { "Hooking", "hookfunction",     function() return isFn(hookfunction) end },
+    { "Hooking", "newcclosure",      function() return isFn(newcclosure) end },
+    { "Hooking", "getnamecallmethod",function() return isFn(getnamecallmethod) end },
+    { "Hooking", "getrawmetatable",  function() return isFn(getrawmetatable) end },
+    { "Hooking", "setreadonly",      function() return isFn(setreadonly) end },
+    { "Hooking", "isreadonly",       function() return isFn(isreadonly) end },
+
+    -- Input
+    { "Input", "firesignal",         function() return isFn(firesignal) end },
+    { "Input", "fireclickdetector",  function() return isFn(fireclickdetector) end },
+    { "Input", "fireproximityprompt",function() return isFn(fireproximityprompt) end },
+    { "Input", "getconnections",     function() return isFn(getconnections) end },
+
+    -- File System
+    { "File System", "makefolder", function() return isFn(makefolder) end },
+    { "File System", "isfolder",   function() return isFn(isfolder) end },
+    { "File System", "isfile",     function() return isFn(isfile) end },
+    { "File System", "writefile",  function() return isFn(writefile) end },
+    { "File System", "readfile",   function() return isFn(readfile) end },
+    { "File System", "appendfile", function() return isFn(appendfile) end },
+    { "File System", "delfile",    function() return isFn(delfile) end },
+    { "File System", "listfiles",  function() return isFn(listfiles) end },
+
+    -- HTTP
+    { "HTTP", "game:HttpGet",  function() return isFn(game.HttpGet) end },
+    { "HTTP", "request",       function() return isFn(request) end },
+    { "HTTP", "http_request",  function() return isFn(http_request) end },
+    { "HTTP", "syn.request",   function()
+        local genv = isFn(getgenv) and getgenv() or _G
+        local s = rawget(genv, "syn")
+        return type(s) == "table" and isFn(s.request)
+    end },
+
+    -- Drawing
+    { "Drawing", "Drawing.new",       function() return type(Drawing) == "table" and isFn(Drawing.new) end },
+    { "Drawing", "isrenderobj",       function() return isFn(isrenderobj) end },
+    { "Drawing", "getrenderproperty", function() return isFn(getrenderproperty) end },
+    { "Drawing", "setrenderproperty", function() return isFn(setrenderproperty) end },
+
+    -- Roblox API
+    { "Roblox API", "RaycastParams.new", function()
+        return RaycastParams ~= nil and isFn(RaycastParams.new)
+    end },
+    { "Roblox API", "TweenService:Create", function()
+        local ts = game:GetService("TweenService")
+        return ts ~= nil and isFn(ts.Create)
+    end },
+
+    -- Utility
+    { "Utility", "setclipboard",     function() return isFn(setclipboard) end },
+    { "Utility", "setfpscap",        function() return isFn(setfpscap) end },
+    { "Utility", "cloneref",         function() return isFn(cloneref) end },
+    { "Utility", "compareinstances", function() return isFn(compareinstances) end },
+}
+
+-- =========================================================
+-- Run checks + statistics
+-- =========================================================
+local results, categories = {}, {}
+local total, working = #checks, 0
+
+for _, c in ipairs(checks) do
+    local cat, name, fn = c[1], c[2], c[3]
+    local ok, res = pcall(fn)
+    local pass = (ok and res) and true or false
+
+    results[#results + 1] = { Category = cat, Name = name, Working = pass }
+
+    local entry = categories[cat]
+    if not entry then
+        entry = { Total = 0, Working = 0, Items = {} }
+        categories[cat] = entry
+    end
+
+    entry.Total = entry.Total + 1
+    entry.Items[#entry.Items + 1] = { Name = name, Working = pass }
+
+    if pass then
+        entry.Working = entry.Working + 1
+        working = working + 1
+    end
+end
+
+local missing = total - working
+local percentage = total > 0 and math.floor(working / total * 100) or 0
+local grade = gradeFor(percentage)
+local mainColor = colorFor(percentage)
+
+-- =========================================================
+-- Dashboard (hero card)
+-- =========================================================
+local line = font(C.Dim, "━━━━━━━━━━━━━━━━━━━━")
+
+local dashboardText = table.concat({
+    string.format('<b>%s</b>  %s', font(C.White, "SYSTEM OVERVIEW"), font(C.Muted, "• live scan")),
+    line,
+    string.format('%s  Executor     %s', font(C.Cyan, "◆"), font(C.Cyan, "<b>" .. executorName .. "</b>")),
+    string.format('%s  Username     %s', font(C.Purple, "◆"), font(C.White, username)),
+    string.format('%s  Display      %s', font(C.Purple, "◆"), font(C.White, displayName)),
+    "",
+    string.format('%s  Compatibility  %s  %s', font(mainColor, "◆"), font(mainColor, "<b>" .. percentage .. "%</b>"), font(mainColor, "Rank " .. grade)),
+    bar(percentage, 24),
+    "",
+    string.format('%s  %s     %s  %s     %s  %s',
+        font(C.Green, "✓"), font(C.White, working .. " working"),
+        font(C.Red, "✗"), font(C.White, missing .. " missing"),
+        font(C.Muted, "Σ"), font(C.White, total .. " total")),
+    line,
+    string.format('%s <b>%s</b>%s\n%s %s',
+        font(C.Muted, "Welcome back,"), font(C.White, displayName), font(C.Muted, "."),
+        font(C.Muted, "Enjoy your experience with"), font(C.Purple, "<b>Destiny Hub</b> ✦")),
+}, "\n")
+
+local function copyToClipboard(text, label)
+    local ok, err = pcall(function()
+        if isFn(setclipboard) then
+            setclipboard(text)
+        else
+            error("setclipboard is not available")
+        end
+    end)
+    if not ok then
+        warn("[Destiny Hub] " .. label .. " error: " .. tostring(err))
+    end
+end
+
+-- plain text report for the "Copy Report" button
+local function buildReport()
+    local out = {
+        "Destiny Hub | Compatibility Report",
+        "Executor: " .. executorName,
+        string.format("Score: %d%% (Rank %s) - %d/%d", percentage, grade, working, total),
+        "",
+    }
+    for _, r in ipairs(results) do
+        out[#out + 1] = string.format("[%s] %s (%s)", r.Working and "OK" or "--", r.Name, r.Category)
+    end
+    return table.concat(out, "\n")
+end
+
+Home:Paragraph({
+    Title = "✦ Destiny Hub | Dashboard",
+    Desc = dashboardText,
+
+    ImageSize = 50,
+    Thumbnail = "rbxassetid://71825656372618",
+    ThumbnailSize = 70,
+    Buttons = {
+        {
+            Title = "Discord",
+            Callback = function()
+                copyToClipboard("https://discord.gg/hUMaVECvBz", "Clipboard")
+            end,
+        },
+        {
+            Title = "Report",
+            Callback = function()
+                copyToClipboard(buildReport(), "Report")
+            end,
+        },
+    },
+})
+local categoryOrder = {
+    "Executor", "Environment", "Hooking", "Input", "File System",
+    "HTTP", "Drawing", "Roblox API", "Utility",
+}
+local categoryIcons = {
+    ["Executor"]    = "terminal",
+    ["Environment"] = "layers",
+    ["Hooking"]     = "anchor",
+    ["Input"]       = "mouse-pointer-click",
+    ["File System"] = "folder",
+    ["HTTP"]        = "globe",
+    ["Drawing"]     = "pen-tool",
+    ["Roblox API"]  = "box",
+    ["Utility"]     = "wrench",
+}
+Home:Divider()
+for _, catName in ipairs(categoryOrder) do
+    local cat = categories[catName]
+    if cat then
+        local pct = math.floor(cat.Working / cat.Total * 100)
+        local col = colorFor(pct)
+
+        local rows = {
+            string.format("%s  %s  %s",
+                bar(pct, 16),
+                font(col, "<b>" .. pct .. "%</b>"),
+                font(C.Muted, string.format("(%d/%d)", cat.Working, cat.Total))),
+            font(C.Dim, "────────────────────────"),
+        }
+
+        for _, it in ipairs(cat.Items) do
+            if it.Working then
+                rows[#rows + 1] = string.format("%s  %s  %s",
+                    font(C.Green, "✓"), font(C.White, it.Name), font(C.Muted, "· available"))
+            else
+                rows[#rows + 1] = string.format("%s  %s  %s",
+                    font(C.Red, "✗"), font(C.White, it.Name), font(C.Red, "· unavailable"))
+            end
+        end
+
+        Home:Paragraph({
+            Title = catName,
+            Desc = table.concat(rows, "\n"),
+            Image = categoryIcons[catName] or "layers",
+            ImageSize = 22,
+        })
+    end
+end
