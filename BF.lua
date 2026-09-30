@@ -168,7 +168,6 @@ end)
 Window:DisableTopbarButtons({
     "Close",
     "Minimize",
-    "Fullscreen"
 })
 
 Window:SetIconSize(40) 
@@ -1190,6 +1189,7 @@ local SafeZoneCacheTime = 0
 ----------------------------------------------------------------
 -- Helpers
 ----------------------------------------------------------------
+
 local function Hex(c)
     return string.format(
         "#%02X%02X%02X",
@@ -1200,25 +1200,43 @@ local function Hex(c)
 end
 
 local function Colored(text, color)
-    return string.format('<font color="%s">%s</font>', Hex(color), tostring(text))
+    return string.format(
+        '<font color="%s">%s</font>',
+        Hex(color),
+        tostring(text)
+    )
 end
 
 local function FormatNumber(n)
-    if type(n) ~= "number" then return tostring(n) end
-    if n >= 1e9 then return string.format("%.1fB", n / 1e9) end
-    if n >= 1e6 then return string.format("%.1fM", n / 1e6) end
-    if n >= 1e3 then return string.format("%.1fK", n / 1e3) end
+    if type(n) ~= "number" then
+        return tostring(n)
+    end
+
+    if n >= 1e9 then
+        return string.format("%.1fB", n / 1e9)
+    end
+
+    if n >= 1e6 then
+        return string.format("%.1fM", n / 1e6)
+    end
+
+    if n >= 1e3 then
+        return string.format("%.1fK", n / 1e3)
+    end
+
     return tostring(n)
 end
 
 ----------------------------------------------------------------
 -- Safe zones
 ----------------------------------------------------------------
+
 local function RefreshSafeZones()
     SafeZones = {}
 
     local origin = Workspace:FindFirstChild("_WorldOrigin")
     local folder = origin and origin:FindFirstChild("SafeZones")
+
     if not folder then
         SafeZoneCacheTime = tick()
         return
@@ -1227,7 +1245,9 @@ local function RefreshSafeZones()
     for _, zone in ipairs(folder:GetChildren()) do
         if zone:IsA("BasePart") then
             local mesh = zone:FindFirstChildOfClass("SpecialMesh")
-            local radius = mesh and mesh.Scale.X * 0.5
+
+            local radius =
+                mesh and mesh.Scale.X * 0.5
                 or math.max(zone.Size.X, zone.Size.Z) * 0.5
 
             SafeZones[#SafeZones + 1] = {
@@ -1241,10 +1261,15 @@ local function RefreshSafeZones()
 end
 
 local function IsSafeZone(character)
-    if not character then return false end
+    if not character then
+        return false
+    end
 
     local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return false end
+
+    if not root then
+        return false
+    end
 
     if tick() - SafeZoneCacheTime >= 5 then
         RefreshSafeZones()
@@ -1252,6 +1277,7 @@ local function IsSafeZone(character)
 
     for _, zone in ipairs(SafeZones) do
         local d = root.Position - zone.Position
+
         if d.X * d.X + d.Y * d.Y + d.Z * d.Z <= zone.Radius ^ 2 then
             return true
         end
@@ -1263,6 +1289,7 @@ end
 ----------------------------------------------------------------
 -- Player data
 ----------------------------------------------------------------
+
 local function GetTeam(player)
     if not player or not player.Parent then
         return "Player", C.White, false
@@ -1288,7 +1315,10 @@ end
 local function GetLevel(player)
     local data = player:FindFirstChild("Data")
     local level = data and data:FindFirstChild("Level")
-    if level then return level.Value end
+
+    if level then
+        return level.Value
+    end
 
     local stats = player:FindFirstChild("leaderstats")
     level = stats and stats:FindFirstChild("Level")
@@ -1299,6 +1329,7 @@ end
 local function GetBounty(player)
     local stats = player:FindFirstChild("leaderstats")
     local bounty = stats and stats:FindFirstChild("Bounty/Honor")
+
     return bounty and bounty.Value or 0
 end
 
@@ -1313,22 +1344,34 @@ local function GetStatus(player)
         or (char and char:FindFirstChild("TempSafeZone") ~= nil)
 
     local combat = player:GetAttribute("InCombat")
+
     if char then
         combat = combat or char:GetAttribute("InCombat")
     end
-    combat = combat == true or combat == 1 or combat == "1"
+
+    combat =
+        combat == true
+        or combat == 1
+        or combat == "1"
 
     return
-        pvpOff and "OFF" or "ON", pvpOff and C.PvPOff or C.PvPOn,
-        safe and "SAFE" or "NORMAL", safe and C.SafeZoneOn or C.SafeZoneOff,
-        combat and "COMBAT" or "READY", combat and C.Combat or C.Muted
+        pvpOff and "OFF" or "ON",
+        pvpOff and C.PvPOff or C.PvPOn,
+
+        safe and "SAFE" or "NORMAL",
+        safe and C.SafeZoneOn or C.SafeZoneOff,
+
+        combat and "COMBAT" or "READY",
+        combat and C.Combat or C.Muted
 end
 
 ----------------------------------------------------------------
 -- UI
 ----------------------------------------------------------------
+
 local function MakeLabel(parent, name, order, height, textSize)
     local label = Instance.new("TextLabel")
+
     label.Name = name
     label.LayoutOrder = order
     label.Size = UDim2.new(1, 0, 0, height)
@@ -1343,12 +1386,14 @@ local function MakeLabel(parent, name, order, height, textSize)
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.Parent = parent
+
     return label
 end
 
 local function BuildUI(gui)
-    -- การ์ดโปร่งใส ยึดขอบล่าง ขยายขึ้นด้านบนเมื่อเปิดหลายแถว
+    -- การ์ดโปร่งใส ยึดขอบล่าง
     local card = Instance.new("Frame")
+
     card.Name = "Card"
     card.AnchorPoint = Vector2.new(0.5, 1)
     card.Position = UDim2.new(0.5, 0, 1, 0)
@@ -1359,6 +1404,7 @@ local function BuildUI(gui)
     card.Parent = gui
 
     local padding = Instance.new("UIPadding")
+
     padding.PaddingTop = UDim.new(0, 6)
     padding.PaddingBottom = UDim.new(0, 6)
     padding.PaddingLeft = UDim.new(0, 8)
@@ -1366,6 +1412,7 @@ local function BuildUI(gui)
     padding.Parent = card
 
     local layout = Instance.new("UIListLayout")
+
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.Padding = UDim.new(0, 3)
@@ -1377,6 +1424,7 @@ local function BuildUI(gui)
 
     -- แถบเลือด
     local hpBG = Instance.new("Frame")
+
     hpBG.Name = "HPBG"
     hpBG.LayoutOrder = 4
     hpBG.Size = UDim2.new(1, 0, 0, 11)
@@ -1385,22 +1433,27 @@ local function BuildUI(gui)
     hpBG.BorderSizePixel = 0
     hpBG.ClipsDescendants = true
     hpBG.Parent = card
+
     Instance.new("UICorner", hpBG).CornerRadius = UDim.new(1, 0)
 
     local hpStroke = Instance.new("UIStroke")
+
     hpStroke.Thickness = 1
     hpStroke.Color = Color3.fromRGB(60, 60, 80)
     hpStroke.Parent = hpBG
 
     local fill = Instance.new("Frame")
+
     fill.Name = "Fill"
     fill.Size = UDim2.new(1, 0, 1, 0)
     fill.BackgroundColor3 = C.HPHigh
     fill.BorderSizePixel = 0
     fill.Parent = hpBG
+
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
     local fillGradient = Instance.new("UIGradient")
+
     fillGradient.Rotation = 90
     fillGradient.Color = ColorSequence.new(
         Color3.fromRGB(255, 255, 255),
@@ -1409,6 +1462,7 @@ local function BuildUI(gui)
     fillGradient.Parent = fill
 
     local hpText = Instance.new("TextLabel")
+
     hpText.Name = "HPText"
     hpText.Size = UDim2.new(1, 0, 1, 0)
     hpText.BackgroundTransparency = 1
@@ -1435,70 +1489,136 @@ end
 ----------------------------------------------------------------
 -- ESP per player
 ----------------------------------------------------------------
-local HP_TWEEN = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+local HP_TWEEN = TweenInfo.new(
+    0.2,
+    Enum.EasingStyle.Quad,
+    Enum.EasingDirection.Out
+)
 
 local function CreateESP(player)
-    if player == LocalPlayer or Registry[player] then return end
+    if player == LocalPlayer or Registry[player] then
+        return
+    end
 
     local entry = {
         Conns = {},
         CharConns = {},
         Token = 0
     }
+
     Registry[player] = entry
 
-   local function ClearCharacter()
-    for _, c in ipairs(entry.CharConns) do
-        c:Disconnect()
-    end
-    table.clear(entry.CharConns)
+    ------------------------------------------------------------
+    -- Clear Character
+    ------------------------------------------------------------
 
-    -- เปลี่ยนมาใช้แบบนี้
-    if entry["Gui"] then
-        entry["Gui"]:Destroy()
-        entry["Gui"] = nil
+    local function ClearCharacter()
+        for _, c in ipairs(entry.CharConns) do
+            pcall(function()
+                c:Disconnect()
+            end)
+        end
+
+        table.clear(entry.CharConns)
+
+        if entry.Gui then
+            pcall(function()
+                entry.Gui:Destroy()
+            end)
+
+            entry.Gui = nil
+        end
+
+        entry.Update = nil
     end
-    entry["Update"] = nil
-end
+
+    ------------------------------------------------------------
+    -- Destroy Player
+    ------------------------------------------------------------
 
     entry.Destroy = function()
         entry.Token = entry.Token + 1
+
         ClearCharacter()
+
         for _, c in ipairs(entry.Conns) do
-            c:Disconnect()
+            pcall(function()
+                c:Disconnect()
+            end)
         end
+
         table.clear(entry.Conns)
+
         Registry[player] = nil
     end
 
+    ------------------------------------------------------------
+    -- Setup Character
+    ------------------------------------------------------------
+
     local function Setup(character)
         entry.Token = entry.Token + 1
+
         local token = entry.Token
 
         ClearCharacter()
 
-        if not character or not character.Parent then return end
+        if not character then
+            return
+        end
 
-        local head, humanoid
-        for _ = 1, 30 do
-            if token ~= entry.Token or not character.Parent then return end
+        --------------------------------------------------------
+        -- รอ Character โหลดเต็มที่
+        -- สูงสุด 30 วินาที
+        --------------------------------------------------------
+
+        local head
+        local humanoid
+
+        for _ = 1, 120 do
+            if token ~= entry.Token
+                or not player.Parent
+                or not character.Parent then
+                return
+            end
 
             head = character:FindFirstChild("Head")
             humanoid = character:FindFirstChildOfClass("Humanoid")
 
-            if head and humanoid then break end
+            if head and humanoid then
+                break
+            end
+
             task.wait(0.25)
         end
 
-        if not head or not humanoid or not player.Parent then return end
-        if token ~= entry.Token then return end
+        if not head or not humanoid then
+            return
+        end
+
+        if token ~= entry.Token or not player.Parent then
+            return
+        end
+
+        --------------------------------------------------------
+        -- ลบ ESP เก่า
+        --------------------------------------------------------
 
         local old = head:FindFirstChild("PlayerESP")
-        if old then old:Destroy() end
+
+        if old then
+            old:Destroy()
+        end
 
         local _, _, enabled = GetTeam(player)
 
+        --------------------------------------------------------
+        -- Billboard
+        --------------------------------------------------------
+
         local gui = Instance.new("BillboardGui")
+
         gui.Name = "PlayerESP"
         gui.Adornee = head
         gui.Size = UDim2.fromOffset(220, 110)
@@ -1513,21 +1633,43 @@ end
 
         local ui = BuildUI(gui)
 
+        --------------------------------------------------------
+        -- Health
+        --------------------------------------------------------
+
         local function UpdateHealth(value)
-            if not ui.Fill.Parent then return end
+            if not ui.Fill.Parent then
+                return
+            end
 
             local max = math.max(humanoid.MaxHealth, 1)
-            local hp = math.clamp(tonumber(value) or 0, 0, max)
+            local hp = math.clamp(
+                tonumber(value) or 0,
+                0,
+                max
+            )
+
             local percent = hp / max
 
-            local color = percent > 0.65 and C.HPHigh
+            local color =
+                percent > 0.65 and C.HPHigh
                 or percent > 0.30 and C.HPMid
                 or C.HPLow
 
-            TweenService:Create(ui.Fill, HP_TWEEN, {
-                Size = UDim2.new(percent, 0, 1, 0),
-                BackgroundColor3 = color
-            }):Play()
+            TweenService:Create(
+                ui.Fill,
+                HP_TWEEN,
+                {
+                    Size = UDim2.new(
+                        percent,
+                        0,
+                        1,
+                        0
+                    ),
+
+                    BackgroundColor3 = color
+                }
+            ):Play()
 
             ui.HPText.Text = string.format(
                 "%s / %s",
@@ -1536,122 +1678,328 @@ end
             )
         end
 
-        local function Update()
-            if not gui.Parent then return end
+        --------------------------------------------------------
+        -- Update
+        --------------------------------------------------------
 
-            local teamName, teamColor, teamEnabled = GetTeam(player)
+        local function Update()
+            if not gui.Parent then
+                return
+            end
+
+            if token ~= entry.Token then
+                return
+            end
+
+            local teamName, teamColor, teamEnabled =
+                GetTeam(player)
+
             gui.Enabled = teamEnabled
-            if not teamEnabled then return end
+
+            if not teamEnabled then
+                return
+            end
 
             ui.Name.Visible = ESP.ShowName
             ui.Status.Visible = ESP.ShowStatus
             ui.HPBG.Visible = ESP.ShowHealth
-            ui.Info.Visible = ESP.ShowLevel or ESP.ShowBounty
+            ui.Info.Visible =
+                ESP.ShowLevel or ESP.ShowBounty
 
+            ----------------------------------------------------
             -- ชื่อ + ระยะ
+            ----------------------------------------------------
+
             local distanceText = ""
-            if ESP.ShowDistance and LocalPlayer.Character then
-                local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local targetRoot = character:FindFirstChild("HumanoidRootPart")
+
+            if ESP.ShowDistance
+                and LocalPlayer.Character then
+
+                local myRoot =
+                    LocalPlayer.Character:FindFirstChild(
+                        "HumanoidRootPart"
+                    )
+
+                local targetRoot =
+                    character:FindFirstChild(
+                        "HumanoidRootPart"
+                    )
 
                 if myRoot and targetRoot then
-                    local distance = math.floor((myRoot.Position - targetRoot.Position).Magnitude)
-                    distanceText = "  " .. Colored(distance .. "m", C.Muted)
+                    local distance =
+                        math.floor(
+                            (
+                                myRoot.Position
+                                - targetRoot.Position
+                            ).Magnitude
+                        )
+
+                    distanceText =
+                        "  "
+                        .. Colored(
+                            distance .. "m",
+                            C.Muted
+                        )
                 end
             end
 
             ui.Name.Text = string.format(
                 "%s %s%s",
-                Colored("[" .. string.upper(tostring(teamName)) .. "]", teamColor),
-                Colored(player.DisplayName, C.White),
+
+                Colored(
+                    "[" .. string.upper(
+                        tostring(teamName)
+                    ) .. "]",
+                    teamColor
+                ),
+
+                Colored(
+                    player.DisplayName,
+                    C.White
+                ),
+
                 distanceText
             )
 
-            -- สถานะ
-            local pvpText, pvpColor, safeText, safeColor, combatText, combatColor = GetStatus(player)
-            local sep = Colored("  |  ", C.Muted)
+            ----------------------------------------------------
+            -- Status
+            ----------------------------------------------------
+
+            local pvpText,
+                pvpColor,
+                safeText,
+                safeColor,
+                combatText,
+                combatColor = GetStatus(player)
+
+            local sep =
+                Colored("  |  ", C.Muted)
 
             ui.Status.Text = table.concat({
-                Colored("PvP ", C.Muted) .. Colored(pvpText, pvpColor),
-                Colored(safeText, safeColor),
-                Colored(combatText, combatColor)
+                Colored("PvP ", C.Muted)
+                    .. Colored(
+                        pvpText,
+                        pvpColor
+                    ),
+
+                Colored(
+                    safeText,
+                    safeColor
+                ),
+
+                Colored(
+                    combatText,
+                    combatColor
+                )
             }, sep)
 
-            -- เลเวล + ค่าหัว
+            ----------------------------------------------------
+            -- Level + Bounty
+            ----------------------------------------------------
+
             local parts = {}
+
             if ESP.ShowLevel then
-                parts[#parts + 1] = Colored("LVL " .. tostring(GetLevel(player)), C.Level)
+                parts[#parts + 1] =
+                    Colored(
+                        "LVL "
+                            .. tostring(
+                                GetLevel(player)
+                            ),
+                        C.Level
+                    )
             end
+
             if ESP.ShowBounty then
-                parts[#parts + 1] = Colored("💎 " .. FormatNumber(GetBounty(player)), C.Bounty)
+                parts[#parts + 1] =
+                    Colored(
+                        "💎 "
+                            .. FormatNumber(
+                                GetBounty(player)
+                            ),
+                        C.Bounty
+                    )
             end
-            ui.Info.Text = table.concat(parts, sep)
+
+            ui.Info.Text =
+                table.concat(parts, sep)
         end
+
+        --------------------------------------------------------
+        -- Initial Update
+        --------------------------------------------------------
 
         Update()
         UpdateHealth(humanoid.Health)
 
-        table.insert(entry.CharConns, humanoid.HealthChanged:Connect(UpdateHealth))
-        table.insert(entry.CharConns, humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(function()
-            UpdateHealth(humanoid.Health)
-        end))
+        --------------------------------------------------------
+        -- Health connections
+        --------------------------------------------------------
+
+        table.insert(
+            entry.CharConns,
+            humanoid.HealthChanged:Connect(
+                UpdateHealth
+            )
+        )
+
+        table.insert(
+            entry.CharConns,
+            humanoid:GetPropertyChangedSignal(
+                "MaxHealth"
+            ):Connect(function()
+                UpdateHealth(humanoid.Health)
+            end)
+        )
+
+        --------------------------------------------------------
+        -- Character ถูกลบ
+        --------------------------------------------------------
+
+        table.insert(
+            entry.CharConns,
+            character.AncestryChanged:Connect(
+                function(_, parent)
+                    if not parent
+                        and token == entry.Token then
+
+                        ClearCharacter()
+                    end
+                end
+            )
+        )
 
         entry.Update = Update
     end
 
+    ------------------------------------------------------------
+    -- Safe Setup
+    ------------------------------------------------------------
+
     local function SafeSetup(character)
+        if not character then
+            return
+        end
+
         task.spawn(function()
-            local ok, err = pcall(Setup, character)
+            local ok, err = pcall(function()
+                Setup(character)
+            end)
+
             if not ok then
                 warn("[ESP]", err)
             end
         end)
     end
 
+    ------------------------------------------------------------
+    -- สำคัญ:
+    -- ต่อ CharacterAdded ก่อน
+    -- แล้วค่อยเช็ค Character ปัจจุบัน
+    ------------------------------------------------------------
+
+    table.insert(
+        entry.Conns,
+        player.CharacterAdded:Connect(
+            function(character)
+                SafeSetup(character)
+            end
+        )
+    )
+
+    ------------------------------------------------------------
+    -- คนที่มี Character อยู่แล้ว
+    ------------------------------------------------------------
+
     if player.Character then
         SafeSetup(player.Character)
     end
-
-    table.insert(entry.Conns, player.CharacterAdded:Connect(SafeSetup))
 end
 
 ----------------------------------------------------------------
 -- Loop / lifecycle
 ----------------------------------------------------------------
+
 local acc = 0
-table.insert(GlobalConns, RunService.Heartbeat:Connect(function(dt)
-    acc += dt
-    if acc < 0.1 then return end -- อัปเดต 10 ครั้ง/วินาที พอสำหรับข้อความ
-    acc = 0
 
-    for _, entry in pairs(Registry) do
-        if entry.Update then
-            local ok, err = pcall(entry.Update)
-            if not ok then warn("[ESP]", err) end
+table.insert(
+    GlobalConns,
+    RunService.Heartbeat:Connect(function(dt)
+        acc = acc + dt
+
+        if acc < 0.1 then
+            return
         end
-    end
-end))
 
-table.insert(GlobalConns, Players.PlayerAdded:Connect(CreateESP))
+        acc = 0
 
-table.insert(GlobalConns, Players.PlayerRemoving:Connect(function(player)
-    local entry = Registry[player]
-    if entry then entry.Destroy() end
-end))
+        for _, entry in pairs(Registry) do
+            if entry.Update then
+                local ok, err = pcall(
+                    entry.Update
+                )
+
+                if not ok then
+                    warn("[ESP]", err)
+                end
+            end
+        end
+    end)
+)
+
+----------------------------------------------------------------
+-- Player Added
+----------------------------------------------------------------
+
+table.insert(
+    GlobalConns,
+    Players.PlayerAdded:Connect(function(player)
+        CreateESP(player)
+    end)
+)
+
+----------------------------------------------------------------
+-- Player Removing
+----------------------------------------------------------------
+
+table.insert(
+    GlobalConns,
+    Players.PlayerRemoving:Connect(function(player)
+        local entry = Registry[player]
+
+        if entry then
+            entry.Destroy()
+        end
+    end)
+)
+
+----------------------------------------------------------------
+-- โหลดผู้เล่นที่อยู่แล้ว
+----------------------------------------------------------------
 
 for _, player in ipairs(Players:GetPlayers()) do
     CreateESP(player)
 end
 
+----------------------------------------------------------------
+-- Cleanup
+----------------------------------------------------------------
+
 ENV.__ESPCleanup = function()
     for _, c in ipairs(GlobalConns) do
-        pcall(function() c:Disconnect() end)
+        pcall(function()
+            c:Disconnect()
+        end)
     end
+
     table.clear(GlobalConns)
 
     for _, entry in pairs(Registry) do
-        pcall(entry.Destroy)
+        pcall(function()
+            entry.Destroy()
+        end)
     end
+
     table.clear(Registry)
 end
 
@@ -2097,8 +2445,18 @@ local function GetClosestPlayerTarget()
     return closest
 end
 
+local function StopFollow()
+    if activeTween then
+        activeTween:Cancel()
+        activeTween = nil
+    end
+end
+
 local function FollowTarget(player)
-    if not player or not player.Character then
+    -- ไม่มีเป้าหมาย = หยุดเฉพาะการทำงาน
+    -- ไม่แตะ CurrentTarget
+    if not player or not player.Parent then
+        StopFollow()
         return false
     end
 
@@ -2108,34 +2466,70 @@ local function FollowTarget(player)
 
     local targetChar = player.Character
     local targetRoot =
-        targetChar:FindFirstChild("HumanoidRootPart")
-    local targetHum =
-        targetChar:FindFirstChildOfClass("Humanoid")
+        targetChar and targetChar:FindFirstChild("HumanoidRootPart")
 
-    if not root or not hum or hum.Health <= 0
-        or not targetRoot or not targetHum
-        or targetHum.Health <= 0 then
+    local targetHum =
+        targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+
+    -- ตัวเราไม่พร้อม
+    if not root or not hum or hum.Health <= 0 then
+        StopFollow()
         return false
     end
 
+    -- เป้าหมายยังไม่มี Character / กำลังเกิดใหม่
+    if not targetChar or not targetRoot or not targetHum then
+        StopFollow()
+        return false
+    end
+
+    -- เป้าหมายตาย
+    if targetHum.Health <= 0 then
+        StopFollow()
+        return false
+    end
+
+    -- เช็คระยะ
+    local distance =
+        (root.Position - targetRoot.Position).Magnitude
+
+    -- หลุดระยะ = หยุด แต่ "ไม่ยกเลิก CurrentTarget"
+    if distance > FollowDistance then
+        StopFollow()
+        return false
+    end
+
+    ------------------------------------------------------------
+    -- อยู่ในระยะแล้ว -> ทำงานต่อ
+    ------------------------------------------------------------
+
     local targetCF = targetRoot.CFrame
+
     local behind =
-        targetCF * CFrame.new(0,0,TpBehindDistance)
+        targetCF * CFrame.new(0, 0, TpBehindDistance)
 
     local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = {char,targetChar}
+
+    params.FilterType =
+        Enum.RaycastFilterType.Exclude
+
+    params.FilterDescendantsInstances = {
+        char,
+        targetChar
+    }
 
     local hit = Workspace:Raycast(
-        behind.Position + Vector3.new(0,5,0),
-        Vector3.new(0,-15,0),
+        behind.Position + Vector3.new(0, 5, 0),
+        Vector3.new(0, -15, 0),
         params
     )
 
     local pos = behind.Position
 
     if hit then
-        pos = hit.Position + Vector3.new(0,3,0)
+        pos =
+            hit.Position
+            + Vector3.new(0, 3, 0)
     end
 
     local cf = CFrame.new(
@@ -2143,8 +2537,10 @@ local function FollowTarget(player)
         pos + targetCF.LookVector
     )
 
+    -- ยกเลิก Tween เก่าก่อนสร้างใหม่
     if activeTween then
         activeTween:Cancel()
+        activeTween = nil
     end
 
     activeTween = TweenService:Create(
@@ -2153,12 +2549,31 @@ local function FollowTarget(player)
             TELEPORT_DURATION,
             Enum.EasingStyle.Linear
         ),
-        {CFrame=cf}
+        {
+            CFrame = cf
+        }
     )
 
     activeTween:Play()
+
     return true
 end
+
+----------------------------------------------------------------
+-- Follow Loop
+----------------------------------------------------------------
+
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+
+        if CurrentTarget then
+            FollowTarget(CurrentTarget)
+        else
+            StopFollow()
+        end
+    end
+end)
 
 --==================================================
 -- CAMERA LOCK
