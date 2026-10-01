@@ -3393,7 +3393,6 @@ local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 
---// GUI
 local JumpGui = Instance.new("ScreenGui")
 JumpGui.Name = "JumpButtonUI"
 JumpGui.ResetOnSpawn = false
