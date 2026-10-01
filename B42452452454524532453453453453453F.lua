@@ -611,7 +611,7 @@ end)
 local function initializeSkillSettings()
 local Players, RunService, ReplicatedStorage, Workspace = game:GetService("Players"), game:GetService("RunService"), game:GetService("ReplicatedStorage"), game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
-local ENV = getgenv() -- ประกาศและใช้งาน ENV เพื่อไม่ให้ขึ้นเตือน Global/TypeError
+local ENV = getgenv() 
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local CommF = Remotes:WaitForChild("CommF_", 10)
@@ -625,7 +625,6 @@ LocalPlayer.CharacterAdded:Connect(function(c)
     hum = nil 
 end)
 
--- Dash & Jump Loop
 RunService.RenderStepped:Connect(function(dt)
     char = (Workspace:FindFirstChild("Characters") and Workspace.Characters:FindFirstChild(LocalPlayer.Name)) or LocalPlayer.Character
     if not char then 
@@ -646,7 +645,6 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- Helper for Loops
 local function StartLoop(stateKey, interval, func)
     _G[stateKey] = not _G[stateKey]
     if not _G[stateKey] then return end
@@ -658,7 +656,6 @@ local function StartLoop(stateKey, interval, func)
     end)
 end
 
--- Auto Ability
 local function SetAutoRaceAbility(state)
     _G.AutoRaceAbilityRunning = state
     if state then
@@ -671,7 +668,6 @@ local function SetAutoRaceAbility(state)
     end
 end
 
--- Auto V4
 local function SetAutoRaceV4(state)
     _G.AutoRaceV4Running = state
     if state then
@@ -687,7 +683,6 @@ local function SetAutoRaceV4(state)
     end
 end
 
--- Buso
 local function CheckAndEnableBuso()
     local c = LocalPlayer.Character
     local b = c and c:FindFirstChild("HasBuso")
@@ -698,8 +693,6 @@ local function CheckAndEnableBuso()
     end
 end
 
-
--- ESP CONFIG
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local Workspace=game:GetService("Workspace")
@@ -2955,17 +2948,10 @@ CombatTab:Slider({
     Value = { Min = 10, Max = 50, Default = getgenv().HitboxSize }, Increment = 1,
     Callback = function(v) getgenv().HitboxSize = v end,
 })
-
-
-local SettingsGroup = Config:Group({})
-local HideShowUI = SettingsGroup:Section({ 
-    Title = "Settings 1", 
-    Icon = "monitor" 
-})
 local SettingsGroup2 = Config:Group({})
 local SettingsGroup3 = Config:Group({})
-local UIKeybind = SettingsGroup:Keybind({
-    Title = "",
+local UIKeybind = Config:Keybind({
+    Title = "UI Keybind",
     Flag = "UIKeybindUIKeybind", 
     Value = "",
     Callback = function(key)
@@ -2973,43 +2959,52 @@ local UIKeybind = SettingsGroup:Keybind({
     end
 })
 local RunService = game:GetService("RunService")
-local LocalPlayer = game:GetService("Players").LocalPlayer
-local conn = nil
-local noclipEnabled = false
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local noclipConnection = nil
 
-local function updateNoclip()
-    local char = LocalPlayer.Character
-    if char then
-        for _, p in ipairs(char:GetDescendants()) do
-            if p:IsA("BasePart") then
-                p.CanCollide = not noclipEnabled
-            end
+local function setNoclip(state)
+    local character = LocalPlayer.Character
+    if not character then return end
+
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not state
         end
     end
 end
 
-SettingsGroup:Toggle({
-    Title = "", Type = "Checkbox", Flag = "NoclipToggle", Value = false,
+Config:Toggle({
+    Title = "Noclip",
+    Type =  "Checkbox",
+    Desc = "Pierce through",
+    Flag = "NoclipToggle",
+    Value = false,
+
     Callback = function(state)
-        noclipEnabled = state
-        
-        if conn then 
-            conn:Disconnect() 
-            conn = nil 
+        -- ป้องกัน Connection เก่าค้าง
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
         end
-        
+
         if state then
-            conn = RunService.Stepped:Connect(updateNoclip)
+            setNoclip(true)
+
+            noclipConnection = RunService.Stepped:Connect(function()
+                setNoclip(true)
+            end)
         else
-            updateNoclip()
+            setNoclip(false)
         end
     end,
 })
 
-LocalPlayer.CharacterAdded:Connect(function(char)
-    if noclipEnabled then
-        task.wait(0.2) 
-        updateNoclip()
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+
+    if noclipConnection then
+        setNoclip(true)
     end
 end)
 
