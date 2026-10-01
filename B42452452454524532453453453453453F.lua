@@ -165,8 +165,8 @@ Snapline.Visible = false
 Snapline.Thickness = 1.5        
 Snapline.Color = Color3.fromRGB(255, 255, 255) 
 Snapline.Transparency = 1             
-Snapline.From = Vector2.new(0, 0)         
-Snapline.To = Vector2.new(0, 0)         
+Snapline.From = Vector2.new(0, 0)        
+Snapline.To = Vector2.new(0, 0)        
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
@@ -186,7 +186,7 @@ local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") and Workspace._
 local combatCache = {}
 local safeZoneCache = {}
 local lastCacheClear = tick()
-local cacheExpiry = 0.2
+local cacheExpiry = 0.5 -- ปรับเพิ่มจาก 0.2 เป็น 0.5 เพื่อลดรอบการเคลียร์
 
 local function clearCacheIfNeeded()
     local now = tick()
@@ -283,7 +283,7 @@ end
 --// อัปเดตรายชื่อเป้าหมาย
 local cachedValidTargets = {}
 local lastTargetUpdate = 0
-local targetUpdateInterval = 0.2  
+local targetUpdateInterval = 0.4  -- ปรับเพิ่มจาก 0.2 เป็น 0.4 เพื่อลดภาระการค้นหาเป้าหมายบ่อยเกินไป
 
 local function UpdateValidTargets()
     table.clear(cachedValidTargets)  
@@ -440,6 +440,14 @@ local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
 RunService.RenderStepped:Connect(function(dt)
+    -- เพิ่มเงื่อนไขเช็คตั้งแต่ต้น ถ้าปิดใช้งานทั้งหมด จะข้ามการทำงานทันทีเพื่อประหยัด CPU
+    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled and not getgenv().ShowFOV then
+        if FOVUI then FOVUI.Visible = false end
+        if Snapline then Snapline.Visible = false end
+        getgenv().CurrentTarget = nil
+        return
+    end
+
     clearCacheIfNeeded()
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
@@ -2624,7 +2632,7 @@ CombatTab:Slider({
     Increment = 1,
     Value = {
         Min     = 50,
-        Max     = 1000,
+        Max     = 2000,
         Default = getgenv().MaxDistance
     },
     Callback = function(state)
@@ -2643,7 +2651,6 @@ CombatTab:Dropdown({
         getgenv().TargetMode = mode
     end,
 })
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -2842,42 +2849,34 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
-
 local IceWalkConfig = {
     GiantFloor = nil,
     FloorConnection = nil,
     FloorRunning = false,
-    LastSeaLevel = nil,      -- ระดับน้ำล่าสุดที่เจอจริง
+    LastSeaLevel = nil,   
     LastHumanoid = nil,
 }
-
 local IceWalkUtils = {}
-
 function IceWalkUtils.SetStates(hum, enabled)
     hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, enabled)
     hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, enabled)
 end
-
 function IceWalkUtils.Cleanup()
     if IceWalkConfig.FloorConnection then
         IceWalkConfig.FloorConnection:Disconnect()
         IceWalkConfig.FloorConnection = nil
     end
-
     if IceWalkConfig.GiantFloor then
         IceWalkConfig.GiantFloor:Destroy()
         IceWalkConfig.GiantFloor = nil
     end
-
     local hum = IceWalkConfig.LastHumanoid
     if hum and hum.Parent then
         IceWalkUtils.SetStates(hum, true)
     end
-
     IceWalkConfig.LastSeaLevel = nil
     IceWalkConfig.LastHumanoid = nil
 end
-
 function IceWalkUtils.GetOrCreateFloor()
     local floor = IceWalkConfig.GiantFloor
     if not floor or not floor.Parent then
@@ -2895,14 +2894,12 @@ function IceWalkUtils.GetOrCreateFloor()
     end
     return floor
 end
-
 GeneralTab:Toggle({
     Title = "Walking on Water",
     Type =  "Checkbox",
     Desc = "Does not sink; Soru and warping work normally.",
     Flag = "IceWalk",
     Value = false,
-
     Callback = function(state)
         IceWalkConfig.FloorRunning = state
 
@@ -2912,40 +2909,27 @@ GeneralTab:Toggle({
         end
 
         local floorPart = IceWalkUtils.GetOrCreateFloor()
-
         local raycastParams = RaycastParams.new()
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
         raycastParams.IgnoreWater = false
-
-        local RAY_RATE = 0.1       -- Raycast ทุก 0.1 วินาที
-        local rayElapsed = RAY_RATE -- ให้ยิงทันทีในเฟรมแรก
+        local RAY_RATE = 0.1      
+        local rayElapsed = RAY_RATE 
         local DEFAULT_SEA = -2.8
-
-        -- ใช้ Stepped: ทำงานก่อนฟิสิกส์คำนวณ พื้นจะได้อยู่ที่เดิมทันเวลา
         IceWalkConfig.FloorConnection = RunService.Stepped:Connect(function(_, dt)
             if not IceWalkConfig.FloorRunning then return end
-
             local character = LocalPlayer.Character
             if not character then return end
-
             local rootPart = character:FindFirstChild("HumanoidRootPart")
             local hum = character:FindFirstChildOfClass("Humanoid")
             if not rootPart or not hum then return end
-
             if not floorPart.Parent then
                 floorPart = IceWalkUtils.GetOrCreateFloor()
             end
-
-            -- Humanoid ตัวใหม่ (หลังตาย/รีสปอน) -> ปิด State ใหม่
             if IceWalkConfig.LastHumanoid ~= hum then
                 IceWalkConfig.LastHumanoid = hum
                 IceWalkUtils.SetStates(hum, false)
             end
-
             local pos = rootPart.Position
-
-            -- Raycast แบบจำกัดความถี่ + เริ่มยิงจากสูงขึ้น กันกรณีตัวจมไปแล้ว
-           -- Raycast แบบจำกัดความถี่ + เริ่มยิงจากสูงขึ้น กันกรณีตัวจมไปแล้ว
             rayElapsed = rayElapsed + dt
             if rayElapsed >= RAY_RATE then
                 rayElapsed = 0
@@ -2961,20 +2945,12 @@ GeneralTab:Toggle({
                     IceWalkConfig.LastSeaLevel = result.Position.Y
                 end
             end
-
-            -- ถ้ายังไม่เคยเจอน้ำ ใช้ค่า default / ถ้าเจอแล้วจำค่าล่าสุดไว้
             local seaLevel = IceWalkConfig.LastSeaLevel or DEFAULT_SEA
-
-            -- พื้นตามตัวทุกเฟรม (แค่เซ็ต Position ไม่หนัก)
-            -- ผิวบนของพื้น = seaLevel (พื้นหนา 2 จึงเลื่อนลง 1)
             floorPart.Position = Vector3.new(pos.X, seaLevel - 1, pos.Z)
-
-            -- กันจม: ถ้าต่ำกว่าผิวน้ำ (และอยู่ในช่วงที่เป็นน้ำจริง) ให้ดึงขึ้น
             if pos.Y < seaLevel + 1 and pos.Y > seaLevel - 40 then
                 if hum:GetState() == Enum.HumanoidStateType.Swimming then
                     hum:ChangeState(Enum.HumanoidStateType.Running)
                 end
-
                 if pos.Y < seaLevel + 0.5 then
                     rootPart.CFrame = rootPart.CFrame + Vector3.new(0, (seaLevel + 4) - pos.Y, 0)
                     rootPart.AssemblyLinearVelocity = Vector3.new(
@@ -2985,9 +2961,7 @@ GeneralTab:Toggle({
         end)
     end,
 })
-
 GeneralTab:Divider() 
-
 GeneralTab:Toggle({
     Title = "Jump Boost",
     Type =  "Checkbox",
@@ -2998,7 +2972,6 @@ GeneralTab:Toggle({
         JumpEnabled = state
     end,
 })
-
 GeneralTab:Slider({
     Title = "Jump Multiplier",
     Desc = "Adjust the multiplier for your jump power.",
@@ -3027,7 +3000,7 @@ GeneralTab:Slider({
     Title = "Dash Multiplier",
     Desc = "Adjust the speed multiplier of your dash.",
     Flag = "DashSlider",
-    Increment = 0.1, -- ละเอียดขึ้นแบบทศนิยม หรือจะเปลี่ยนเป็น 1 ถ้าเอาจำนวนเต็ม
+    Increment = 0.1, 
     Value = {
         Min = 1,
         Max = 10,
@@ -3097,13 +3070,11 @@ Visuals:Toggle({
         ESPConfig.ShowStatus = state
     end,
 })
-
 local UtilitySection = GeneralTab:Section({ 
     Title = "Target Dominance", 
     Icon = "crown" 
 })
 GeneralTab:Divider() 
-
 FollowToggle = GeneralTab:Toggle({
     Title = "Instant Warp",
     Type = "Checkbox",
@@ -3114,7 +3085,6 @@ FollowToggle = GeneralTab:Toggle({
         SetFollowState(state, false)
     end,
 })
-
 local Keybind = GeneralTab:Keybind({
     Title = "Teleport Key",
     Desc = "Keybind for pursuit features.",
@@ -3144,17 +3114,11 @@ local Slider = GeneralTab:Slider({
         FollowDistance = value
     end,
 })
-
 Config:Divider() 
-
-
-
--- ฮิตBox
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
--- ค่าคอนฟิกสำหรับขยายหัวโดยเฉพาะ
 getgenv().HitboxEnabled = getgenv().HitboxEnabled or true
 getgenv().HitboxSize = getgenv().HitboxSize or 18
 getgenv().HitboxColor = getgenv().HitboxColor or Color3.fromRGB(96, 205, 255)
@@ -3177,58 +3141,58 @@ local function resetPlayerHitbox(character)
     end
 end
 
--- ลูปการทำงานหลักเฉพาะหัว
-RunService.RenderStepped:Connect(function()
-    if not getgenv().HitboxEnabled then return end
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local character = player.Character
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            
-            if humanoid and humanoid.Health > 0 then
-                local head = character:FindFirstChild("Head")
-                if head then
-                    -- บันทึกขนาดเดิมเก็บไว้ครั้งแรก
-                    local originalSize = head:FindFirstChild("OriginalSize")
-                    if not originalSize then
-                        originalSize = Instance.new("Vector3Value")
-                        originalSize.Name = "OriginalSize"
-                        originalSize.Value = head.Size
-                        originalSize.Parent = head
-                    end
+-- เปลี่ยนมาใช้ Task ในลูปแบบหน่วงเวลา (0.3 วินาที) เพื่อลดอาการแลคอย่างได้ผล
+task.spawn(function()
+    while true do
+        if getgenv().HitboxEnabled then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local character = player.Character
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
                     
-                    -- จัดการกรอบเส้น (SelectionBox)
-                    local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
-                    if getgenv().HitboxShowBox then
-                        if not selectionBox then
-                            selectionBox = Instance.new("SelectionBox")
-                            selectionBox.Name = "CustomHitboxSelectionBox"
-                            selectionBox.Parent = head
+                    if humanoid and humanoid.Health > 0 then
+                        local head = character:FindFirstChild("Head")
+                        if head then
+                            -- บันทึกขนาดเดิมเก็บไว้ครั้งแรก
+                            local originalSize = head:FindFirstChild("OriginalSize")
+                            if not originalSize then
+                                originalSize = Instance.new("Vector3Value")
+                                originalSize.Name = "OriginalSize"
+                                originalSize.Value = head.Size
+                                originalSize.Parent = head
+                            end
+                            
+                            -- จัดการกรอบเส้น (SelectionBox)
+                            local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
+                            if getgenv().HitboxShowBox then
+                                if not selectionBox then
+                                    selectionBox = Instance.new("SelectionBox")
+                                    selectionBox.Name = "CustomHitboxSelectionBox"
+                                    selectionBox.Parent = head
+                                end
+                                selectionBox.Adornee = head
+                                selectionBox.Color3 = getgenv().HitboxColor
+                                selectionBox.LineThickness = 0.001
+                            elseif selectionBox then
+                                selectionBox:Destroy()
+                            end
+                            
+                            -- ขยายขนาดหัวและปรับสถานะ
+                            head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                            head.Transparency = 1 
+                            head.CanCollide = false
+                            head.CastShadow = false
                         end
-                        selectionBox.Adornee = head
-                        selectionBox.Color3 = getgenv().HitboxColor
-                        selectionBox.LineThickness = 0.001
-                    elseif selectionBox then
-                        selectionBox:Destroy()
+                    else
+                        resetPlayerHitbox(character)
                     end
-                    
-                    -- ขยายขนาดหัวและปรับสถานะ
-                    head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                    head.Transparency = 1 
-                    head.CanCollide = false
-                    head.CastShadow = false
                 end
-            else
-                resetPlayerHitbox(character)
             end
         end
+        task.wait(0.3) 
     end
 end)
-
-
 local HitboxSection = CombatTab:Section({ Title = "Hitbox Expander" })
-
 CombatTab:Toggle({
     Title = "Expand Hitboxes",
     Type = "Checkbox",
@@ -3246,7 +3210,6 @@ CombatTab:Toggle({
         end
     end,
 })
-
 CombatTab:Toggle({
     Title = "Show Hitbox Visual",
     Type = "Checkbox",
@@ -3270,7 +3233,6 @@ CombatTab:Toggle({
         end
     end,
 })
-
 CombatTab:Slider({
     Title = "Hitbox Scale",
     Desc = "Adjust hitbox size multiplier.",
@@ -3285,12 +3247,10 @@ CombatTab:Slider({
         getgenv().HitboxSize = value
     end,
 })
-
 local HideShowUI = Config:Section({ 
     Title = "Settings", 
     Icon = "monitor" 
 })
-
 local UIKeybind = Config:Keybind({
     Title = "Keybind Ui",
     Desc = "Keybind to show or hide the user interface",
@@ -3300,7 +3260,6 @@ local UIKeybind = Config:Keybind({
         Window:Toggle()
     end
 })
-
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
