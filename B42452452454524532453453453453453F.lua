@@ -3,113 +3,6 @@ if not game:IsLoaded() then game.Loaded:Wait() end
 
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 
-WindUI:AddTheme({
-    Name = "Destiny Cyber Neon Purple",
-    Primary = Color3.fromHex("#FFFFFF"),
-    White = Color3.fromHex("#FFFFFF"),
-    Black = Color3.fromHex("#050505"),
-    Dialog = Color3.fromHex("#121212"),
-    Background = Color3.fromHex("#09090B"),
-    BackgroundTransparency = 0.05,
-    Hover = Color3.fromHex("#27272A"),
-    PanelBackground = Color3.fromHex("#18181B"),
-    PanelBackgroundTransparency = 0.3,
-    WindowBackground = Color3.fromHex("#0F0F12"), 
-    WindowShadow = Color3.fromHex("#A855F7"),
-    WindowTopbarTitle = Color3.fromHex("#FFFFFF"),
-    WindowTopbarAuthor = Color3.fromHex("#A1A1AA"),
-    WindowTopbarIcon = Color3.fromHex("#FFFFFF"), -- เปลี่ยนไอคอนหัวข้อหน้าต่างเป็นสีขาว
-    WindowTopbarButtonIcon = Color3.fromHex("#FFFFFF"),
-    WindowSearchBarBackground = Color3.fromHex("#18181B"),
-    
-    -- Sidebar / Tabs
-    TabBackground = Color3.fromHex("#121215"),
-    TabBackgroundHover = Color3.fromHex("#27272A"),
-    TabBackgroundHoverTransparency = 0.2,
-    TabBackgroundActive = Color3.fromHex("#1F1F23"),
-    TabBackgroundActiveTransparency = 0.0,
-    TabText = Color3.fromHex("#A1A1AA"),
-    TabTextTransparency = 0.1,
-    TabTextTransparencyActive = 0,
-    TabTitle = Color3.fromHex("#FFFFFF"),
-    TabIcon = Color3.fromHex("#FFFFFF"), -- เปลี่ยนไอคอนเมนูซ้ายเป็นสีขาว
-    TabIconTransparency = 0,
-    TabIconTransparencyActive = 0,
-    TabBorderTransparency = 1,
-    TabBorderTransparencyActive = 0,
-    TabBorder = Color3.fromHex("#A855F7"),
-    TabSectionText = Color3.fromHex("#71717A"),
-    TabSectionIcon = Color3.fromHex("#FFFFFF"), -- เปลี่ยนไอคอน Section ในเมนูเป็นสีขาว
-    
-    -- Elements / Cards
-    ElementBackground = Color3.fromHex("#18181B"),
-    ElementBackgroundTransparency = 0.4,
-    ElementBackgroundHover = Color3.fromHex("#27272A"),
-    ElementTitle = Color3.fromHex("#FFFFFF"),
-    ElementDesc = Color3.fromHex("#A1A1AA"),
-    ElementIcon = Color3.fromHex("#FFFFFF"), -- เปลี่ยนไอคอนในการ์ดเป็นสีขาว
-    
-    -- Buttons
-    Button = Color3.fromHex("#1E1E24"),
-    ButtonTransparency = 0,
-    ButtonHover = Color3.fromHex("#A855F7"),
-    ButtonText = Color3.fromHex("#FFFFFF"),
-    ButtonTitle = Color3.fromHex("#FFFFFF"),
-    ButtonIcon = Color3.fromHex("#FFFFFF"), -- เปลี่ยนไอคอนปุ่มเป็นสีขาว
-    ButtonBorder = Color3.fromHex("#A855F7"),
-    ButtonBorderTransparency = 0.2,
-    
-    Input = Color3.fromHex("#121215"),
-    InputBackground = Color3.fromHex("#121215"),
-    InputText = Color3.fromHex("#FFFFFF"),
-    InputPlaceholder = Color3.fromHex("#71717A"),
-    InputBorder = Color3.fromHex("#A855F7"),
-    InputBorderTransparency = 0.4,
-    
-    Dropdown = Color3.fromHex("#121215"),
-    DropdownBackground = Color3.fromHex("#121215"),
-    DropdownItem = Color3.fromHex("#D4D4D8"),
-    DropdownItemHover = Color3.fromHex("#27272A"),
-    DropdownItemHoverTransparency = 0.2,
-    DropdownItemActive = Color3.fromHex("#A855F7"),
-    DropdownItemText = Color3.fromHex("#FFFFFF"),
-    DropdownIcon = Color3.fromHex("#FFFFFF"), -- เปลี่ยนไอคอน Dropdown เป็นสีขาว
-    DropdownTabBorder = Color3.fromHex("#A855F7"),
-    
-    -- Toggles
-    Toggle = Color3.fromHex("#A855F7"),
-    ToggleBar = Color3.fromHex("#FFFFFF"),
-    ToggleEnabled = Color3.fromHex("#A855F7"),
-    ToggleDisabled = Color3.fromHex("#27272A"),
-    
-    Checkbox = Color3.fromHex("#A855F7"),
-    CheckboxIcon = Color3.fromHex("#050505"),
-    CheckboxBorder = Color3.fromHex("#A855F7"),
-    CheckboxBorderTransparency = 0.2,
-    
-    SliderIcon = Color3.fromHex("#FFFFFF"), -- เปลี่ยนไอคอน Slider เป็นสีขาว
-    Slider = Color3.fromHex("#A855F7"),
-    SliderThumb = Color3.fromHex("#FFFFFF"),
-    SliderIconFrom = Color3.fromHex("#FFFFFF"), -- เปลี่ยนไอคอน Slider ฝั่งเริ่มต้นเป็นสีขาว
-    SliderIconTo = Color3.fromHex("#FFFFFF"), -- เปลี่ยนไอคอน Slider ปลายทางเป็นสีขาว
-    
-    SectionBox = Color3.fromHex("#18181B"),
-    SectionBoxTransparency = 0.5,
-    SectionBoxBorder = Color3.fromHex("#A855F7"),
-    SectionBoxBorderTransparency = 0.4,
-    SectionBoxBackground = Color3.fromHex("#121215"),
-    SectionBoxBackgroundTransparency = 0.5,
-    
-    Divider = Color3.fromHex("#27272A"),
-    DividerTransparency = 0.3,
-    Line = Color3.fromHex("#27272A"),
-    LineTransparency = 0.3,
-    
-    Scrollbar = Color3.fromHex("#A855F7"),
-    ScrollbarBackground = Color3.fromHex("#0F0F12"),
-    ScrollbarTransparency = 0.1,
-})
-
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
         Title = "Project Destiny [v3.0] Premium",
@@ -118,13 +11,14 @@ local success, Window = pcall(function()
         Folder = "Destiny Hub",
         Size = UDim2.fromOffset(620, 558),
         Transparent = true,
-        Theme = "Destiny Cyber Neon Purple",
+        Theme = "Dark",
         Resizable = true,
         SideBarWidth = 200,
         HideSearchBar = false,
         ScrollBarEnabled = true,
     })
 end)
+
 Window:DisableTopbarButtons({ "Close", "Minimize" })
 Window:SetIconSize(40) 
 Window:Section({ Title = "Control Panel" })
@@ -140,11 +34,13 @@ Window:Section({ Title = "Configuration" })
 local Bounty = Window:Tab({ Title = "Bounty Hunting", Icon = "moon" })
 local Config = Window:Tab({ Title = "Settings Config", Icon = "wrench" })
 CombatTab:Select()
+
 local MyConfig = Window.ConfigManager:Config("DestinyConfig")
 task.spawn(function()
-    task.wait(3)
+    task.wait()
     pcall(function() MyConfig:Load() end)
 end)
+
 Window:CreateTopbarButton("ToggleMinimize", "minimize-2", function() Window:Close() end, 5, true, 17)
 Window:CreateTopbarButton("Settings", "cog", function() Config:Select() end, 4, true, 17)
 Window:CreateTopbarButton("swords", "swords", function() CombatTab:Select() end, 3, true, 17)
@@ -1957,9 +1853,10 @@ local function StopFollow()
     end
 end
 
+local activeTween = nil
+local lastTweenGoal = nil
+
 local function FollowTarget(player)
-    -- ไม่มีเป้าหมาย = หยุดเฉพาะการทำงาน
-    -- ไม่แตะ CurrentTarget
     if not player or not player.Parent then
         StopFollow()
         return false
@@ -1970,58 +1867,29 @@ local function FollowTarget(player)
     local hum = char and char:FindFirstChildOfClass("Humanoid")
 
     local targetChar = player.Character
-    local targetRoot =
-        targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
 
-    local targetHum =
-        targetChar and targetChar:FindFirstChildOfClass("Humanoid")
-
-    -- ตัวเราไม่พร้อม
-    if not root or not hum or hum.Health <= 0 then
-        StopFollow()
-        return false
-    end
-
-    -- เป้าหมายยังไม่มี Character / กำลังเกิดใหม่
-    if not targetChar or not targetRoot or not targetHum then
-        StopFollow()
-        return false
-    end
-
-    -- เป้าหมายตาย
-    if targetHum.Health <= 0 then
+    -- เช็คความพร้อมของตัวเราและเป้าหมาย
+    if not root or not hum or hum.Health <= 0 or not targetChar or not targetRoot or not targetHum or targetHum.Health <= 0 then
         StopFollow()
         return false
     end
 
     -- เช็คระยะ
-    local distance =
-        (root.Position - targetRoot.Position).Magnitude
-
-    -- หลุดระยะ = หยุด แต่ "ไม่ยกเลิก CurrentTarget"
+    local distance = (root.Position - targetRoot.Position).Magnitude
     if distance > FollowDistance then
         StopFollow()
         return false
     end
 
-    ------------------------------------------------------------
-    -- อยู่ในระยะแล้ว -> ทำงานต่อ
-    ------------------------------------------------------------
-
+    -- คำนวณตำแหน่งปลายทาง
     local targetCF = targetRoot.CFrame
-
-    local behind =
-        targetCF * CFrame.new(0, 0, TpBehindDistance)
+    local behind = targetCF * CFrame.new(0, 0, TpBehindDistance)
 
     local params = RaycastParams.new()
-
-    params.FilterType =
-        Enum.RaycastFilterType.Exclude
-
-    params.FilterDescendantsInstances = {
-        char,
-        targetChar
-    }
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {char, targetChar}
 
     local hit = Workspace:Raycast(
         behind.Position + Vector3.new(0, 5, 0),
@@ -2030,39 +1898,38 @@ local function FollowTarget(player)
     )
 
     local pos = behind.Position
-
     if hit then
-        pos =
-            hit.Position
-            + Vector3.new(0, 3, 0)
+        pos = hit.Position + Vector3.new(0, 3, 0)
     end
 
-    local cf = CFrame.new(
-        pos,
-        pos + targetCF.LookVector
-    )
+    local cf = CFrame.new(pos, pos + targetCF.LookVector)
 
-    -- ยกเลิก Tween เก่าก่อนสร้างใหม่
+    -- ป้องกันการสร้าง Tween ถี่เกินไป ถ้าระยะเป้าหมายขยับไปน้อยมากๆ ไม่ต้องสร้างใหม่
+    if lastTweenGoal and (lastTweenGoal.Position - cf.Position).Magnitude < 0.5 and activeTween then
+        return true
+    end
+    lastTweenGoal = cf
+
+    -- ยกเลิก Tween เก่า
     if activeTween then
         activeTween:Cancel()
         activeTween = nil
     end
 
+    -- สร้าง Tween ใหม่ด้วยความเร็วที่สัมพันธ์กับระยะทาง
     activeTween = TweenService:Create(
         root,
         TweenInfo.new(
             TELEPORT_DURATION,
             Enum.EasingStyle.Linear
         ),
-        {
-            CFrame = cf
-        }
+        { CFrame = cf }
     )
 
     activeTween:Play()
-
     return true
 end
+
 
 ----------------------------------------------------------------
 -- Follow Loop
@@ -4447,9 +4314,10 @@ local Toggle = Bounty:Toggle({
         end
     end
 })
+
 local ToggleHop = Bounty:Toggle({
     Title = "Hop Servers",
-    Type = "Checkbox", -- กำหนดให้เป็นแบบ Checkbox ตามในรูป
+    Type = "Checkbox", 
     Desc = "Automatically hop servers when no target found",
     Flag = "HopServers_Toggle",
     Default = false,
