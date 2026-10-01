@@ -609,94 +609,150 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 local function initializeSkillSettings()
-local Players, RunService, ReplicatedStorage, Workspace = game:GetService("Players"), game:GetService("RunService"), game:GetService("ReplicatedStorage"), game:GetService("Workspace")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
 local LocalPlayer = Players.LocalPlayer
-local ENV = getgenv() 
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local CommF = Remotes:WaitForChild("CommF_", 10)
 local commE = Remotes:WaitForChild("CommE", 10)
 
-local JumpEnabled, JumpMultiplier, DashEnabled, DashMultiplier = false, 1, false, 1
-local char, hum
+-- Settings variables
+local JumpEnabled = false
+local JumpMultiplier = 1
+local DashEnabled = false
+local DashMultiplier = 1
 
-LocalPlayer.CharacterAdded:Connect(function(c) 
-    char = c 
-    hum = nil 
-end)
+local autoRaceConnection
+local autoRaceV4Connection
 
-RunService.RenderStepped:Connect(function(dt)
-    char = (Workspace:FindFirstChild("Characters") and Workspace.Characters:FindFirstChild(LocalPlayer.Name)) or LocalPlayer.Character
-    if not char then 
-        hum = nil 
-        return 
-    end
-    
-    hum = hum or char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-
-    hum.JumpPower = JumpEnabled and (50 * JumpMultiplier) or 50
-    if JumpEnabled then 
-        hum.UseJumpPower = true 
-    end
-
-    if DashEnabled and hum.MoveDirection.Magnitude > 0 then
-        char:TranslateBy(hum.MoveDirection * 25 * DashMultiplier * dt)
-    end
-end)
-
-local function StartLoop(stateKey, interval, func)
-    _G[stateKey] = not _G[stateKey]
-    if not _G[stateKey] then return end
-    task.spawn(function()
-        while _G[stateKey] do
-            pcall(func)
-            task.wait(interval)
-        end
-    end)
+local function GetCharacter()
+    local f = Workspace:FindFirstChild("Characters")
+    return (f and f:FindFirstChild(LocalPlayer.Name)) or LocalPlayer.Character
 end
 
+local function UpdateJump(h)
+    h.UseJumpPower = true
+    h.JumpPower = 50 * JumpMultiplier
+end
+
+local function UpdateDash(c, h, dt)
+    if h.MoveDirection.Magnitude > 0 then
+        c:TranslateBy(h.MoveDirection * 25 * DashMultiplier * dt)
+    end
+end
+
+-- ฟังก์ชันเปิดใช้งานเผ่า (Race Ability)
 local function SetAutoRaceAbility(state)
     _G.AutoRaceAbilityRunning = state
-    if state then
-        StartLoop("AutoRaceAbilityRunning", 0.5, function()
+
+    if autoRaceConnection then
+        autoRaceConnection:Disconnect()
+        autoRaceConnection = nil
+    end
+    if not state then return end
+
+    local last = 0
+    autoRaceConnection = RunService.Heartbeat:Connect(function()
+        if not _G.AutoRaceAbilityRunning then return end
+        local now = tick()
+        if now - last < 0.5 then return end
+        last = now
+
+        pcall(function()
             local c = LocalPlayer.Character
             if c and c:FindFirstChild("HumanoidRootPart") and commE then
                 commE:FireServer("ActivateAbility")
             end
         end)
-    end
+    end)
 end
 
+-- ฟังก์ชันเปิดใช้งานเผ่า V4 (Awakening)
 local function SetAutoRaceV4(state)
     _G.AutoRaceV4Running = state
-    if state then
-        StartLoop("AutoRaceV4Running", 0.5, function()
+
+    if autoRaceV4Connection then
+        autoRaceV4Connection:Disconnect()
+        autoRaceV4Connection = nil
+    end
+    if not state then return end
+
+    local last = 0
+    autoRaceV4Connection = RunService.Heartbeat:Connect(function()
+        if not _G.AutoRaceV4Running then return end
+        local now = tick()
+        if now - last < 0.1 then return end
+        last = now
+
+        pcall(function()
             local c = LocalPlayer.Character
-            if c and c:FindFirstChild("HumanoidRootPart") then
-                local b = LocalPlayer:FindFirstChild("Backpack")
-                local a = b and b:FindFirstChild("Awakening")
-                local r = a and a:FindFirstChild("RemoteFunction")
-                if r then r:InvokeServer(true) end
+            if not c or not c:FindFirstChild("HumanoidRootPart") then return end
+
+            local b = LocalPlayer:FindFirstChild("Backpack")
+            local a = b and b:FindFirstChild("Awakening")
+            local r = a and a:FindFirstChild("RemoteFunction")
+            if r then 
+                r:InvokeServer(true) 
             end
         end)
+    end)
+end
+
+-- BUSO CHECKER (เพิ่ม Cooldown ป้องกันการส่งข้อมูลถี่เกินไป)
+local function CheckAndEnableBuso()
+    local c = LocalPlayer.Character
+    if not c then return end
+
+    local b = c:FindFirstChild("HasBuso")
+    if not b or (b:IsA("BoolValue") and not b.Value) then
+        if CommF then
+            pcall(function()
+                CommF:InvokeServer("Buso")
+            end)
+        end
     end
 end
 
-local function CheckAndEnableBuso()
-    local c = LocalPlayer.Character
-    local b = c and c:FindFirstChild("HasBuso")
-    if c and (not b or not b.Value) and CommF then
-        pcall(function() 
-            CommF:InvokeServer("Buso") 
-        end)
+-- ลูปหลักสำหรับควบคุมการเคลื่อนไหวและออร่า
+local busoLastCheck = 0
+RunService.RenderStepped:Connect(function(dt)
+    local c = GetCharacter()
+    if not c then return end
+
+    local h = c:FindFirstChildOfClass("Humanoid")
+    if not h then return end
+
+    -- จัดการเรื่องกระโดด
+    if JumpEnabled then
+        UpdateJump(h)
+    elseif h.JumpPower ~= 50 then
+        h.JumpPower = 50
     end
-end
+
+    -- จัดการเรื่อง Dash
+    if DashEnabled then
+        UpdateDash(c, h, dt)
+    end
+
+    -- ตรวจสอบและเปิดฮากีเกราะทุกๆ 1.5 วินาที (ป้องกันการรัว Remote)
+    local now = tick()
+    if now - busoLastCheck >= 1.5 then
+        busoLastCheck = now
+        CheckAndEnableBuso()
+    end
+end)
+
 
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local Workspace=game:GetService("Workspace")
 local LocalPlayer=Players.LocalPlayer
+
+local ENV = getgenv() 
 
 ENV=ENV or {}
 
@@ -2345,7 +2401,7 @@ local VisualsSection = CombatTab:Section({
     Icon = "eye" 
 })
 CombatTab:Toggle({
-    Title = "Show Red Snapline",
+    Title = "Show Snapline",
     Type =  "Checkbox",
     Desc  = "Render line to active target.",
     Flag  = "show_snapline_toggle",
@@ -2358,8 +2414,8 @@ CombatTab:Toggle({
     end,
 })
 CombatTab:Slider({
-    Title = "Max Distance",
-    Desc  = "Set max distance threshold.",
+    Title = "Distance",
+    Desc  = "Dead-end distance: 2,000",
     Flag  = "max_distance_slider",
     Increment = 1,
     Value = {
@@ -2373,8 +2429,8 @@ CombatTab:Slider({
 })
 getgenv().TargetMode = "Players Only" 
 CombatTab:Dropdown({
-    Title = "Target Type",
-    Desc  = "Choose targets.",
+    Title = "Select ",
+    Desc  = "Players, or NPC",
     Flag  = "target_type_dropdown",
     Values = { "Players Only", "Enemies Only" },
     Value  = "Players Only",
@@ -2482,7 +2538,7 @@ end
 local FastAttackToggle = GeneralTab:Toggle({
     Title = "Fast Attack",
     Type =  "Checkbox",
-    Desc = "Increases your attack speed automatically",
+    Desc = "Combat Sword Fruit",
     Flag = "FastAttack",
     Value = false,
     Callback = function(state)
@@ -2493,7 +2549,7 @@ local FastAttackToggle = GeneralTab:Toggle({
 local Slider = GeneralTab:Slider({
     Title = "Attack Speed",
     Type =  "Checkbox",
-    Desc = "Speed (not long = fastest)",
+    Desc = "Speed Attack",
     Value = {
         Min = 0,
         Max = 0.7,
@@ -2536,9 +2592,9 @@ local CommE = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
 local autoKenEnabled = false
 
 GeneralTab:Toggle({
-    Title = "Auto Ken",
+    Title = "Ken",
     Type =  "Checkbox",
-    Desc = "Automatically toggles the Ken feature when enabled or disabled",
+    Desc = "Auto Ken",
     Flag = "AutoKenCheck",
     Value = false,
 
@@ -2568,9 +2624,9 @@ local CharacterAbilities = GeneralTab:Section({
 GeneralTab:Divider() 
 
 GeneralTab:Toggle({
-    Title = "Auto Race V4",
+    Title = "Race V4",
     Type =  "Checkbox",
-    Desc = "Auto Race V4 activate & upgrade.",
+    Desc = "Auto Race V3",
     Flag = "AutoRaceV4_Toggle",
     Value = false,
     Callback = function(state)
@@ -2579,9 +2635,9 @@ GeneralTab:Toggle({
 })
 
 GeneralTab:Toggle({
-    Title = "Auto Race V3",
+    Title = "Race V3",
     Type =  "Checkbox",
-    Desc = "Instant Race V3 activation.",
+    Desc = "Auto Race V3",
     Flag = "AutoRaceAbility",
     Value = false,
     Callback = function(state)
@@ -2638,9 +2694,9 @@ function IceWalkUtils.GetOrCreateFloor()
     return floor
 end
 GeneralTab:Toggle({
-    Title = "Walking on Water",
+    Title = "Auto Sea",
     Type =  "Checkbox",
-    Desc = "Does not sink; Soru and warping work normally.",
+    Desc = "Walking in the water",
     Flag = "IceWalk",
     Value = false,
     Callback = function(state)
@@ -2708,7 +2764,7 @@ GeneralTab:Divider()
 GeneralTab:Toggle({
     Title = "Jump Boost",
     Type =  "Checkbox",
-    Desc = "Enhances your jump height significantly.",
+    Desc = "Ordered to jump.",
     Flag = "JumpToggle",
     Value = false,
     Callback = function(state)
@@ -2717,7 +2773,7 @@ GeneralTab:Toggle({
 })
 GeneralTab:Slider({
     Title = "Jump Multiplier",
-    Desc = "Adjust the multiplier for your jump power.",
+    Desc = "Adjust Jump power.",
     Flag = "JumpSlider",
     Increment = 0.1, 
     Value = {
@@ -2732,7 +2788,7 @@ GeneralTab:Slider({
 GeneralTab:Toggle({
     Title = "Speed Dash",
     Type =  "Checkbox",
-    Desc = "Enables fast forward dashing ability.",
+    Desc = "Increase your speed.",
     Flag = "DashToggle",
     Value = false,
     Callback = function(state)
@@ -2740,8 +2796,8 @@ GeneralTab:Toggle({
     end,
 })
 GeneralTab:Slider({
-    Title = "Dash Multiplier",
-    Desc = "Adjust the speed multiplier of your dash.",
+    Title = "Speed Dash",
+    Desc = "Adjust speed",
     Flag = "DashSlider",
     Increment = 0.1, 
     Value = {
@@ -2819,7 +2875,7 @@ local UtilitySection = GeneralTab:Section({
 })
 GeneralTab:Divider() 
 FollowToggle = GeneralTab:Toggle({
-    Title = "Instant Warp",
+    Title = "Teleport Player",
     Type = "Checkbox",
     Desc = "Tracks and follows your target.",
     Flag = "FollowToggle",
@@ -2829,7 +2885,7 @@ FollowToggle = GeneralTab:Toggle({
     end,
 })
 local Keybind = GeneralTab:Keybind({
-    Title = "Teleport Key",
+    Title = "Keybind Key",
     Desc = "Keybind for pursuit features.",
     Flag = "UIKeybind",
     Value = "E",
@@ -2849,7 +2905,7 @@ local Slider = GeneralTab:Slider({
     Flag = "VolumeSlider",
     Increment = 1,
     Value = {
-        Min = 20,
+        Min = 0,
         Max = 250,
         Default = 200
     },
@@ -3773,7 +3829,7 @@ end
 local Toggle = Bounty:Toggle({
     Title = "Auto Bounty",
     Type = "Checkbox",
-    Desc = "Automatically hunt bounty for you",
+    Desc = "Auto-hunt up to 30M",
     Flag = "AutoBounty_Toggle",
     Callback = function(state)
         autoBountyEnabled = state
@@ -3825,7 +3881,7 @@ local Toggle = Bounty:Toggle({
 local ToggleHop = Bounty:Toggle({
     Title = "Hop Servers",
     Type = "Checkbox", 
-    Desc = "Automatically hop servers when no target found",
+    Desc = "Switch to another server.",
     Flag = "HopServers_Toggle",
     Default = false,
     Callback = function(state)
@@ -3836,7 +3892,7 @@ local ToggleHop = Bounty:Toggle({
 local TogglePvP = Bounty:Toggle({
     Title = "Enable PvP",
     Type = "Checkbox",
-    Desc = "Automatically enables PvP combat continuously",
+    Desc = "Enable PvP mode at all times.",
     Flag = "Toggle_EnablePvP",
     Default = false,
     Callback = function(state)
@@ -3858,7 +3914,7 @@ local TogglePvP = Bounty:Toggle({
 
 local DropdownMyFaction = Bounty:Dropdown({
     Title = "Auto Team",
-    Desc = "Select your faction. The system will check and switch automatically.",
+    Desc = "Select a team",
     Values = {"Marines", "Pirates"},
     Multi = false,
     Locked = false,
@@ -3879,7 +3935,7 @@ Bounty:Divider()
 
 local DropdownMelee = Bounty:Dropdown({
     Title = "Melee",
-    Desc = "Select Melee skills (Supports all fighting styles in the game)",
+    Desc = "Select Melee skills ",
     Values = {"Z", "X", "C"},
     Multi = true,
     AllowNone = true,
@@ -3891,7 +3947,7 @@ local DropdownMelee = Bounty:Dropdown({
 
 local DropdownSword = Bounty:Dropdown({
     Title = "Sword",
-    Desc = "Select Sword skills (Supports all swords in the game)",
+    Desc = "Select Sword skills",
     Values = {"Z", "X"},
     Multi = true,
     AllowNone = true,
@@ -3902,8 +3958,8 @@ local DropdownSword = Bounty:Dropdown({
 })
 
 local DropdownFruit = Bounty:Dropdown({
-    Title = "Blox Fruit",
-    Desc = "Select Blox Fruit skills (Supports all fruits in the game)",
+    Title = "Fruit",
+    Desc = "Select Blox Fruit skills ",
     Values = {"Z", "X", "C", "V", "F"},
     Multi = true,
     AllowNone = true,
@@ -3915,7 +3971,7 @@ local DropdownFruit = Bounty:Dropdown({
 
 local DropdownGun = Bounty:Dropdown({
     Title = "Gun",
-    Desc = "Select Gun skills (Supports all guns in the game)",
+    Desc = "Select Gun skills ",
     Values = {"Z", "X"},
     Multi = true,
     AllowNone = true,
