@@ -3507,7 +3507,7 @@ Config:Toggle({
     Title = "Teleport Player",
     Type =  "Checkbox",
     Desc = "ซ่อน/แสดง ปุ่ม Teleport Player",
-    Flag = "ToggleTeleportUI",
+    Flag = "ToggleTelepo1010rtUI",
     Value = true,
 
     Callback = function(Value)
@@ -3566,11 +3566,12 @@ Stroke.Thickness = 2
 Stroke.Transparency = 0.15
 Stroke.Parent = JumpButton
 
---// ตั้งตำแหน่งเริ่มต้นด้านขวาล่าง
+--// ตำแหน่งเริ่มต้นด้านขวาล่าง
 local Camera = workspace.CurrentCamera
 
 if Camera then
     local Viewport = Camera.ViewportSize
+
     JumpButton.Position = UDim2.fromOffset(
         Viewport.X - 100,
         Viewport.Y - 130
@@ -3578,59 +3579,55 @@ if Camera then
 else
     JumpButton.Position = UDim2.fromOffset(500, 500)
 end
-
---// Jump
-JumpButton.MouseButton1Click:Connect(function()
-    local Character = LocalPlayer.Character
-    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
-
-    if Humanoid and Humanoid.Health > 0 then
-        Humanoid.Jump = true
-        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
-
---// Drag
 local Dragging = false
+local IsDragging = false
 local DragStart
-local StartPos
-
+local StartPosition
+local DRAG_THRESHOLD = 8
 JumpButton.InputBegan:Connect(function(Input)
-    if Input.UserInputType == Enum.UserInputType.MouseButton1
-        or Input.UserInputType == Enum.UserInputType.Touch then
-
-        Dragging = true
-        DragStart = Input.Position
-
-        -- ใช้ตำแหน่งจริงของปุ่ม ไม่ใช้ Position.Offset
-        StartPos = JumpButton.AbsolutePosition
+    if Input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and Input.UserInputType ~= Enum.UserInputType.Touch then
+        return
     end
-end)
+    Dragging = true
+    IsDragging = false
+    DragStart = Input.Position
+    StartPosition = JumpButton.Position
+    Input.Changed:Connect(function()
 
+        if Input.UserInputState == Enum.UserInputState.End then
+            Dragging = false
+        end
+
+    end)
+end)
 UserInputService.InputChanged:Connect(function(Input)
     if not Dragging then
         return
     end
-
     if Input.UserInputType ~= Enum.UserInputType.MouseMovement
         and Input.UserInputType ~= Enum.UserInputType.Touch then
         return
     end
+    local Delta = Input.Position - DragStart
+    if not IsDragging then
+        if math.abs(Delta.X) < DRAG_THRESHOLD
+            and math.abs(Delta.Y) < DRAG_THRESHOLD then
+            return
+        end
 
+        IsDragging = true
+    end
     local Camera = workspace.CurrentCamera
     if not Camera then
         return
     end
-
-    local Delta = Input.Position - DragStart
-
-    local NewX = StartPos.X + Delta.X
-    local NewY = StartPos.Y + Delta.Y
-
     local Viewport = Camera.ViewportSize
     local ButtonSize = JumpButton.AbsoluteSize
-
-    -- จำกัดไม่ให้ออกนอกหน้าจอ
+    local StartX = StartPosition.X.Offset
+    local StartY = StartPosition.Y.Offset
+    local NewX = StartX + Delta.X
+    local NewY = StartY + Delta.Y
     NewX = math.clamp(
         NewX,
         0,
@@ -3643,18 +3640,38 @@ UserInputService.InputChanged:Connect(function(Input)
         Viewport.Y - ButtonSize.Y
     )
 
-    JumpButton.Position = UDim2.fromOffset(NewX, NewY)
+    JumpButton.Position = UDim2.fromOffset(
+        NewX,
+        NewY
+    )
 end)
+JumpButton.MouseButton1Click:Connect(function()
 
+    if IsDragging then
+        IsDragging = false
+        return
+    end
+
+    local Character = LocalPlayer.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+    if Humanoid and Humanoid.Health > 0 then
+        Humanoid.Jump = true
+        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
 UserInputService.InputEnded:Connect(function(Input)
+
     if Input.UserInputType == Enum.UserInputType.MouseButton1
         or Input.UserInputType == Enum.UserInputType.Touch then
 
         Dragging = false
+
+        task.delay(0.05, function()
+            IsDragging = false
+        end)
     end
 end)
-
---// Toggle Jump Button
 Config:Toggle({
     Title = "Jump Button",
     Type = "Checkbox",
@@ -3666,13 +3683,8 @@ Config:Toggle({
         JumpButton.Visible = Value == true
     end,
 })
-
-
 end
-
 initializeSkillSettings()
-
-
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4941,12 +4953,9 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
-
--- =========================================================
--- Palette
--- =========================================================
 local C = {
     Green  = "#4ADE80",
     Amber  = "#FBBF24",
@@ -4958,222 +4967,100 @@ local C = {
     White  = "#F5F3FF",
 }
 
-local function rgb(hex)
-    hex = hex:gsub("#", "")
-    return Color3.fromRGB(
-        tonumber(hex:sub(1, 2), 16),
-        tonumber(hex:sub(3, 4), 16),
-        tonumber(hex:sub(5, 6), 16)
-    )
-end
-
-local function colorFor(pct)
-    if pct >= 90 then return C.Green end
-    if pct >= 60 then return C.Amber end
-    return C.Red
-end
-
-local function gradeFor(pct)
-    if pct >= 95 then return "S" end
-    if pct >= 85 then return "A" end
-    if pct >= 70 then return "B" end
-    if pct >= 50 then return "C" end
-    return "D"
-end
-
-
-local function bar(pct, len)
-    len = len or 20
-    local n = math.clamp(math.floor(pct / 100 * len + .5), 0, len)
-
-    return string.format(
-        '<font color="%s">%s</font><font color="%s">%s</font>',
-        colorFor(pct),
-        string.rep("━", n),
-        C.Dim,
-        string.rep("─", len - n)
-    )
-end
-
-
 local function font(color, text)
-    return string.format('<font color="%s">%s</font>', color, text)
+    return string.format(
+        '<font color="%s">%s</font>',
+        color,
+        text
+    )
 end
 
--- =========================================================
--- Executor / Player info
--- =========================================================
 local executorName = "Unknown"
+
 pcall(function()
     if type(identifyexecutor) == "function" then
         local n = identifyexecutor()
-        if n then executorName = tostring(n) end
+        if n then
+            executorName = tostring(n)
+        end
     elseif type(getexecutorname) == "function" then
         local n = getexecutorname()
-        if n then executorName = tostring(n) end
+        if n then
+            executorName = tostring(n)
+        end
     end
 end)
 
 local username = LP and LP.Name or "Unknown"
 local displayName = LP and LP.DisplayName or username
 
--- =========================================================
--- Checks
--- =========================================================
-local function isFn(v) return type(v) == "function" end
-
-local checks = {
-    -- Executor
-    { "Executor", "identifyexecutor", function() return isFn(identifyexecutor) end },
-    { "Executor", "getexecutorname",  function() return isFn(getexecutorname) end },
-
-    -- Environment
-    { "Environment", "getgenv", function() return isFn(getgenv) end },
-    { "Environment", "getfenv", function() return isFn(getfenv) end },
-    { "Environment", "setfenv", function() return isFn(setfenv) end },
-    { "Environment", "_G",      function() return type(_G) == "table" end },
-
-    -- Hooking
-    { "Hooking", "hookmetamethod",   function() return isFn(hookmetamethod) end },
-    { "Hooking", "hookfunction",     function() return isFn(hookfunction) end },
-    { "Hooking", "newcclosure",      function() return isFn(newcclosure) end },
-    { "Hooking", "getnamecallmethod",function() return isFn(getnamecallmethod) end },
-    { "Hooking", "getrawmetatable",  function() return isFn(getrawmetatable) end },
-    { "Hooking", "setreadonly",      function() return isFn(setreadonly) end },
-    { "Hooking", "isreadonly",       function() return isFn(isreadonly) end },
-
-    -- Input
-    { "Input", "firesignal",         function() return isFn(firesignal) end },
-    { "Input", "fireclickdetector",  function() return isFn(fireclickdetector) end },
-    { "Input", "fireproximityprompt",function() return isFn(fireproximityprompt) end },
-    { "Input", "getconnections",     function() return isFn(getconnections) end },
-
-    -- File System
-    { "File System", "makefolder", function() return isFn(makefolder) end },
-    { "File System", "isfolder",   function() return isFn(isfolder) end },
-    { "File System", "isfile",     function() return isFn(isfile) end },
-    { "File System", "writefile",  function() return isFn(writefile) end },
-    { "File System", "readfile",   function() return isFn(readfile) end },
-    { "File System", "appendfile", function() return isFn(appendfile) end },
-    { "File System", "delfile",    function() return isFn(delfile) end },
-    { "File System", "listfiles",  function() return isFn(listfiles) end },
-
-    -- HTTP
-    { "HTTP", "game:HttpGet",  function() return isFn(game.HttpGet) end },
-    { "HTTP", "request",       function() return isFn(request) end },
-    { "HTTP", "http_request",  function() return isFn(http_request) end },
-    { "HTTP", "syn.request",   function()
-        local genv = isFn(getgenv) and getgenv() or _G
-        local s = rawget(genv, "syn")
-        return type(s) == "table" and isFn(s.request)
-    end },
-
-    -- Drawing
-    { "Drawing", "Drawing.new",       function() return type(Drawing) == "table" and isFn(Drawing.new) end },
-    { "Drawing", "isrenderobj",       function() return isFn(isrenderobj) end },
-    { "Drawing", "getrenderproperty", function() return isFn(getrenderproperty) end },
-    { "Drawing", "setrenderproperty", function() return isFn(setrenderproperty) end },
-
-    -- Roblox API
-    { "Roblox API", "RaycastParams.new", function()
-        return RaycastParams ~= nil and isFn(RaycastParams.new)
-    end },
-    { "Roblox API", "TweenService:Create", function()
-        local ts = game:GetService("TweenService")
-        return ts ~= nil and isFn(ts.Create)
-    end },
-
-    -- Utility
-    { "Utility", "setclipboard",     function() return isFn(setclipboard) end },
-    { "Utility", "setfpscap",        function() return isFn(setfpscap) end },
-    { "Utility", "cloneref",         function() return isFn(cloneref) end },
-    { "Utility", "compareinstances", function() return isFn(compareinstances) end },
-}
-
--- =========================================================
--- Run checks + statistics
--- =========================================================
-local results, categories = {}, {}
-local total, working = #checks, 0
-
-for _, c in ipairs(checks) do
-    local cat, name, fn = c[1], c[2], c[3]
-    local ok, res = pcall(fn)
-    local pass = (ok and res) and true or false
-
-    results[#results + 1] = { Category = cat, Name = name, Working = pass }
-
-    local entry = categories[cat]
-    if not entry then
-        entry = { Total = 0, Working = 0, Items = {} }
-        categories[cat] = entry
-    end
-
-    entry.Total = entry.Total + 1
-    entry.Items[#entry.Items + 1] = { Name = name, Working = pass }
-
-    if pass then
-        entry.Working = entry.Working + 1
-        working = working + 1
-    end
-end
-
-local missing = total - working
-local percentage = total > 0 and math.floor(working / total * 100) or 0
-local grade = gradeFor(percentage)
-local mainColor = colorFor(percentage)
-
--- =========================================================
--- Dashboard (hero card)
--- =========================================================
-local line = font(C.Dim, "━━━━━━━━━━━━━━━━━━━━")
-
-local dashboardText = table.concat({
-    string.format('<b>%s</b>  %s', font(C.White, "SYSTEM OVERVIEW"), font(C.Muted, "• live scan")),
-    line,
-    string.format('%s  Executor     %s', font(C.Cyan, "◆"), font(C.Cyan, "<b>" .. executorName .. "</b>")),
-    string.format('%s  Username     %s', font(C.Purple, "◆"), font(C.White, username)),
-    string.format('%s  Display      %s', font(C.Purple, "◆"), font(C.White, displayName)),
-    "",
-    string.format('%s  Compatibility  %s  %s', font(mainColor, "◆"), font(mainColor, "<b>" .. percentage .. "%</b>"), font(mainColor, "Rank " .. grade)),
-    bar(percentage, 24),
-    "",
-    string.format('%s  %s     %s  %s     %s  %s',
-        font(C.Green, "✓"), font(C.White, working .. " working"),
-        font(C.Red, "✗"), font(C.White, missing .. " missing"),
-        font(C.Muted, "Σ"), font(C.White, total .. " total")),
-    line,
-    string.format('%s <b>%s</b>%s\n%s %s',
-        font(C.Muted, "Welcome back,"), font(C.White, displayName), font(C.Muted, "."),
-        font(C.Muted, "Enjoy your experience with"), font(C.Purple, "<b>Destiny Hub</b> ✦")),
-}, "\n")
-
 local function copyToClipboard(text, label)
     local ok, err = pcall(function()
-        if isFn(setclipboard) then
+        if type(setclipboard) == "function" then
             setclipboard(text)
         else
             error("setclipboard is not available")
         end
     end)
+
     if not ok then
         warn("[Destiny Hub] " .. label .. " error: " .. tostring(err))
     end
 end
+local dashboardText = table.concat({
 
--- plain text report for the "Copy Report" button
-local function buildReport()
-    local out = {
-        "Destiny Hub | Compatibility Report",
-        "Executor: " .. executorName,
-        string.format("Score: %d%% (Rank %s) - %d/%d", percentage, grade, working, total),
-        "",
-    }
-    for _, r in ipairs(results) do
-        out[#out + 1] = string.format("[%s] %s (%s)", r.Working and "OK" or "--", r.Name, r.Category)
-    end
-    return table.concat(out, "\n")
-end
+    string.format(
+        '<b>%s</b>  %s',
+        font(C.White, "SYSTEM OVERVIEW"),
+        font(C.Muted, "• live")
+    ),
+
+    font(C.Dim, "━━━━━━━━━━━━━━━━━━━━"),
+
+    string.format(
+        '%s  Executor     %s',
+        font(C.Cyan, "◆"),
+        font(C.Cyan, "<b>" .. executorName .. "</b>")
+    ),
+
+    string.format(
+        '%s  Username     %s',
+        font(C.Purple, "◆"),
+        font(C.White, username)
+    ),
+
+    string.format(
+        '%s  Display      %s',
+        font(C.Purple, "◆"),
+        font(C.White, displayName)
+    ),
+
+    "",
+
+    string.format(
+        '%s  Status       %s',
+        font(C.Green, "◆"),
+        font(C.Green, "<b>Ready</b>")
+    ),
+
+    "",
+
+    font(C.Dim, "━━━━━━━━━━━━━━━━━━━━"),
+
+    string.format(
+        '%s <b>%s</b>%s',
+        font(C.Muted, "Welcome back,"),
+        font(C.White, displayName),
+        font(C.Muted, ".")
+    ),
+
+    string.format(
+        '%s %s',
+        font(C.Muted, "Enjoy your experience with"),
+        font(C.Purple, "<b>Destiny Hub</b> ✦")
+    ),
+
+}, "\n")
 
 Home:Paragraph({
     Title = "✦ Destiny Hub | Dashboard",
@@ -5182,66 +5069,168 @@ Home:Paragraph({
     ImageSize = 50,
     Thumbnail = "rbxassetid://71825656372618",
     ThumbnailSize = 70,
+
     Buttons = {
         {
             Title = "Discord",
             Callback = function()
-                copyToClipboard("https://discord.gg/hUMaVECvBz", "Clipboard")
+                copyToClipboard(
+                    "https://discord.gg/hUMaVECvBz",
+                    "Clipboard"
+                )
             end,
         },
+
         {
             Title = "Report",
             Callback = function()
-                copyToClipboard(buildReport(), "Report")
+                local report = table.concat({
+                    "Destiny Hub | Dashboard",
+                    "Executor: " .. executorName,
+                    "Username: " .. username,
+                    "Display: " .. displayName,
+                    "Status: Ready",
+                }, "\n")
+
+                copyToClipboard(report, "Report")
             end,
         },
     },
 })
-local categoryOrder = {
-    "Executor", "Environment", "Hooking", "Input", "File System",
-    "HTTP", "Drawing", "Roblox API", "Utility",
-}
-local categoryIcons = {
-    ["Executor"]    = "terminal",
-    ["Environment"] = "layers",
-    ["Hooking"]     = "anchor",
-    ["Input"]       = "mouse-pointer-click",
-    ["File System"] = "folder",
-    ["HTTP"]        = "globe",
-    ["Drawing"]     = "pen-tool",
-    ["Roblox API"]  = "box",
-    ["Utility"]     = "wrench",
-}
-Home:Divider()
-for _, catName in ipairs(categoryOrder) do
-    local cat = categories[catName]
-    if cat then
-        local pct = math.floor(cat.Working / cat.Total * 100)
-        local col = colorFor(pct)
-
-        local rows = {
-            string.format("%s  %s  %s",
-                bar(pct, 16),
-                font(col, "<b>" .. pct .. "%</b>"),
-                font(C.Muted, string.format("(%d/%d)", cat.Working, cat.Total))),
-            font(C.Dim, "────────────────────────"),
+local HttpService = game:GetService("HttpService")
+local FileName = "SkillColorConfig.json"
+getgenv().SkillColorChangerEnabled = getgenv().SkillColorChangerEnabled or false
+getgenv().SkillColor = getgenv().SkillColor or Color3.fromRGB(255, 255, 255)
+local function saveConfig()
+    local success, err = pcall(function()
+        local data = {
+            R = getgenv().SkillColor.R,
+            G = getgenv().SkillColor.G,
+            B = getgenv().SkillColor.B
         }
-
-        for _, it in ipairs(cat.Items) do
-            if it.Working then
-                rows[#rows + 1] = string.format("%s  %s  %s",
-                    font(C.Green, "✓"), font(C.White, it.Name), font(C.Muted, "· available"))
-            else
-                rows[#rows + 1] = string.format("%s  %s  %s",
-                    font(C.Red, "✗"), font(C.White, it.Name), font(C.Red, "· unavailable"))
-            end
-        end
-
-        Home:Paragraph({
-            Title = catName,
-            Desc = table.concat(rows, "\n"),
-            Image = categoryIcons[catName] or "layers",
-            ImageSize = 22,
-        })
+        writefile(FileName, HttpService:JSONEncode(data))
+    end)
+    if not success then
+        warn("Failed to save color config: " .. tostring(err))
     end
 end
+local function loadConfig()
+    if pcall(function() readfile(FileName) end) then
+        local success, err = pcall(function()
+            local content = readfile(FileName)
+            local data = HttpService:JSONDecode(content)
+            if data and data.R and data.G and data.B then
+                getgenv().SkillColor = Color3.new(data.R, data.G, data.B)
+            end
+        end)
+        if not success then
+            warn("Failed to load color config: " .. tostring(err))
+        end
+    end
+end
+loadConfig()
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local IgnoredFolders = {
+    workspace:FindFirstChild("Boats"),
+    workspace:FindFirstChild("Characters"),
+    workspace:FindFirstChild("Enemies"),
+    workspace:FindFirstChild("NPCs"),
+    workspace:FindFirstChild("SeaEvents"),
+    workspace:FindFirstChild("SeaBeasts"),
+    workspace:FindFirstChild("SlappingMinigameFolder"),
+    workspace:FindFirstChild("Map"),
+    workspace:FindFirstChild("Folder"),
+    workspace:FindFirstChild("CutParts"),
+    workspace:FindFirstChild("ChestModels"),
+    workspace:FindFirstChild("Arenas"),
+    workspace:FindFirstChild("ActiveFishingSpots"),
+}
+local function isIgnored(obj)
+    for _, folder in ipairs(IgnoredFolders) do
+        if folder and (obj == folder or obj:IsDescendantOf(folder)) then
+            return true
+        end
+    end
+    return false
+end
+local function applySkillColorOnly(targetObj)
+    if not targetObj or not getgenv().SkillColorChangerEnabled then return end
+    if isIgnored(targetObj) then return end
+    
+    local function apply(item)
+        pcall(function()
+            if item:IsA("ParticleEmitter") or item:IsA("Trail") or item:IsA("Beam") then
+                item.Color = ColorSequence.new(getgenv().SkillColor)
+            elseif item:IsA("BasePart") then
+                -- เช็คว่าเป็น Part ของเอฟเฟกต์สกิลหรือไม่ (ป้องกันการไปเปลี่ยนสีพื้นแมพหรือตัวละครหลัก)
+                -- ถ้า Part นั้นมีชื่อหรืออยู่ในโมเดลเอฟเฟกต์ จะทำการเปลี่ยนสี Color
+                if item.Name ~= "HumanoidRootPart" and item.Name ~= "Head" and item.Name ~= "Torso" then
+                    item.Color = getgenv().SkillColor
+                end
+            end
+        end)
+    end
+    apply(targetObj)
+    for _, descendant in ipairs(targetObj:GetDescendants()) do
+        if not isIgnored(descendant) then
+            apply(descendant)
+        end
+    end
+end
+local function hookCharacterEffects(character)
+    if not character then return end
+    applySkillColorOnly(character)
+    character.DescendantAdded:Connect(function(descendant)
+        if getgenv().SkillColorChangerEnabled and not isIgnored(descendant) then
+            task.defer(function()
+                applySkillColorOnly(descendant)
+            end)
+        end
+    end)
+end
+if LocalPlayer.Character then
+    hookCharacterEffects(LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(hookCharacterEffects)
+workspace.DescendantAdded:Connect(function(descendant)
+    if getgenv().SkillColorChangerEnabled and descendant:IsDescendantOf(workspace) then
+        if not isIgnored(descendant) then
+            task.defer(function()
+                applySkillColorOnly(descendant)
+            end)
+        end
+    end
+end)
+local UtilitySection = System:Section({ 
+    Title = "Settings Skills", 
+    Icon = "settings" 
+})
+System:Divider() 
+System:Toggle({
+    Title = "Skill Color Changer",
+    Desc = "Change skill effect colors only.",
+    Flag = "skill_color_toggle",
+    Value = getgenv().SkillColorChangerEnabled,
+    Callback = function(Value)
+        getgenv().SkillColorChangerEnabled = Value
+        if Value and LocalPlayer.Character then
+            applySkillColorOnly(LocalPlayer.Character)
+        end
+    end,
+})
+System:Colorpicker({
+    Title = "Select Skill Color",
+    Desc = "Choose your custom skill effect color.",
+    Default = getgenv().SkillColor,
+    Callback = function(color)
+        if not getgenv().RainbowModeEnabled then
+            getgenv().SkillColor = color
+            
+            saveConfig()
+
+            if getgenv().SkillColorChangerEnabled and LocalPlayer.Character then
+                applySkillColorOnly(LocalPlayer.Character)
+            end
+        end
+    end
+})
