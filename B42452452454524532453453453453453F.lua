@@ -6,7 +6,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
         Title = "Project Destiny [v3.0] Premium",
-        Icon = "rbxassetid://82953555902230",
+        Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
         Size = UDim2.fromOffset(620, 558),
