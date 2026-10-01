@@ -63,7 +63,6 @@ Group:Button({
             Progress:Set(70)
             task.wait(.3)
             Progress:Set(100)
-
             WindUI:Notify({
                 Title="System Saved",
                 Content="Saved successfully!",
@@ -97,6 +96,7 @@ Group:Button({
         WindUI:Notify({ Title = "System Warning", Content = "Settings reset!", Icon = "bell-ring", Duration = 3 })
     end,
 })
+
 Config:Divider() 
 getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
 getgenv().SilentAimMode = getgenv().SilentAimMode or "FOV"
@@ -2526,9 +2526,6 @@ CombatTab:Toggle({
         end
     end,
 })
-
-
-
 CombatTab:Divider() 
 local FOVSection = CombatTab:Section({ 
     Title = "Targeting & FOV", 
@@ -3234,6 +3231,7 @@ local HitboxSection = CombatTab:Section({ Title = "Hitbox Expander" })
 
 CombatTab:Toggle({
     Title = "Expand Hitboxes",
+    Type = "Checkbox",
     Desc = "Enlarge player hitboxes.",
     Flag = "HitboxToggle",
     Value = getgenv().HitboxEnabled,
@@ -3251,6 +3249,7 @@ CombatTab:Toggle({
 
 CombatTab:Toggle({
     Title = "Show Hitbox Visual",
+    Type = "Checkbox",
     Desc = "Render hitbox outlines.",
     Flag = "HitboxVisualToggle",
     Value = getgenv().HitboxShowBox,
@@ -3301,9 +3300,6 @@ local UIKeybind = Config:Keybind({
         Window:Toggle()
     end
 })
-
-
-
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -3645,7 +3641,6 @@ local function checkAndSwitchTeam()
     teamCheckInProgress = false
 end
 
--- ✅ ลดการหน่วงเวลา
 local function pressKey(keyName)
     pcall(function()
         if type(keyName) == "table" then
@@ -3671,7 +3666,6 @@ local function pressKey(keyName)
     end)
 end
 
--- ✅ เก็บ CheckMatch ไว้ใน Table พร้อมจำกัด Size
 local toolTypeCache = {}
 local MAX_TOOL_CACHE = 500
 
