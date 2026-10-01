@@ -20,7 +20,7 @@ local success, Window = pcall(function()
 end)
 
 Window:DisableTopbarButtons({ "Close", "Minimize" })
-Window:SetIconSize(40) 
+Window:SetIconSize(30) 
 Window:Section({ Title = "Control Panel" })
 local Home = Window:Tab({ Title = "Changelog !!", Icon = "clipboard-list" })
 local GeneralTab = Window:Tab({ Title = "General Main", Icon = "gauge" })
