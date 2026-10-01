@@ -199,7 +199,11 @@ end
 
 local function isPlayerInCombat(player, character)
     if not player then return false end
-    if combatCache[player] ~= nil then return combatCache[player] end
+    
+    -- ⚡ ใช้ cache ก่อน
+    if combatCache[player] ~= nil then
+        return combatCache[player]
+    end
     
     local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag")
     if pCombat == true or pCombat == 1 or pCombat == "1" then
@@ -214,38 +218,74 @@ local function isPlayerInCombat(player, character)
     end
 
     if character then
-        local combatObj = character:FindFirstChild("InCombat") or character:FindFirstChild("Combat") or character:FindFirstChild("CombatTag") or character:FindFirstChild("PvpTag")
-        if combatObj and combatObj:IsA("ValueBase") then
+        local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
+        if cCombat == true or cCombat == 1 or cCombat == "1" then
             combatCache[player] = true
             return true
+        end
+
+        local combatObj = character:FindFirstChild("InCombat") 
+            or character:FindFirstChild("Combat") 
+            or character:FindFirstChild("CombatTag")
+            or character:FindFirstChild("PvpTag")
+
+        if combatObj then
+            if combatObj:IsA("BoolValue") and combatObj.Value == true then
+                combatCache[player] = true
+                return true
+            elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
+                combatCache[player] = true
+                return true
+            elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" then
+                combatCache[player] = true
+                return true
+            elseif combatObj:IsA("ValueBase") then
+                combatCache[player] = true
+                return true
+            end
         end
     end
 
     combatCache[player] = false
     return false
 end
-
 local function isInSafeZoneRadius(character)
-    if not character or not character:FindFirstChild("HumanoidRootPart") or not safeZonesFolder then return false end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
+    if not safeZonesFolder then return false end
+    
     local charPos = character.HumanoidRootPart.Position
     
     for _, zonePart in ipairs(safeZonesFolder:GetChildren()) do
         if zonePart:IsA("BasePart") then
-            local radius = math.max(zonePart.Size.X, zonePart.Size.Z) / 2
-            local mesh = zonePart:FindFirstChildOfClass("SpecialMesh")
-            if mesh then radius = (mesh.Scale.X / 2) * math.max(zonePart.Size.X, zonePart.Size.Z) end
+            local zonePos = zonePart.Position
+            local radius = 0
             
-            if (charPos - zonePart.Position).Magnitude <= radius then
+            local mesh = zonePart:FindFirstChildOfClass("SpecialMesh")
+            if mesh then
+                radius = mesh.Scale.X / 2
+                radius = radius * math.max(zonePart.Size.X, zonePart.Size.Z)
+            else
+                radius = math.max(zonePart.Size.X, zonePart.Size.Z) / 2
+            end
+            
+            local distance = (charPos - zonePos).Magnitude
+            if distance <= radius then
                 return true
             end
         end
     end
+    
     return false
 end
 
 local function isPlayerInSafeZone(player, character)
     if not player then return false end
-    if safeZoneCache[player] ~= nil then return safeZoneCache[player] end
+    
+    -- ⚡ ใช้ cache ก่อน
+    if safeZoneCache[player] ~= nil then
+        return safeZoneCache[player]
+    end
+    
     if isPlayerInCombat(player, character) then
         safeZoneCache[player] = false
         return false
@@ -265,16 +305,28 @@ local function ShouldIgnoreTarget(targetCharacter, targetPlayer)
     if humanoid and humanoid.Health <= 0 then return true end
 
     local enemiesFolder = Workspace:FindFirstChild("Enemies")
-    if enemiesFolder and targetCharacter:IsDescendantOf(enemiesFolder) then
+    local isEnemyNPC = enemiesFolder and targetCharacter:IsDescendantOf(enemiesFolder)
+    
+    if isEnemyNPC then
         return false 
     end
 
-    if not targetPlayer or targetPlayer == LocalPlayer then return true end
-    if targetPlayer:GetAttribute("PvpDisabled") == true then return true end
-    if isPlayerInSafeZone(targetPlayer, targetCharacter) then return true end
+    if not targetPlayer then return true end
+    if targetPlayer == LocalPlayer then return true end
     
-    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" and targetPlayer.Team == LocalPlayer.Team then
+    local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled")
+    if pvpDisabled == true then 
+        return true 
+    end
+    
+    if isPlayerInSafeZone(targetPlayer, targetCharacter) then
         return true
+    end
+    
+    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
+        if targetPlayer.Team and targetPlayer.Team == LocalPlayer.Team then 
+            return true 
+        end
     end
     
     return false
