@@ -1608,6 +1608,155 @@ local function createDraggableButton(text,accentColor,x,y,callback)
         end
     }
 end
+--// =========================================================
+--// SILENT AIM FLOATING TOGGLE
+--// =========================================================
+
+local SilentAimSyncing = false
+local SilentAimNotifyCooldown = false
+
+local CombatTabToggle
+local SilentAimButton
+
+local function SetSilentAim1State(state, updateWindUI, message)
+    state = state == true
+
+    --// State หลัก
+    getgenv().SilentAimEnabled = state
+
+    --// Clear target ตอน OFF
+    if not state then
+        getgenv().CurrentTarget = nil
+
+        if Snapline then
+            pcall(function()
+                Snapline.Visible = false
+            end)
+        end
+    end
+
+    --// Sync WindUI
+    if updateWindUI
+        and CombatTabToggle
+        and not SilentAimSyncing then
+
+        SilentAimSyncing = true
+
+        pcall(function()
+            if CombatTabToggle.Set then
+                CombatTabToggle:Set(state)
+            end
+        end)
+
+        task.defer(function()
+            SilentAimSyncing = false
+        end)
+    end
+
+    --// Sync Floating Button
+    if SilentAimButton
+        and SilentAimButton.Set then
+
+        pcall(function()
+            SilentAimButton.Set(state)
+        end)
+    end
+
+    --// Notification
+    if WindUI
+        and WindUI.Notify
+        and not SilentAimNotifyCooldown then
+
+        SilentAimNotifyCooldown = true
+
+        pcall(function()
+            WindUI:Notify({
+                Title = "Destiny Hub",
+                Content = message or (
+                    state
+                    and "SILENT AIM ON [LOCKED]"
+                    or "SILENT AIM OFF"
+                ),
+                Icon = "crosshair",
+                Duration = 1.5
+            })
+        end)
+
+        task.delay(0.2, function()
+            SilentAimNotifyCooldown = false
+        end)
+    end
+end
+
+
+--// =========================================================
+--// WINDUI TOGGLE
+--// =========================================================
+
+CombatTabToggle = CombatTab:Toggle({
+    Title = "Silent Aim",
+    Desc = "Hit shots without precise crosshairs.",
+    Type = "Checkbox",
+    Flag = "silent_aim_toggle",
+
+    Value = getgenv().SilentAimEnabled == true,
+
+    Callback = function(state)
+
+        if SilentAimSyncing then
+            return
+        end
+
+        SetSilentAim1State(state, false)
+    end
+})
+
+
+--// =========================================================
+--// FLOATING BUTTON
+--// =========================================================
+
+SilentAimButton = createDraggableButton(
+    "Silent Aim",
+    Color3.fromRGB(0,229,255),
+    350,
+    66,
+
+    function(state)
+
+        --// Floating button เป็นตัวสั่ง state
+        SetSilentAim1State(state, true)
+
+    end
+)
+
+
+--// =========================================================
+--// FORCE INITIAL SYNC
+--// =========================================================
+
+task.defer(function()
+    local state = getgenv().SilentAimEnabled == true
+
+    -- ไม่ให้ callback ยิงวนตอนเริ่มต้น
+    SilentAimSyncing = true
+
+    if SilentAimButton and SilentAimButton.Set then
+        pcall(function()
+            SilentAimButton.Set(state)
+        end)
+    end
+
+    if CombatTabToggle and CombatTabToggle.Set then
+        pcall(function()
+            CombatTabToggle:Set(state)
+        end)
+    end
+
+    SilentAimSyncing = false
+end)
+
+
 
 --==================================================
 -- FOLLOW
@@ -1948,8 +2097,6 @@ local camlockBtn = createDraggableButton(
         end
     end
 )
-
-
 
 --==================================================
 -- FOLLOW STATE
@@ -2512,23 +2659,9 @@ CombatTab:Toggle({
         end
     end,
 })
-CombatTab:Toggle({
-    Title = "Silent Aim",
-    Desc  = "Hit shots without precise crosshairs.",
-    Type =  "Checkbox",
-    Flag  = "silent_aim_toggle",
-    Value =getgenv().SilentAimEnabled,
-    Callback = function(state)
-        getgenv().SilentAimEnabled = state
-        
-        if not state then
-            getgenv().CurrentTarget = nil
-            if Snapline then 
-                Snapline.Visible = false 
-            end
-        end
-    end
-})
+
+
+
 CombatTab:Divider() 
 local FOVSection = CombatTab:Section({ 
     Title = "Targeting & FOV", 
@@ -3153,8 +3286,6 @@ Config:Divider()
 
 
 -- ฮิตBox
-
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -3386,7 +3517,19 @@ Config:Toggle({
     end,
 })
 
+Config:Toggle({
+    Title = "SilentAimButton",
+    Type =  "Checkbox",
+    Desc = "ซ่อน/แสดง ปุ่ม",
+    Flag = "ToggleTeleportUI",
+    Value = true,
 
+    Callback = function(Value)
+        if SilentAimButton and SilentAimButton.Instance then
+            SilentAimButton.Instance.Visible = Value
+        end
+    end,
+})
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -4797,10 +4940,6 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
-
-
-
-
 
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
