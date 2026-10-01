@@ -96,7 +96,6 @@ Group:Button({
     end,
 })
 
-Config:Divider() 
 getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
 getgenv().SilentAimMode = getgenv().SilentAimMode or "FOV"
 getgenv().FOVRadius = getgenv().FOVRadius or 100
@@ -597,126 +596,95 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 local function initializeSkillSettings()
-local Players=game:GetService("Players")
-local RunService=game:GetService("RunService")
-local ReplicatedStorage=game:GetService("ReplicatedStorage")
-local TweenService=game:GetService("TweenService")
-local Workspace=game:GetService("Workspace")
-local LocalPlayer=Players.LocalPlayer
-local ENV=getgenv()
+local Players, RunService, ReplicatedStorage, Workspace = game:GetService("Players"), game:GetService("RunService"), game:GetService("ReplicatedStorage"), game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local ENV = getgenv() -- ประกาศและใช้งาน ENV เพื่อไม่ให้ขึ้นเตือน Global/TypeError
 
-local Remotes=ReplicatedStorage:WaitForChild("Remotes",10)
-local CommF=Remotes:WaitForChild("CommF_",10)
-local commE=Remotes:WaitForChild("CommE",10)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+local CommF = Remotes:WaitForChild("CommF_", 10)
+local commE = Remotes:WaitForChild("CommE", 10)
 
-local JumpEnabled=false
-local JumpMultiplier=1
-local DashEnabled=false
-local DashMultiplier=1
-local autoRaceConnection
-local autoRaceV4Connection
+local JumpEnabled, JumpMultiplier, DashEnabled, DashMultiplier = false, 1, false, 1
+local char, hum
 
-local function GetCharacter()
-    local f=Workspace:FindFirstChild("Characters")
-    return (f and f:FindFirstChild(LocalPlayer.Name)) or LocalPlayer.Character
-end
+LocalPlayer.CharacterAdded:Connect(function(c) 
+    char = c 
+    hum = nil 
+end)
 
-local function UpdateJump(h)
-    h.UseJumpPower=true
-    h.JumpPower=50*JumpMultiplier
-end
-
-local function UpdateDash(c,h,dt)
-    if h.MoveDirection.Magnitude>0 then
-        c:TranslateBy(h.MoveDirection*25*DashMultiplier*dt)
+-- Dash & Jump Loop
+RunService.RenderStepped:Connect(function(dt)
+    char = (Workspace:FindFirstChild("Characters") and Workspace.Characters:FindFirstChild(LocalPlayer.Name)) or LocalPlayer.Character
+    if not char then 
+        hum = nil 
+        return 
     end
+    
+    hum = hum or char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    hum.JumpPower = JumpEnabled and (50 * JumpMultiplier) or 50
+    if JumpEnabled then 
+        hum.UseJumpPower = true 
+    end
+
+    if DashEnabled and hum.MoveDirection.Magnitude > 0 then
+        char:TranslateBy(hum.MoveDirection * 25 * DashMultiplier * dt)
+    end
+end)
+
+-- Helper for Loops
+local function StartLoop(stateKey, interval, func)
+    _G[stateKey] = not _G[stateKey]
+    if not _G[stateKey] then return end
+    task.spawn(function()
+        while _G[stateKey] do
+            pcall(func)
+            task.wait(interval)
+        end
+    end)
 end
 
+-- Auto Ability
 local function SetAutoRaceAbility(state)
-    _G.AutoRaceAbilityRunning=state
-
-    if autoRaceConnection then
-        autoRaceConnection:Disconnect()
-        autoRaceConnection=nil
-    end
-    if not state then return end
-
-    local last=0
-    autoRaceConnection=RunService.Heartbeat:Connect(function()
-        if not _G.AutoRaceAbilityRunning then return end
-        local now=tick()
-        if now-last<.5 then return end
-        last=now
-
-        pcall(function()
-            local c=LocalPlayer.Character
+    _G.AutoRaceAbilityRunning = state
+    if state then
+        StartLoop("AutoRaceAbilityRunning", 0.5, function()
+            local c = LocalPlayer.Character
             if c and c:FindFirstChild("HumanoidRootPart") and commE then
                 commE:FireServer("ActivateAbility")
             end
         end)
-    end)
+    end
 end
 
+-- Auto V4
 local function SetAutoRaceV4(state)
-    _G.AutoRaceV4Running=state
-
-    if autoRaceV4Connection then
-        autoRaceV4Connection:Disconnect()
-        autoRaceV4Connection=nil
-    end
-    if not state then return end
-
-    local last=0
-    autoRaceV4Connection=RunService.Heartbeat:Connect(function()
-        if not _G.AutoRaceV4Running then return end
-        local now=tick()
-        if now-last<.1 then return end
-        last=now
-
-        pcall(function()
-            local c=LocalPlayer.Character
-            if not c or not c:FindFirstChild("HumanoidRootPart") then return end
-
-            local b=LocalPlayer:FindFirstChild("Backpack")
-            local a=b and b:FindFirstChild("Awakening")
-            local r=a and a:FindFirstChild("RemoteFunction")
-            if r then r:InvokeServer(true) end
+    _G.AutoRaceV4Running = state
+    if state then
+        StartLoop("AutoRaceV4Running", 0.5, function()
+            local c = LocalPlayer.Character
+            if c and c:FindFirstChild("HumanoidRootPart") then
+                local b = LocalPlayer:FindFirstChild("Backpack")
+                local a = b and b:FindFirstChild("Awakening")
+                local r = a and a:FindFirstChild("RemoteFunction")
+                if r then r:InvokeServer(true) end
+            end
         end)
-    end)
+    end
 end
 
-RunService.RenderStepped:Connect(function(dt)
-    local c=GetCharacter()
-    if not c then return end
-
-    local h=c:FindFirstChildOfClass("Humanoid")
-    if not h then return end
-
-    if JumpEnabled then
-        UpdateJump(h)
-    elseif h.JumpPower~=50 then
-        h.JumpPower=50
-    end
-
-    if DashEnabled then
-        UpdateDash(c,h,dt)
-    end
-end)
-
--- BUSO
+-- Buso
 local function CheckAndEnableBuso()
-    local c=LocalPlayer.Character
-    if not c then return end
-
-    local b=c:FindFirstChild("HasBuso")
-    if not b or (b:IsA("BoolValue") and not b.Value) then
-        if CommF then
-            pcall(function()
-                CommF:InvokeServer("Buso")
-            end)
-        end
+    local c = LocalPlayer.Character
+    local b = c and c:FindFirstChild("HasBuso")
+    if c and (not b or not b.Value) and CommF then
+        pcall(function() 
+            CommF:InvokeServer("Buso") 
+        end)
     end
 end
+
 
 -- ESP CONFIG
 local Players=game:GetService("Players")
@@ -2195,77 +2163,6 @@ local HPRestoreSlider = System:Slider({
     end
 })
 System:Divider() 
-
-local Configjson = Config:Section({ 
-    Title = "Config.json", 
-    Icon = "file" 
-})
-local importedConfigData = ""
-local configFilePath = "WindUI/Destiny Hub/config/DestinyConfig.json"
-
-Config:Input({
-    Title = "Configuration Code",
-    Value = "",
-    Placeholder = "วางโค้ด JSON ที่นี่...",
-    Callback = function(text)
-        importedConfigData = text
-    end,
-})
-
-Config:Button({
-    Title = "Import Configuration",
-    Callback = function()
-        pcall(function()
-            if importedConfigData and importedConfigData ~= "" then
-                if makefolder then
-                    if not isfolder("WindUI") then makefolder("WindUI") end
-                    if not isfolder("WindUI/Destiny Hub") then makefolder("WindUI/Destiny Hub") end
-                    if not isfolder("WindUI/Destiny Hub/config") then makefolder("WindUI/Destiny Hub/config") end
-                end
-                
-                if writefile then
-                    writefile(configFilePath, importedConfigData)
-                    WindUI:Notify({
-                        Title = "Import Success",
-                        Content = "นำเข้าและบันทึก Config เรียบร้อยแล้ว!",
-                        Duration = 3,
-                    })
-                end
-            else
-                WindUI:Notify({
-                    Title = "Import Failed",
-                    Content = "กรุณากรอกหรือวางโค้ด Config ก่อนกด Import",
-                    Duration = 3,
-                })
-            end
-        end)
-    end,
-})
-Config:Button({
-    Title = "Export Configuration",
-    Callback = function()
-        pcall(function()
-            if isfile and isfile(configFilePath) then
-                local configData = readfile(configFilePath)
-                
-                if setclipboard then
-                    setclipboard(configData)
-                    WindUI:Notify({
-                        Title = "Export Success",
-                        Content = "คัดลอกโค้ด Config ไปยังคลิปบอร์ดแล้ว!",
-                        Duration = 3,
-                    })
-                end
-            else
-                WindUI:Notify({
-                    Title = "Export Failed",
-                    Content = "ไม่พบไฟล์ตั้งค่า กรุณากด Save ก่อน",
-                    Duration = 3,
-                })
-            end
-        end)
-    end,
-})
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -2440,7 +2337,7 @@ CombatTab:Toggle({
 CombatTab:Divider() 
 local VisualsSection = CombatTab:Section({ 
     Title = "Visuals & Filters", 
-    Icon = "eye" -- หรือใช้ "palette", "sparkles" ก็ได้ครับ
+    Icon = "eye" 
 })
 CombatTab:Toggle({
     Title = "Show Red Snapline",
@@ -3049,13 +2946,17 @@ CombatTab:Slider({
 
 
 
-local HideShowUI = Config:Section({ 
-    Title = "Settings", 
+
+
+local SettingsGroup = Config:Group({})
+local HideShowUI = SettingsGroup:Section({ 
+    Title = "Settings 1", 
     Icon = "monitor" 
 })
-local UIKeybind = Config:Keybind({
-    Title = "Keybind Ui",
-    Desc = "Keybind to show or hide the user interface",
+local SettingsGroup2 = Config:Group({})
+local SettingsGroup3 = Config:Group({})
+local UIKeybind = SettingsGroup:Keybind({
+    Title = "",
     Flag = "UIKeybindUIKeybind", 
     Value = "",
     Callback = function(key)
@@ -3064,44 +2965,54 @@ local UIKeybind = Config:Keybind({
 })
 local RunService = game:GetService("RunService")
 local LocalPlayer = game:GetService("Players").LocalPlayer
-local conn, parts = nil, {}
+local conn = nil
+local noclipEnabled = false
 
-local function setNoclip(state)
-    for _, p in ipairs(parts) do if p.Parent then p.CanCollide = not state end end
-end
-
-Config:Toggle({
-    Title = "Noclip", Type = "Checkbox", Desc = "Walk through walls.", Flag = "NoclipToggle", Value = false,
-    Callback = function(state)
-        if conn then conn:Disconnect(); conn = nil end
-        parts = {}
-        if LocalPlayer.Character then
-            for _, p in ipairs(LocalPlayer.Character:GetDescendants()) do
-                if p:IsA("BasePart") then table.insert(parts, p) end
+-- ฟังก์ชันสำหรับเปิด/ปิดการชนของชิ้นส่วนตัวละครปัจจุบัน
+local function updateNoclip()
+    local char = LocalPlayer.Character
+    if char then
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then
+                p.CanCollide = not noclipEnabled
             end
         end
+    end
+end
+
+SettingsGroup:Toggle({
+    Title = "", Type = "Checkbox", Flag = "NoclipToggle", Value = false,
+    Callback = function(state)
+        noclipEnabled = state
+        
+        if conn then 
+            conn:Disconnect() 
+            conn = nil 
+        end
+        
         if state then
-            setNoclip(true)
-            conn = RunService.Stepped:Connect(function() setNoclip(true) end)
+            conn = RunService.Stepped:Connect(updateNoclip)
         else
-            setNoclip(false)
+            updateNoclip()
         end
     end,
 })
 
 LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.5)
-    parts = {}
-    for _, p in ipairs(char:GetDescendants()) do
-        if p:IsA("BasePart") then table.insert(parts, p) end
+    if noclipEnabled then
+        task.wait(0.2) 
+        updateNoclip()
     end
-    if conn then setNoclip(true) end
 end)
 
-Config:Toggle({
-    Title = "Camera Lock",
+local HideShowUI = SettingsGroup2:Section({ 
+    Title = "Settings 2", 
+    Icon = "monitor" 
+})
+
+SettingsGroup2:Toggle({
+    Title = "",
     Type =  "Checkbox",
-    Desc = "ซ่อน/แสดง ปุ่ม Camera Lock",
     Flag = "ToggleCamlockUI",
     Value = true,
 
@@ -3112,10 +3023,9 @@ Config:Toggle({
     end,
 })
 
-Config:Toggle({
-    Title = "Teleport Player",
+SettingsGroup2:Toggle({
+    Title = "",
     Type =  "Checkbox",
-    Desc = "ซ่อน/แสดง ปุ่ม Teleport Player",
     Flag = "ToggleTelepo1010rtUI",
     Value = true,
 
@@ -3125,11 +3035,14 @@ Config:Toggle({
         end
     end,
 })
+local HideShowUI = SettingsGroup3:Section({ 
+    Title = "Settings 3", 
+    Icon = "monitor" 
+})
 
-Config:Toggle({
-    Title = "SilentAimButton",
+SettingsGroup3:Toggle({
+    Title = "",
     Type =  "Checkbox",
-    Desc = "ซ่อน/แสดง ปุ่ม",
     Flag = "ToggleTeleportUI",
     Value = true,
 
@@ -3139,116 +3052,95 @@ Config:Toggle({
         end
     end,
 })
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local P=game:GetService("Players")
+local UIS=game:GetService("UserInputService")
+local L=P.LocalPlayer
+local CG=game:GetService("CoreGui")
 
-local JumpGui = Instance.new("ScreenGui")
-JumpGui.Name = "JumpButtonUI"
-JumpGui.ResetOnSpawn = false
-JumpGui.IgnoreGuiInset = true
-JumpGui.Parent = game:GetService("CoreGui")
+local old=CG:FindFirstChild("JumpButtonUI")
+if old then old:Destroy() end
 
-local JumpButton = Instance.new("TextButton")
-JumpButton.Name = "JumpButton"
-JumpButton.Size = UDim2.fromOffset(70, 70)
-JumpButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-JumpButton.BackgroundTransparency = 0.15
-JumpButton.Text = "↑"
-JumpButton.TextColor3 = Color3.fromRGB(0, 229, 255)
-JumpButton.TextSize = 32
-JumpButton.Font = Enum.Font.GothamBold
-JumpButton.AutoButtonColor = true
-JumpButton.Active = true
-JumpButton.Visible = true
-JumpButton.Parent = JumpGui
+local G=Instance.new("ScreenGui")
+G.Name="JumpButtonUI"
+G.IgnoreGuiInset=true
+G.Parent=CG
 
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(1, 0)
-Corner.Parent = JumpButton
+local B=Instance.new("TextButton")
+B.Parent=G
+B.Size=UDim2.fromOffset(90,90)
+-- ใช้ Scale เป็น 1 และปรับ Offset เพื่อความเสถียร
+B.Position=UDim2.new(1,-75,1,-100)
+B.AnchorPoint=Vector2.new(.5,.5)
+B.BackgroundColor3=Color3.fromRGB(15,15,15)
+B.Text="↑"
+B.TextColor3=Color3.fromRGB(0,200,255)
+B.TextSize=48
+B.Font=Enum.Font.GothamBold
+B.AutoButtonColor=false
 
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(0, 229, 255)
-Stroke.Thickness = 2
-Stroke.Transparency = 0.15
-Stroke.Parent = JumpButton
+Instance.new("UICorner",B).CornerRadius=UDim.new(1,0)
 
---// ตำแหน่งเริ่มต้นด้านขวาล่าง
-local Camera = workspace.CurrentCamera
-if Camera then
-    local Viewport = Camera.ViewportSize
-    JumpButton.Position = UDim2.fromOffset(Viewport.X - 100, Viewport.Y - 130)
-else
-    JumpButton.Position = UDim2.fromOffset(500, 500)
-end
+local dragging,dragInput,dragStart,startPos,moved
 
---// ระบบลากแบบแยก Touch แยกนิ้ว (Multi-touch safe)
-local activeInput = nil
-local dragStartPos = nil
-local startButtonPos = nil
-local isDragging = false
-local DRAG_THRESHOLD = 8
-
-JumpButton.InputBegan:Connect(function(input)
-    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not activeInput then
-        activeInput = input
-        dragStartPos = input.Position
-        startButtonPos = JumpButton.Position
-        isDragging = false
+B.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1
+    or i.UserInputType==Enum.UserInputType.Touch then
+        dragging=true
+        moved=false
+        dragStart=i.Position
+        startPos=B.Position
     end
 end)
 
-JumpButton.InputChanged:Connect(function(input)
-    if input == activeInput then
-        local delta = input.Position - dragStartPos
-        if not isDragging then
-            if math.abs(delta.X) < DRAG_THRESHOLD and math.abs(delta.Y) < DRAG_THRESHOLD then
-                return
-            end
-            isDragging = true
+B.InputChanged:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseMovement
+    or i.UserInputType==Enum.UserInputType.Touch then
+        dragInput=i
+    end
+end)
+
+UIS.InputChanged:Connect(function(i)
+    if not dragging or i~=dragInput then return end
+
+    local d=i.Position-dragStart
+    if d.Magnitude>8 then moved=true end
+
+    -- แก้ไขจุดที่คำนวณตำแหน่งใหม่ให้อ้างอิงจากตำแหน่งเดิม (Scale และ Offset)
+    B.Position=UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + d.X,
+        startPos.Y.Scale, startPos.Y.Offset + d.Y
+    )
+end)
+
+B.InputEnded:Connect(function(i)
+    if i.UserInputType~=Enum.UserInputType.MouseButton1
+    and i.UserInputType~=Enum.UserInputType.Touch then return end
+
+    dragging=false
+
+    if not moved then
+        local c=L.Character
+        local h=c and c:FindFirstChildOfClass("Humanoid")
+
+        if h and h.Health>0 then
+            h.Jump=true
+            h:ChangeState(Enum.HumanoidStateType.Jumping)
         end
-        
-        local vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
-        local btnSize = JumpButton.AbsoluteSize
-        
-        local newX = math.clamp(startButtonPos.X.Offset + delta.X, 0, vp.X - btnSize.X)
-        local newY = math.clamp(startButtonPos.Y.Offset + delta.Y, 0, vp.Y - btnSize.Y)
-        
-        JumpButton.Position = UDim2.fromOffset(newX, newY)
     end
+
+    dragInput=nil
 end)
 
-local function onInputEnd(input)
-    if input == activeInput then
-        if not isDragging then
-            -- ถ้าไม่ได้ขยับ ถือว่าเป็นการกดกระโดด
-            local character = LocalPlayer.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.Health > 0 then
-                humanoid.Jump = true
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
-        end
-        activeInput = nil
-        isDragging = false
-    end
-end
-
-JumpButton.InputEnded:Connect(onInputEnd)
-JumpButton.SelectionLost:Connect(function()
-    activeInput = nil
-    isDragging = false
-end)
-
-Config:Toggle({
-    Title = "Jump Button",
-    Type = "Checkbox",
-    Desc = "ซ่อน/แสดง ปุ่ม Jump",
-    Flag = "ToggleJumpUI",
-    Value = true,
-    Callback = function(Value)
-        JumpButton.Visible = Value == true
+SettingsGroup3:Toggle({
+    Title="",
+    Type="Checkbox",
+    Flag="ToggleJumpUI",
+    Value=true,
+    Callback=function(Value)
+        G.Enabled=Value==true
     end,
 })
+
 
 end
 initializeSkillSettings()
@@ -3509,7 +3401,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local sliderDist = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 150
     local maxDistance = math.max(sliderDist, 250) 
     local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
-    
+
     if distance <= maxDistance then
         local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
 
