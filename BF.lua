@@ -1949,6 +1949,8 @@ local camlockBtn = createDraggableButton(
     end
 )
 
+
+
 --==================================================
 -- FOLLOW STATE
 --==================================================
@@ -3383,6 +3385,146 @@ Config:Toggle({
         end
     end,
 })
+
+
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+
+--// GUI
+local JumpGui = Instance.new("ScreenGui")
+JumpGui.Name = "JumpButtonUI"
+JumpGui.ResetOnSpawn = false
+JumpGui.IgnoreGuiInset = true
+JumpGui.Parent = game:GetService("CoreGui")
+
+local JumpButton = Instance.new("TextButton")
+JumpButton.Name = "JumpButton"
+JumpButton.Size = UDim2.fromOffset(70, 70)
+JumpButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+JumpButton.BackgroundTransparency = 0.15
+JumpButton.Text = "↑"
+JumpButton.TextColor3 = Color3.fromRGB(0, 229, 255)
+JumpButton.TextSize = 32
+JumpButton.Font = Enum.Font.GothamBold
+JumpButton.AutoButtonColor = true
+JumpButton.Active = true
+JumpButton.Visible = true
+JumpButton.Parent = JumpGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(1, 0)
+Corner.Parent = JumpButton
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(0, 229, 255)
+Stroke.Thickness = 2
+Stroke.Transparency = 0.15
+Stroke.Parent = JumpButton
+
+--// ตั้งตำแหน่งเริ่มต้นด้านขวาล่าง
+local Camera = workspace.CurrentCamera
+
+if Camera then
+    local Viewport = Camera.ViewportSize
+    JumpButton.Position = UDim2.fromOffset(
+        Viewport.X - 100,
+        Viewport.Y - 130
+    )
+else
+    JumpButton.Position = UDim2.fromOffset(500, 500)
+end
+
+--// Jump
+JumpButton.MouseButton1Click:Connect(function()
+    local Character = LocalPlayer.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+    if Humanoid and Humanoid.Health > 0 then
+        Humanoid.Jump = true
+        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+--// Drag
+local Dragging = false
+local DragStart
+local StartPos
+
+JumpButton.InputBegan:Connect(function(Input)
+    if Input.UserInputType == Enum.UserInputType.MouseButton1
+        or Input.UserInputType == Enum.UserInputType.Touch then
+
+        Dragging = true
+        DragStart = Input.Position
+
+        -- ใช้ตำแหน่งจริงของปุ่ม ไม่ใช้ Position.Offset
+        StartPos = JumpButton.AbsolutePosition
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(Input)
+    if not Dragging then
+        return
+    end
+
+    if Input.UserInputType ~= Enum.UserInputType.MouseMovement
+        and Input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    local Camera = workspace.CurrentCamera
+    if not Camera then
+        return
+    end
+
+    local Delta = Input.Position - DragStart
+
+    local NewX = StartPos.X + Delta.X
+    local NewY = StartPos.Y + Delta.Y
+
+    local Viewport = Camera.ViewportSize
+    local ButtonSize = JumpButton.AbsoluteSize
+
+    -- จำกัดไม่ให้ออกนอกหน้าจอ
+    NewX = math.clamp(
+        NewX,
+        0,
+        Viewport.X - ButtonSize.X
+    )
+
+    NewY = math.clamp(
+        NewY,
+        0,
+        Viewport.Y - ButtonSize.Y
+    )
+
+    JumpButton.Position = UDim2.fromOffset(NewX, NewY)
+end)
+
+UserInputService.InputEnded:Connect(function(Input)
+    if Input.UserInputType == Enum.UserInputType.MouseButton1
+        or Input.UserInputType == Enum.UserInputType.Touch then
+
+        Dragging = false
+    end
+end)
+
+--// Toggle Jump Button
+Config:Toggle({
+    Title = "Jump Button",
+    Type = "Checkbox",
+    Desc = "ซ่อน/แสดง ปุ่ม Jump",
+    Flag = "ToggleJumpUI",
+    Value = true,
+
+    Callback = function(Value)
+        JumpButton.Visible = Value == true
+    end,
+})
+
 
 end
 
