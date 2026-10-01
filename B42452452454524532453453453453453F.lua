@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.0] Premium",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -417,7 +417,7 @@ task.spawn(function()
     local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
     if not success or not Mouse then return end
 
-    local oldIndex
+   local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and self == Mouse then
             local rootPart = getTargetCFrame()
@@ -433,26 +433,39 @@ task.spawn(function()
         return oldIndex(self, idx)
     end))
 
+    -- 3. ระบบ Hook Namecall (สำหรับส่งค่าพิกัดสกิล / กระสุน)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
-        local rootPart = getTargetCFrame()
-
-        if getgenv().SilentAimEnabled and rootPart and (method == "FireServer" or method == "InvokeServer") then
-            local targetCFrame = rootPart.CFrame
-            local targetPos = targetCFrame.Position
-            local args = { ... }
+        
+        if getgenv().SilentAimEnabled and (method == "FireServer" or method == "InvokeServer") then
+            local rootPart = getTargetCFrame()
             
-            for i = 1, #args do
-                local argType = typeof(args[i])
-                if argType == "CFrame" then args[i] = targetCFrame
-                elseif argType == "Vector3" then args[i] = targetPos end
+            if rootPart then
+                local targetCFrame = rootPart.CFrame
+                local targetPos = targetCFrame.Position
+                local args = { ... }
+                
+                -- ตรวจสอบและแทนที่เฉพาะ Arguments ที่เป็นทิศทางหรือเป้าหมาย (ป้องกันการแก้ข้อมูลตัวเราเอง)
+                for i = 1, #args do
+                    local argType = typeof(args[i])
+                    -- ปรับเงื่อนไขตรงนี้เพิ่มเติมได้ตามรูปแบบเกมที่คุณเล่น
+                    if argType == "CFrame" then 
+                        args[i] = targetCFrame
+                    elseif argType == "Vector3" then 
+                        -- อาจจะเช็คระยะห่างว่าใกล้เคียงกับตำแหน่งตัวเราไหม เพื่อไม่ให้ทับตำแหน่งตัวเอง
+                        args[i] = targetPos 
+                    end
+                end
+                
+                return oldNamecall(self, unpack(args))
             end
-            return oldNamecall(self, unpack(args))
         end
+        
         return oldNamecall(self, ...)
     end))
 end)
+
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
@@ -1821,18 +1834,21 @@ local function FollowTarget(player)
         return false;
     end
 
+    -- คำนวณตำแหน่งด้านหลังเป้าหมายตามที่ตั้งค่าไว้ (TpBehindDistance)
     local targetCF = targetRoot.CFrame;
     local behind = targetCF * CFrame.new(0, 0, TpBehindDistance);
+    
     local params = RaycastParams.new();
     params.FilterType = Enum.RaycastFilterType.Exclude;
     params.FilterDescendantsInstances = {char, targetChar};
 
     local hit = Workspace:Raycast(behind.Position + Vector3.new(0, 5, 0), Vector3.new(0, -15, 0), params);
     local pos = hit and (hit.Position + Vector3.new(0, 3, 0)) or behind.Position;
-    local cf = CFrame.new(pos, pos + targetCF.LookVector);
+    local targetCFrame = CFrame.new(pos, pos + targetCF.LookVector);
 
-    -- เซ็ต CFrame ตรงๆ ทันทีแบบแข็งทื่อ ไม่ให้ขยับหนี
-    root.CFrame = cf;
+    -- ใช้ Lerp ดึงตัวละครไปติดหลังเป้าหมายแบบสมูท (เลข 0.3 คือความเร็วในการตาม ยิ่งมากยิ่งไว)
+    root.CFrame = root.CFrame:Lerp(targetCFrame, 0.5);
+
     return true;
 end
 
@@ -1981,7 +1997,7 @@ local Toggle = System:Toggle({
 
     Callback = function(state)
         toggleState = state
-        runId = runId + 1 -- ให้ลูปเก่าหยุด
+        runId = runId + 1 
 
         if not state then
             return
@@ -2006,12 +2022,10 @@ local Toggle = System:Toggle({
                     setSoru(soruScript, false)
                     task.wait(half)
                 else
-                    -- ยังไม่เจอ Soru (กำลังรีสปอน) ลองใหม่เรื่อยๆ ไม่หยุดลูป
                     task.wait(0.5)
                 end
             end
 
-            -- ปิดสวิตช์แล้ว: คืนสถานะเปิดปกติ (ถ้าไม่มีรอบใหม่มาแทน)
             if runId == myId and lastSoru and lastSoru.Parent then
                 setSoru(lastSoru, true)
             end
@@ -2025,12 +2039,12 @@ local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
 
-local defenseProtocolEnabled = false -- เปิดใช้งานทันที
+local defenseProtocolEnabled = false 
 local isEmergencyAscending = false
 
-local healthTriggerThreshold = 30 -- เพิ่มเลือดขั้นต่ำให้ทำงานไวขึ้น (เช่น เลือดเหลือ 30% หนีทันที)
-local healthRecoveryThreshold = 100 -- เลือดฟื้นกลับมาถึง 85% ถึงจะกลับลงมาสู้ต่อ
-local ascentVelocity = 200 -- เพิ่มความเร็วในการพุ่งขึ้นฟ้าให้หนีพ้นระยะสกิล AOE
+local healthTriggerThreshold = 30
+local healthRecoveryThreshold = 100 
+local ascentVelocity = 200  
 
 local blockedStates = {
     Enum.HumanoidStateType.Ragdoll,       -- สถานะตัวอ่อน/ล้ม
@@ -2136,7 +2150,6 @@ local ShieldToggle = System:Toggle({
                 end
 
                 if root then
-                    -- หยุดแรงลอยทันที เพื่อให้ตัวละครร่วงลงมาตามปกติ
                     root.AssemblyLinearVelocity = Vector3.zero
                     root.AssemblyAngularVelocity = Vector3.zero
                 end
@@ -2170,7 +2183,6 @@ local LocalPlayer = Players.LocalPlayer
 local isAntiCCEnabled = false 
 local connection = nil
 
--- รายชื่อสถานะ (เอา Stun ออกเพราะไม่มีในระบบ Enum ดั้งเดิมของ Roblox)
 local blockedStates = {
     Enum.HumanoidStateType.Ragdoll,       
     Enum.HumanoidStateType.FallingDown,   
@@ -2558,7 +2570,7 @@ end)
 
 local CharacterAbilities = GeneralTab:Section({ 
     Title = "Character & Abilities", 
-    Icon = "user" -- หรือใช้ "zap", "activity" ก็ได้ครับ
+    Icon = "user" 
 })
 GeneralTab:Divider() 
 
@@ -2945,9 +2957,6 @@ CombatTab:Slider({
 })
 
 
-
-
-
 local SettingsGroup = Config:Group({})
 local HideShowUI = SettingsGroup:Section({ 
     Title = "Settings 1", 
@@ -2968,7 +2977,6 @@ local LocalPlayer = game:GetService("Players").LocalPlayer
 local conn = nil
 local noclipEnabled = false
 
--- ฟังก์ชันสำหรับเปิด/ปิดการชนของชิ้นส่วนตัวละครปัจจุบัน
 local function updateNoclip()
     local char = LocalPlayer.Character
     if char then
