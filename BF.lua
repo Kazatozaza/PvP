@@ -688,31 +688,6 @@ local Remotes=ReplicatedStorage:WaitForChild("Remotes",10)
 local CommF=Remotes:WaitForChild("CommF_",10)
 local commE=Remotes:WaitForChild("CommE",10)
 
-ENV.HitboxEnabled=true
-ENV.HitboxSize=11
-
-task.spawn(function()
-    while true do
-        if ENV.HitboxEnabled then
-            for _,p in ipairs(Players:GetPlayers()) do
-                if p~=LocalPlayer and p.Character then
-                    local c=p.Character
-                    local h=c:FindFirstChildOfClass("Humanoid")
-                    local head=c:FindFirstChild("Head")
-                    if h and h.Health>0 and head then
-                        local s=ENV.HitboxSize
-                        head.Size=Vector3.new(s,s,s)
-                        head.Transparency=1
-                        head.CanCollide=false
-                        head.CastShadow=false
-                    end
-                end
-            end
-        end
-        task.wait(1)
-    end
-end)
-
 local JumpEnabled=false
 local JumpMultiplier=1
 local DashEnabled=false
@@ -3124,7 +3099,6 @@ Visuals:Toggle({
     end,
 })
 
-
 local UtilitySection = GeneralTab:Section({ 
     Title = "Target Dominance", 
     Icon = "crown" 
@@ -3157,7 +3131,6 @@ local Keybind = GeneralTab:Keybind({
         end
     end,
 })
-
 local Slider = GeneralTab:Slider({
     Title = "Pursuit Radius",
     Desc = "Maximum distance from target.",
@@ -3174,6 +3147,145 @@ local Slider = GeneralTab:Slider({
 })
 
 Config:Divider() 
+
+
+
+-- ฮิตBox
+
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ค่าคอนฟิกสำหรับขยายหัวโดยเฉพาะ
+getgenv().HitboxEnabled = getgenv().HitboxEnabled or true
+getgenv().HitboxSize = getgenv().HitboxSize or 18
+getgenv().HitboxColor = getgenv().HitboxColor or Color3.fromRGB(96, 205, 255)
+getgenv().HitboxShowBox = getgenv().HitboxShowBox or true
+
+local function resetPlayerHitbox(character)
+    if not character then return end
+    local head = character:FindFirstChild("Head")
+    if head then
+        local originalSize = head:FindFirstChild("OriginalSize")
+        if originalSize then
+            head.Size = originalSize.Value
+            originalSize:Destroy()
+        end
+        local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
+        if selectionBox then selectionBox:Destroy() end
+        head.Transparency = 0
+        head.CanCollide = true
+        head.CastShadow = true
+    end
+end
+
+-- ลูปการทำงานหลักเฉพาะหัว
+RunService.RenderStepped:Connect(function()
+    if not getgenv().HitboxEnabled then return end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local character = player.Character
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            
+            if humanoid and humanoid.Health > 0 then
+                local head = character:FindFirstChild("Head")
+                if head then
+                    -- บันทึกขนาดเดิมเก็บไว้ครั้งแรก
+                    local originalSize = head:FindFirstChild("OriginalSize")
+                    if not originalSize then
+                        originalSize = Instance.new("Vector3Value")
+                        originalSize.Name = "OriginalSize"
+                        originalSize.Value = head.Size
+                        originalSize.Parent = head
+                    end
+                    
+                    -- จัดการกรอบเส้น (SelectionBox)
+                    local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
+                    if getgenv().HitboxShowBox then
+                        if not selectionBox then
+                            selectionBox = Instance.new("SelectionBox")
+                            selectionBox.Name = "CustomHitboxSelectionBox"
+                            selectionBox.Parent = head
+                        end
+                        selectionBox.Adornee = head
+                        selectionBox.Color3 = getgenv().HitboxColor
+                        selectionBox.LineThickness = 0.001
+                    elseif selectionBox then
+                        selectionBox:Destroy()
+                    end
+                    
+                    -- ขยายขนาดหัวและปรับสถานะ
+                    head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                    head.Transparency = 1 
+                    head.CanCollide = false
+                    head.CastShadow = false
+                end
+            else
+                resetPlayerHitbox(character)
+            end
+        end
+    end
+end)
+
+
+local HitboxSection = CombatTab:Section({ Title = "Hitbox Expander" })
+
+CombatTab:Toggle({
+    Title = "Expand Hitboxes",
+    Desc = "Enlarge player hitboxes.",
+    Flag = "HitboxToggle",
+    Value = getgenv().HitboxEnabled,
+    Callback = function(state)
+        getgenv().HitboxEnabled = state
+        if not state then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    resetPlayerHitbox(player.Character)
+                end
+            end
+        end
+    end,
+})
+
+CombatTab:Toggle({
+    Title = "Show Hitbox Visual",
+    Desc = "Render hitbox outlines.",
+    Flag = "HitboxVisualToggle",
+    Value = getgenv().HitboxShowBox,
+    Callback = function(state)
+        getgenv().HitboxShowBox = state
+        if not state then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local head = player.Character:FindFirstChild("Head")
+                    if head then
+                        local selectionBox = head:FindFirstChild("CustomHitboxSelectionBox")
+                        if selectionBox then
+                            selectionBox:Destroy()
+                        end
+                    end
+                end
+            end
+        end
+    end,
+})
+
+CombatTab:Slider({
+    Title = "Hitbox Scale",
+    Desc = "Adjust hitbox size multiplier.",
+    Flag = "HitboxSizeSlider",
+    Value = {
+        Min = 10,
+        Max = 100,
+        Default = getgenv().HitboxSize
+    },
+    Increment = 1,
+    Callback = function(value)
+        getgenv().HitboxSize = value
+    end,
+})
 
 local HideShowUI = Config:Section({ 
     Title = "Settings", 
