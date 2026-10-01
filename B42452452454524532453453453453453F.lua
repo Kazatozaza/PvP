@@ -2225,92 +2225,10 @@ local HPRestoreSlider = System:Slider({
     end
 })
 System:Divider() 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
 
-local isAntiCCEnabled = false 
-local connection = nil
 
-local blockedStates = {
-    Enum.HumanoidStateType.Ragdoll,       
-    Enum.HumanoidStateType.FallingDown,   
-    Enum.HumanoidStateType.Physics,       
-    Enum.HumanoidStateType.PlatformStanding 
-}
-
-local function applyCrowdControl(humanoid, enableAntiCC)
-    if not humanoid then return end
-
-    pcall(function()
-        for _, state in ipairs(blockedStates) do
-            humanoid:SetStateEnabled(state, not enableAntiCC)
-        end
-    end)
-end
-
-local function setupBloxFruitsAntiStun(character)
-    local humanoid = character:WaitForChild("Humanoid", 5)
-    if not humanoid then return end
-
-    applyCrowdControl(humanoid, isAntiCCEnabled)
-
-    if connection then 
-        connection:Disconnect() 
-        connection = nil
-    end
-    
-    if isAntiCCEnabled then
-        connection = RunService.Stepped:Connect(function()
-            if not isAntiCCEnabled or not character or not character.Parent then
-                if connection then 
-                    connection:Disconnect() 
-                    connection = nil
-                end
-                return
-            end
-
-            local currentState = humanoid:GetState()
-            if currentState == Enum.HumanoidStateType.Ragdoll or 
-               currentState == Enum.HumanoidStateType.FallingDown or
-               currentState == Enum.HumanoidStateType.PlatformStanding then
-                pcall(function()
-                    humanoid:ChangeState(Enum.HumanoidStateType.Running)
-                end)
-            end
-        end)
-    end
-end
-
-LocalPlayer.CharacterAdded:Connect(function(character)
-    if isAntiCCEnabled then
-        setupBloxFruitsAntiStun(character)
-    end
-end)
-
-local Toggle = CombatTab:Toggle({
-    Title = "Anti-Stun (Blox Fruits)",
-    Type = "Checkbox",
-    Desc  = "Blocks stuns and ragdolls seamlessly without lag.",
-    Value = false,
-    Locked = false,
-    Flag = "anti_cc_toggle",
-    Callback = function(state)
-        isAntiCCEnabled = state
-
-        local character = LocalPlayer.Character
-        if character then
-            setupBloxFruitsAntiStun(character)
-        end
-
-        if not state and connection then
-            connection:Disconnect()
-            connection = nil
-        end
-    end
-})
 CombatTab:Toggle({
-    Title = "CamLock (PC/Mobile)",
+    Title = "CamLock )",
     Type = "Checkbox",
     Desc  = "Lock onto targets instantly.",
     Flag  = "camlock_toggle",
@@ -2329,7 +2247,7 @@ local FOVSection = CombatTab:Section({
 })
 CombatTab:Dropdown({
     Title = "Silent Aim Mode",
-    Desc  = "Switch targeting parameters.",
+    Desc  = "...",
     Flag  = "silent_aim_mode_dropdown",
     Values = { "FOV", "180°", "360°" },
     Value  = getgenv().SilentAimMode,
@@ -2354,7 +2272,7 @@ CombatTab:Dropdown({
 })
 CombatTab:Slider({
     Title = "FOV Size",
-    Desc  = "Scale FOV radius.",
+    Desc  = "...",
     Flag  = "fov_size_slider",
     Increment = 1,
     Value = {
@@ -2373,7 +2291,7 @@ CombatTab:Slider({
 })
 CombatTab:Dropdown({
     Title = "FOV Position",
-    Desc  = "Choose FOV center source.",
+    Desc  = "...",
     Flag  = "fov_position_dropdown",
     Values = { "Mouse/Touch", "Middle" },
     Value  = getgenv().FOVPositionMode,
@@ -2385,7 +2303,7 @@ CombatTab:Dropdown({
 CombatTab:Toggle({
     Title = "Show FOV Circle",
     Type =  "Checkbox",
-    Desc  = "Display FOV circle boundary.",
+    Desc  = "...",
     Flag  = "show_fov_toggle",
     Value = getgenv().ShowFOV,
     Callback = function(state)
@@ -2403,7 +2321,7 @@ local VisualsSection = CombatTab:Section({
 CombatTab:Toggle({
     Title = "Show Snapline",
     Type =  "Checkbox",
-    Desc  = "Render line to active target.",
+    Desc  = ".",
     Flag  = "show_snapline_toggle",
     Value = getgenv().ShowTracer,
     Callback = function(state)
@@ -2415,7 +2333,7 @@ CombatTab:Toggle({
 })
 CombatTab:Slider({
     Title = "Distance",
-    Desc  = "Dead-end distance: 2,000",
+    Desc  = ".",
     Flag  = "max_distance_slider",
     Increment = 1,
     Value = {
@@ -2458,18 +2376,15 @@ local lastAttack = 0
 local function Attack(targetPart, tool)
     if not targetPart then return end
 
-    -- ตรวจสอบว่าในตัว Tool มี LeftClickRemote หรือไม่ (สำหรับผลปีศาจเช่น T-Rex)
     local leftClickRemote = tool and tool:FindFirstChild("LeftClickRemote")
     
     if leftClickRemote and leftClickRemote:IsA("RemoteEvent") then
-        -- รูปแบบการโจมตีของผลปีศาจ
         local args = {
             vector.create(0.4720563590526581, -0, -0.881568431854248),
             1
         }
         leftClickRemote:FireServer(unpack(args))
     else
-        -- รูปแบบการโจมตีเดิม (หมัด, ดาบ, ปืนทั่วไป)
         if registerHit and registerAttack then
             registerHit:FireServer(targetPart, {}, "211ee8ef")
             registerAttack:FireServer(0.4000000059604645, 1)
@@ -2538,7 +2453,6 @@ end
 local FastAttackToggle = GeneralTab:Toggle({
     Title = "Fast Attack",
     Type =  "Checkbox",
-    Desc = "Combat Sword Fruit",
     Flag = "FastAttack",
     Value = false,
     Callback = function(state)
@@ -2549,7 +2463,6 @@ local FastAttackToggle = GeneralTab:Toggle({
 local Slider = GeneralTab:Slider({
     Title = "Attack Speed",
     Type =  "Checkbox",
-    Desc = "Speed Attack",
     Value = {
         Min = 0,
         Max = 0.7,
@@ -2562,10 +2475,12 @@ local Slider = GeneralTab:Slider({
         _G.AttackSpeed = value
     end
 })
+
+GeneralTab:Divider() 
+
 GeneralTab:Toggle({
     Title = "Auto Buso",
     Type =  "Checkbox",
-    Desc = "Automatically enables Buso Haki",
     Flag = "AutoHakiCheck",
     Value = false,
     Callback = function(state)
@@ -2592,9 +2507,8 @@ local CommE = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
 local autoKenEnabled = false
 
 GeneralTab:Toggle({
-    Title = "Ken",
+    Title = "Auto Ken",
     Type =  "Checkbox",
-    Desc = "Auto Ken",
     Flag = "AutoKenCheck",
     Value = false,
 
@@ -2617,16 +2531,10 @@ task.spawn(function()
     end
 end)
 
-local CharacterAbilities = GeneralTab:Section({ 
-    Title = "Character & Abilities", 
-    Icon = "user" 
-})
-GeneralTab:Divider() 
 
 GeneralTab:Toggle({
-    Title = "Race V4",
+    Title = "Auto Race V4",
     Type =  "Checkbox",
-    Desc = "Auto Race V3",
     Flag = "AutoRaceV4_Toggle",
     Value = false,
     Callback = function(state)
@@ -2635,9 +2543,8 @@ GeneralTab:Toggle({
 })
 
 GeneralTab:Toggle({
-    Title = "Race V3",
+    Title = "Auto Race V3",
     Type =  "Checkbox",
-    Desc = "Auto Race V3",
     Flag = "AutoRaceAbility",
     Value = false,
     Callback = function(state)
@@ -2696,7 +2603,6 @@ end
 GeneralTab:Toggle({
     Title = "Auto Sea",
     Type =  "Checkbox",
-    Desc = "Walking in the water",
     Flag = "IceWalk",
     Value = false,
     Callback = function(state)
@@ -2764,7 +2670,6 @@ GeneralTab:Divider()
 GeneralTab:Toggle({
     Title = "Jump Boost",
     Type =  "Checkbox",
-    Desc = "Ordered to jump.",
     Flag = "JumpToggle",
     Value = false,
     Callback = function(state)
@@ -2773,7 +2678,6 @@ GeneralTab:Toggle({
 })
 GeneralTab:Slider({
     Title = "Jump Multiplier",
-    Desc = "Adjust Jump power.",
     Flag = "JumpSlider",
     Increment = 0.1, 
     Value = {
@@ -2788,7 +2692,6 @@ GeneralTab:Slider({
 GeneralTab:Toggle({
     Title = "Speed Dash",
     Type =  "Checkbox",
-    Desc = "Increase your speed.",
     Flag = "DashToggle",
     Value = false,
     Callback = function(state)
@@ -2797,7 +2700,6 @@ GeneralTab:Toggle({
 })
 GeneralTab:Slider({
     Title = "Speed Dash",
-    Desc = "Adjust speed",
     Flag = "DashSlider",
     Increment = 0.1, 
     Value = {
@@ -2869,15 +2771,10 @@ Visuals:Toggle({
         ESPConfig.ShowStatus = state
     end,
 })
-local UtilitySection = GeneralTab:Section({ 
-    Title = "Target Dominance", 
-    Icon = "crown" 
-})
 GeneralTab:Divider() 
 FollowToggle = GeneralTab:Toggle({
     Title = "Teleport Player",
     Type = "Checkbox",
-    Desc = "Tracks and follows your target.",
     Flag = "FollowToggle",
     Value = false,
     Callback = function(state)
@@ -2886,7 +2783,6 @@ FollowToggle = GeneralTab:Toggle({
 })
 local Keybind = GeneralTab:Keybind({
     Title = "Keybind Key",
-    Desc = "Keybind for pursuit features.",
     Flag = "UIKeybind",
     Value = "E",
     Callback = function(key)
@@ -2901,7 +2797,6 @@ local Keybind = GeneralTab:Keybind({
 })
 local Slider = GeneralTab:Slider({
     Title = "Pursuit Radius",
-    Desc = "Maximum distance from target.",
     Flag = "VolumeSlider",
     Increment = 1,
     Value = {
