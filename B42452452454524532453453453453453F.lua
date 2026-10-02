@@ -579,15 +579,15 @@ local function getTargetCFrame()
     return cachedPart
 end
 
-local function getPredictedPosition(rootPart)
-    if not rootPart then return nil, nil end
-    
-    local pos = rootPart.Position
-    if not getgenv().PredictionEnabled then return pos, rootPart.CFrame end
-    
-    local velocity = rootPart.AssemblyLinearVelocity
-    local predictedPos = pos + (Vector3.new(velocity.X, 0, velocity.Z) * (getgenv().PredictionFactor or 0.135))
-    return predictedPos, rootPart.CFrame
+local function GetPredictedPosition(targetPart)
+    if not targetPart then return Vector3.new(0,0,0), nil end
+    local basePos = targetPart.Position
+    local rootCFrame = targetPart.CFrame
+    if getgenv().PredictionEnabled then
+        local velocity = targetPart.AssemblyLinearVelocity or Vector3.new(0,0,0)
+        return basePos + (velocity * (getgenv().PredictionFactor or 0.135)), rootCFrame
+    end
+    return basePos, rootCFrame
 end
 
 task.spawn(function()
@@ -596,45 +596,32 @@ task.spawn(function()
 
     repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
 
-    -- รองรับทั้ง Mouse (PC) และ Touch (Mobile)
-    local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
+    local success, Mouse = pcall(function()
+        return LocalPlayer:GetMouse()
+    end)
+    if not success or not Mouse then return end
 
-    if success and Mouse then
-        local oldIndex
-        oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-            if self ~= Mouse or not getgenv().SilentAimEnabled then 
-                return oldIndex(self, idx) 
+    -- แก้ไขให้เรียกใช้ getTargetCFrame() และ GetPredictedPosition() ที่ถูกต้อง
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+        if getgenv().SilentAimEnabled and self == Mouse then
+            local r = getTargetCFrame()
+            if r then
+                local predPos, rootCFrame = GetPredictedPosition(r)
+                if predPos then
+                    if idx == "Hit" then 
+                        return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
+                    elseif idx == "Target" then 
+                        return r
+                    elseif idx == "X" or idx == "Y" then 
+                        return Camera:WorldToScreenPoint(predPos)[idx]
+                    end
+                end
             end
-            
-            if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
-                return oldIndex(self, idx)
-            end
-            
-            local rootPart = getTargetCFrame()
-            if not rootPart then 
-                clearCache()
-                return oldIndex(self, idx) 
-            end
-            
-            local predPos, rootCFrame = getPredictedPosition(rootPart)
-            if not predPos then 
-                clearCache()
-                return oldIndex(self, idx) 
-            end
-            
-            if idx == "Hit" then 
-                return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-            elseif idx == "Target" then 
-                return rootPart
-            elseif idx == "X" or idx == "Y" then 
-                return Camera:WorldToScreenPoint(predPos)[idx]
-            end
-            
-            return oldIndex(self, idx)
-        end))
-    end
+        end
+        return oldIndex(self, idx)
+    end))
 
-    -- รองรับการยิงผ่าน RemoteEvent สำหรับมือถือและทุกแพลตฟอร์ม
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         if not getgenv().SilentAimEnabled then
@@ -653,7 +640,7 @@ task.spawn(function()
             return oldNamecall(self, ...)
         end
         
-        local predPos, rootCFrame = getPredictedPosition(rootPart)
+        local predPos, rootCFrame = GetPredictedPosition(rootPart)
         if not predPos then 
             clearCache()
             return oldNamecall(self, ...) 
@@ -711,7 +698,6 @@ RunService.RenderStepped:Connect(function(dt)
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
 
-    -- ===== FOV UI: ลดภาระการรันซ้ำซ้อนใน RenderStepped =====
     local now = tick()
     if now - lastFOVUpdate > 0.05 then
         lastFOVUpdate = now
@@ -737,7 +723,6 @@ RunService.RenderStepped:Connect(function(dt)
         return
     end
 
-    -- ===== TARGET FINDING =====
     local bestTarget = nil
     local shortestDistance = math.huge
     local maxDistance = getgenv().MaxDistance or 1000
@@ -778,9 +763,9 @@ RunService.RenderStepped:Connect(function(dt)
     
     getgenv().CurrentTarget = bestTarget
 
-    -- ===== CAMLOCK =====
+    -- ===== CAMLOCK: เปลี่ยนมาเรียกใช้ GetPredictedPosition ตัวใหญ่ =====
     if getgenv().CamlockEnabled and bestTarget then
-        local targetPos, _ = getPredictedPosition(bestTarget)
+        local targetPos, _ = GetPredictedPosition(bestTarget)
         if targetPos then
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
         end
