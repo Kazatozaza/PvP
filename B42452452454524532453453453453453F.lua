@@ -245,7 +245,7 @@ getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle"
 getgenv().LockedPartName = "HumanoidRootPart"
 getgenv().PredictionEnabled = getgenv().PredictionEnabled ~= false and true
 getgenv().PredictionFactor = getgenv().PredictionFactor or 0.135
-getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
+getgenv().CamlockEnabled = false -- ปิดล็อกกล้องถาวร เพื่อไม่ให้หน้าจอขยับเอง
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -552,95 +552,57 @@ local function getPredictedPosition(rootPart)
     return predictedPos, rootPart.CFrame
 end
 
--- ===== FIX: รองรับปืน Blox Fruits โดยดักจับการยิงผ่าน Remote / Mouse / Direction =====
+-- ===== SILENT AIM (ส่งกระสุนไปหาเป้าหมายโดยที่กล้องไม่ขยับ) =====
 task.spawn(function()
     local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local Humanoid = Character:WaitForChild("Humanoid")
 
     repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
     local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
-    if not success or not Mouse then return end
 
-    local oldIndex
-    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        if self ~= Mouse or not getgenv().SilentAimEnabled then 
-            return oldIndex(self, idx) 
-        end
-        
-        if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
-            return oldIndex(self, idx)
-        end
-        
-        local rootPart = getTargetCFrame()
-        if not rootPart then 
-            clearCache()
-            return oldIndex(self, idx) 
-        end
-        
-        local predPos, rootCFrame = getPredictedPosition(rootPart)
-        if not predPos then 
-            clearCache()
-            return oldIndex(self, idx) 
-        end
-        
-        if idx == "Hit" then 
-            return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        elseif idx == "Target" then 
-            return rootPart
-        elseif idx == "X" or idx == "Y" then 
-            local currentFrame = tick()
-            if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
-                lastCachedFrame = currentFrame
-                lastPredPos = predPos
-                cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+    if success and Mouse then
+        local oldIndex
+        oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+            if self == Mouse and getgenv().SilentAimEnabled then
+                local rootPart = getTargetCFrame()
+                if rootPart then
+                    local predPos, rootCFrame = getPredictedPosition(rootPart)
+                    if predPos then
+                        if idx == "Hit" then return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position) end
+                        if idx == "Target" then return rootPart end
+                        if idx == "X" or idx == "Y" then
+                            local sp = Camera:WorldToScreenPoint(predPos)
+                            return sp[idx]
+                        end
+                    end
+                end
             end
-            return cachedScreenPoint[idx]
-        end
-        
-        return oldIndex(self, idx)
-    end))
+            return oldIndex(self, idx)
+        end))
+    end
 
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        if not getgenv().SilentAimEnabled then
-            clearCache()
-            return oldNamecall(self, ...)
-        end
-        
-        local method = getnamecallmethod()
-        if method ~= "FireServer" and method ~= "InvokeServer" then
-            return oldNamecall(self, ...)
-        end
-        
-        local rootPart = getTargetCFrame()
-        if not rootPart then
-            clearCache()
-            return oldNamecall(self, ...)
-        end
-        
-        local predPos, rootCFrame = getPredictedPosition(rootPart)
-        if not predPos then 
-            clearCache()
-            return oldNamecall(self, ...) 
-        end
-        
-        local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        local args = {...}
-        
-        for i = 1, #args do
-            local argType = typeof(args[i])
-            if argType == "CFrame" then 
-                args[i] = targetCFrame
-            elseif argType == "Vector3" then 
-                -- แก้ไขให้รองรับการยิงปืน Blox Fruits ที่ส่งพิกัด Vector3 ไปยัง Server
-                local camPos = Camera.CFrame.Position
-                if (args[i] - camPos).Magnitude < 500 then
-                    args[i] = predPos
+        if getgenv().SilentAimEnabled then
+            local method = getnamecallmethod()
+            if method == "FireServer" or method == "InvokeServer" then
+                local rootPart = getTargetCFrame()
+                if rootPart then
+                    local predPos, rootCFrame = getPredictedPosition(rootPart)
+                    if predPos then
+                        local args = {...}
+                        for i = 1, #args do
+                            local argType = typeof(args[i])
+                            if argType == "CFrame" or argType == "Vector3" then
+                                args[i] = predPos
+                            end
+                        end
+                        return oldNamecall(self, unpack(args))
+                    end
                 end
             end
         end
-        
-        return oldNamecall(self, unpack(args))
+        return oldNamecall(self, ...)
     end))
 end)
 
@@ -654,7 +616,7 @@ local function clearOldData()
 end
 
 RunService.RenderStepped:Connect(function(dt)
-    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled and not getgenv().ShowFOV then
+    if not getgenv().SilentAimEnabled and not getgenv().ShowFOV then
         clearOldData()
         return
     end
@@ -696,7 +658,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
+    if not getgenv().SilentAimEnabled then
         clearOldData()
         return
     end
@@ -741,12 +703,7 @@ RunService.RenderStepped:Connect(function(dt)
     
     getgenv().CurrentTarget = bestTarget
 
-    if getgenv().CamlockEnabled and bestTarget then
-        local targetPos, _ = getPredictedPosition(bestTarget)
-        if targetPos then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-        end
-    end
+    -- (ตัดส่วน Camlock ออก หน้าจอของคุณจะอิสระ 100% ไม่ล็อกตามเป้า)
 
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
