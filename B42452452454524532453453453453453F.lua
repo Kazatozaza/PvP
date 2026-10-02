@@ -165,15 +165,30 @@ Snapline.To = Vector2.new(0, 0)
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
+-- ===== OPTIMIZATION: อัปเดตตำแหน่ง FOV ทันทีที่เม้าส์ขยับ ลดอาการหน่วง =====
+local function UpdateFOVPosition(pos)
+    if not FOVUI or not FOVUI.Visible then return end
+    local cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
+    local viewportSize = Camera.ViewportSize
+    
+    if cachedFOVMode:find("mouse") then
+        FOVUI.Position = UDim2.new(0, pos.X, 0, pos.Y)
+    else
+        FOVUI.Position = UDim2.new(0, viewportSize.X / 2, 0, viewportSize.Y / 2)
+    end
+end
+
 UserInputService.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+        UpdateFOVPosition(LastMousePosition)
     end
 end)
 
 UserInputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
         LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+        UpdateFOVPosition(LastMousePosition)
     end
 end)
 
@@ -341,7 +356,6 @@ local function GetAllValidTargets()
     return cachedValidTargets
 end
 
--- ===== OPTIMIZATION: Cache FOVPositionMode =====
 local cachedFOVMode = "Middle"
 local lastModeCheck = 0
 
@@ -400,31 +414,44 @@ end
 
 local cachedPart = nil
 local lastTarget = nil
-local PredictionFactor = 0.135 
+local cachedScreenPoint = nil
+local lastPredPos = nil
+local lastCachedFrame = 0
+
+local function clearCache()
+    cachedPart = nil
+    lastTarget = nil
+    cachedScreenPoint = nil
+    lastPredPos = nil
+    lastCachedFrame = 0
+    table.clear(combatCache)
+    table.clear(safeZoneCache)
+end
 
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
     if not target or not target.Parent then 
-        cachedPart = nil
-        lastTarget = nil
+        clearCache()
         return nil 
     end
-    
+
     if target ~= lastTarget then
+        clearCache()
         lastTarget = target
         cachedPart = target.Parent:FindFirstChild("HumanoidRootPart")
     end
+    
     return cachedPart
 end
 
 local function getPredictedPosition(rootPart)
-    if not rootPart then return rootPart.Position, rootPart.CFrame end
+    if not rootPart then return nil, nil end
     
     local pos = rootPart.Position
     if not getgenv().PredictionEnabled then return pos, rootPart.CFrame end
     
     local velocity = rootPart.AssemblyLinearVelocity
-    local predictedPos = pos + (Vector3.new(velocity.X, 0, velocity.Z) * getgenv().PredictionFactor)
+    local predictedPos = pos + (Vector3.new(velocity.X, 0, velocity.Z) * (getgenv().PredictionFactor or 0.135))
     return predictedPos, rootPart.CFrame
 end
 
@@ -436,26 +463,27 @@ task.spawn(function()
     local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
     if not success or not Mouse then return end
 
-    local lastCachedFrame = 0
-    local cachedScreenPoint = nil
-    local lastPredPos = nil
-
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        -- เช็คเงื่อนไขพื้นฐานให้ออกไวที่สุด (Early return) เพื่อความเร็วสูงสุด
         if self ~= Mouse or not getgenv().SilentAimEnabled then 
             return oldIndex(self, idx) 
         end
         
-        -- กรองเฉพาะ properties ที่ต้องการดักจับ
         if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
             return oldIndex(self, idx)
         end
         
         local rootPart = getTargetCFrame()
-        if not rootPart then return oldIndex(self, idx) end
+        if not rootPart then 
+            clearCache()
+            return oldIndex(self, idx) 
+        end
         
         local predPos, rootCFrame = getPredictedPosition(rootPart)
+        if not predPos then 
+            clearCache()
+            return oldIndex(self, idx) 
+        end
         
         if idx == "Hit" then 
             return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
@@ -477,6 +505,7 @@ task.spawn(function()
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         if not getgenv().SilentAimEnabled then
+            clearCache()
             return oldNamecall(self, ...)
         end
         
@@ -487,10 +516,16 @@ task.spawn(function()
         
         local rootPart = getTargetCFrame()
         if not rootPart then
+            clearCache()
             return oldNamecall(self, ...)
         end
         
         local predPos, rootCFrame = getPredictedPosition(rootPart)
+        if not predPos then 
+            clearCache()
+            return oldNamecall(self, ...) 
+        end
+        
         local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
         
         local args = {...}
@@ -512,39 +547,40 @@ local displayedUiColor = currentUiColor
 local lastFOVUpdate = 0
 local lastSnaplineUpdate = 0
 
+local function clearOldData()
+    getgenv().CurrentTarget = nil
+end
+
 RunService.RenderStepped:Connect(function(dt)
-    -- ===== EARLY RETURN: ถ้าปิดทั้งหมด return ทันที =====
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled and not getgenv().ShowFOV then
-        FOVUI.Visible = false
-        Snapline.Visible = false
-        getgenv().CurrentTarget = nil
+        clearOldData()
         return
     end
 
-    clearCacheIfNeeded()
+    if typeof(clearCacheIfNeeded) == "function" then
+        clearCacheIfNeeded()
+    end
+
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
     local character = LocalPlayer.Character
     if not character or not Camera then
-        FOVUI.Visible = false
-        Snapline.Visible = false
-        getgenv().CurrentTarget = nil
+        clearOldData()
         return
     end
 
     local myRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
     if not myRoot then
-        getgenv().CurrentTarget = nil
-        Snapline.Visible = false
+        clearOldData()
         return
     end
 
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
 
-    -- ===== FOV UI: Update ทุก ~33ms =====
+    -- ===== FOV UI: ลดภาระการรันซ้ำซ้อนใน RenderStepped =====
     local now = tick()
-    if now - lastFOVUpdate > 0.033 then
+    if now - lastFOVUpdate > 0.05 then
         lastFOVUpdate = now
         
         if FOVUI then
@@ -554,7 +590,7 @@ RunService.RenderStepped:Connect(function(dt)
                 local shouldShow = getgenv().ShowFOV == true
                 FOVUI.Visible = shouldShow
                 if shouldShow then
-                    FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
+                    UpdateFOVPosition(refPos)
                     local size = (getgenv().FOVRadius or 100) * 2
                     FOVUI.Size = UDim2.new(0, size, 0, size)
                     if UIStroke then UIStroke.Color = displayedUiColor end
@@ -564,8 +600,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
-        getgenv().CurrentTarget = nil
-        Snapline.Visible = false
+        clearOldData()
         return
     end
 
@@ -618,7 +653,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ===== SNAPLINE: Update ทุก ~33ms =====
+    -- ===== SNAPLINE =====
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
         
@@ -660,6 +695,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
+
 local function initializeSkillSettings()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1596,7 +1632,6 @@ AddESPToggle("Show Level","Displays player levels.","ESP_Level","ShowLevel")
 AddESPToggle("Show Bounty","Shows current bounty or honor.","ESP_Bounty","ShowBounty")
 AddESPToggle("Show Health","Renders health bars and percentages.","ESP_HP","ShowHealth")
 AddESPToggle("Show Player Status","Displays PvP, SafeZone, and combat status.","ESP_Status","ShowStatus")
-
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -1789,7 +1824,7 @@ local function createDraggableButton(text,accentColor,x,y,callback)
 
     button.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch then
+            and input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
@@ -1856,12 +1891,6 @@ local function SetSilentAim1State(state, updateWindUI, message)
 
     if not state then
         getgenv().CurrentTarget = nil
-
-        if Snapline then
-            pcall(function()
-                Snapline.Visible = false
-            end)
-        end
     end
     if updateWindUI
         and CombatTabToggle
@@ -1911,6 +1940,7 @@ local function SetSilentAim1State(state, updateWindUI, message)
         end)
     end
 end
+
 CombatTabToggle = CombatTab:Toggle({
     Title = "Silent Aim",
     Desc = "Hit shots without precise crosshairs.",
@@ -1920,29 +1950,26 @@ CombatTabToggle = CombatTab:Toggle({
     Value = getgenv().SilentAimEnabled == true,
 
     Callback = function(state)
-
         if SilentAimSyncing then
             return
         end
-
         SetSilentAim1State(state, false)
     end
 })
+
 SilentAimButton = createDraggableButton(
     "Silent Aim",
     Color3.fromRGB(0,229,255),
     350,
     66,
-
     function(state)
         SetSilentAim1State(state, true)
-
     end
 )
+
 task.defer(function()
     local state = getgenv().SilentAimEnabled == true
 
-    -- ไม่ให้ callback ยิงวนตอนเริ่มต้น
     SilentAimSyncing = true
 
     if SilentAimButton and SilentAimButton.Set then
@@ -1963,28 +1990,18 @@ end)
 --==================================================
 -- FOLLOW SYSTEM - OPTIMIZED FOR SMOOTHNESS
 --==================================================
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-
--- CONFIG
 local FollowEnabled = false
 local FollowDistance = 300
 local TpBehindDistance = 5
 local FollowKeybind = Enum.KeyCode.E
 
--- SMOOTHING PARAMS - ปรับให้ลื่นชิบ
-local LERP_SPEED = 0.35  -- ยิ่งสูงยิ่งเร็ว (แต่อย่าเกิน 0.5)
-local VELOCITY_DAMPING = 0.92  -- ความหนืด การเคลื่อนไหว (ยิ่งสูงยิ่ง smooth)
-local HEAD_OFFSET = Vector3.new(0, 2, 0)  -- ทำให้นาดที่ศีรษะของเป้าหมาย
+local LERP_SPEED = 0.35 
+local VELOCITY_DAMPING = 0.92 
+local HEAD_OFFSET = Vector3.new(0, 2, 0) 
 
 local currentTarget
 local teleportBtn
 local camlockBtn
-local FollowToggle
-local lastFollowPos = Vector3.new(0, 0, 0)
 local smoothVelocity = Vector3.new(0, 0, 0)
 
 local function StopFollow()
@@ -2019,12 +2036,10 @@ local function FollowTarget(player)
         return false
     end
 
-    -- SMOOTH POSITION CALCULATION
     local targetCF = targetRoot.CFrame
     local behindOffset = targetCF:VectorToWorldSpace(Vector3.new(0, 2, TpBehindDistance))
     local targetPos = targetRoot.Position + behindOffset + HEAD_OFFSET
     
-    -- APPLY SMOOTHING FILTER
     smoothVelocity = smoothVelocity * VELOCITY_DAMPING
     local smoothPos = root.Position + smoothVelocity
     local targetCFrame = CFrame.new(
@@ -2032,11 +2047,9 @@ local function FollowTarget(player)
         targetRoot.Position + HEAD_OFFSET
     )
 
-    -- DIRECT SET POSITION FOR INSTANT FEEL (ลู่วนลื่นโดยไม่มี lag)
     root.CFrame = targetCFrame
     root.AssemblyLinearVelocity = targetRoot.AssemblyLinearVelocity * 0.95
     
-    -- UPDATE SMOOTHING BUFFER
     smoothVelocity = (targetPos - root.Position) * 0.1
 
     return true
@@ -2113,7 +2126,6 @@ camlockBtn = createDraggableButton(
     end
 )
 
--- MAIN FOLLOW LOOP - 60 FPS SMOOTH
 RunService.RenderStepped:Connect(function()
     if not FollowEnabled then return end
 
@@ -2157,6 +2169,75 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
+-- ==================================================
+-- AUTOMATIC TARGET CLEANUP MODULE (ล้างเฉพาะเป้าหมาย)
+-- ==================================================
+RunService.RenderStepped:Connect(function()
+    local isSilentAimOn = getgenv().SilentAimEnabled == true
+    local isCamlockOn = getgenv().CamlockEnabled == true
+    local isFollowOn = (typeof(FollowEnabled) == "boolean" and FollowEnabled) or false
+
+    if not isSilentAimOn and not isCamlockOn and not isFollowOn then
+        getgenv().CurrentTarget = nil
+        return
+    end
+
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not char or not hum or hum.Health <= 0 then
+        getgenv().CurrentTarget = nil
+        return
+    end
+
+    local currentTargetObj = getgenv().CurrentTarget
+    if currentTargetObj then
+        local targetModel = currentTargetObj.Parent
+        local targetHum = targetModel and targetModel:FindFirstChildOfClass("Humanoid")
+        
+        if not targetModel or not targetHum or targetHum.Health <= 0 then
+            getgenv().CurrentTarget = nil
+        end
+    end
+end)
+
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local jumpConnection = nil
+
+System:Toggle({
+    Title = "Auto Jump (PC)",
+    Type = "Checkbox",
+    Desc = "No cooldown.",
+    Flag = "TogglePCJump",
+    Value = false,
+    Callback = function(state)
+        if state then
+            -- เปิดการใช้งาน: ดักฟังปุ่ม Spacebar บนคีย์บอร์ด
+            jumpConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                -- ถ้าพิมพ์แชทอยู่จะไม่ทำงาน (gameProcessed)
+                if gameProcessed then return end
+                
+                if input.KeyCode == Enum.KeyCode.Space then
+                    local character = LocalPlayer.Character
+                    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+                    if humanoid and humanoid.Health > 0 then
+                        humanoid.Jump = true
+                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
+                end
+            end)
+        else
+            -- ปิดการใช้งาน: ยกเลิกการเชื่อมต่อ Event
+            if jumpConnection then
+                jumpConnection:Disconnect()
+                jumpConnection = nil
+            end
+        end
+    end,
+})
 
 local toggleState = false
 local soruCooldown = 3
@@ -2364,48 +2445,6 @@ local HPRestoreSlider = System:Slider({
 
     Callback = function(value)
         healthTriggerThreshold = value
-    end
-})
-System:Divider() 
-local Button = System:Button({
-    Title = "Fast Mode",
-    Desc = "Enhance efficiency",
-    Callback = function()
-        -- ลบทุกอย่างใน Lighting เมื่อกดปุ่ม
-        pcall(function()
-            for _, obj in ipairs(game:GetService("Lighting"):GetChildren()) do
-                obj:Destroy()
-            end
-        end)
-        
-        local btnPath = game:GetService("Players").LocalPlayer.PlayerGui.Main.SettingsMenu.Content.ScrollingFrame.FastMode
-        local targetBtn = btnPath.FirstButton
-        
-        if targetBtn then
-            task.spawn(function()
-                for i = 1, 10 do
-                    local col = targetBtn.BackgroundColor3
-                    -- เช็คสีเขียวเป้าหมาย (50, 185, 65)[cite: 2, 3]
-                    local isGreen = (math.abs(col.R * 255 - 50) < 5 and math.abs(col.G * 255 - 185) < 5 and math.abs(col.B * 255 - 65) < 5)
-                    
-                    if isGreen then
-                        break
-                    end
-                    
-                    -- ถ้ายังไม่เปลี่ยนสี ให้คลิกซ้ำ
-                    if firesignal then
-                        firesignal(targetBtn.MouseButton1Click)
-                        firesignal(targetBtn.Activated)
-                    elseif fireclickdetector then
-                        fireclickdetector(targetBtn)
-                    else
-                        for _, connection in ipairs(getconnections(targetBtn.MouseButton1Click)) do
-                            connection:Fire()
-                        end
-                    end
-                end
-            end)
-        end
     end
 })
 
@@ -2893,7 +2932,7 @@ GeneralTab:Slider({
     end,
 })
 GeneralTab:Divider() 
-FollowToggle = GeneralTab:Toggle({
+local FollowToggle = GeneralTab:Toggle({
     Title = "Teleport Player",
     Desc = "Warps instantly when within range.",
     Type = "Checkbox",
@@ -3081,7 +3120,7 @@ CombatTab:Slider({
     Flag = "HitboxSizeSlider",
     Value = {
         Min = 10,
-        Max = 50,
+        Max = 100,
         Default = getgenv().HitboxSize
     },
     Increment = 1,
