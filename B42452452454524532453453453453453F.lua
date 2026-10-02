@@ -390,8 +390,17 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
+-- ประกาศตัวแปรพื้นฐานป้องกัน Error (Unknown global)
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
 local cachedPart = nil
 local lastTarget = nil
+
+-- กำหนดค่าตัวคูณสำหรับการดักหน้าเป้าหมาย
+local PredictionFactor = 0.135 
 
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
@@ -408,6 +417,14 @@ local function getTargetCFrame()
     return cachedPart
 end
 
+-- ฟังก์ชันคำนวณตำแหน่งดักหน้าขณะวิ่ง
+local function getPredictedPosition(rootPart)
+    local pos = rootPart.Position
+    local velocity = rootPart.AssemblyLinearVelocity
+    local predictedPos = pos + (Vector3.new(velocity.X, 0, velocity.Z) * PredictionFactor)
+    return predictedPos, rootPart.CFrame
+end
+
 task.spawn(function()
     local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local Humanoid = Character:WaitForChild("Humanoid")
@@ -417,15 +434,19 @@ task.spawn(function()
     local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
     if not success or not Mouse then return end
 
-   local oldIndex
+    -- 1. ระบบ Hook Index (ดัก Mouse)
+    local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and self == Mouse then
             local rootPart = getTargetCFrame()
             if rootPart then
-                if idx == "Hit" then return rootPart.CFrame
-                elseif idx == "Target" then return rootPart
+                local predPos, rootCFrame = getPredictedPosition(rootPart)
+                if idx == "Hit" then 
+                    return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
+                elseif idx == "Target" then 
+                    return rootPart
                 elseif idx == "X" or idx == "Y" then 
-                    local screenPoint = Camera:WorldToScreenPoint(rootPart.Position)
+                    local screenPoint = Camera:WorldToScreenPoint(predPos)
                     return screenPoint[idx]
                 end
             end
@@ -433,7 +454,7 @@ task.spawn(function()
         return oldIndex(self, idx)
     end))
 
-    -- 3. ระบบ Hook Namecall (สำหรับส่งค่าพิกัดสกิล / กระสุน)
+    -- 2. ระบบ Hook Namecall (ส่งค่าพิกัดสกิล / กระสุน)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
@@ -442,18 +463,17 @@ task.spawn(function()
             local rootPart = getTargetCFrame()
             
             if rootPart then
-                local targetCFrame = rootPart.CFrame
-                local targetPos = targetCFrame.Position
+                local predPos, rootCFrame = getPredictedPosition(rootPart)
+                local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
+                local targetPos = predPos
+                
                 local args = { ... }
                 
-                -- ตรวจสอบและแทนที่เฉพาะ Arguments ที่เป็นทิศทางหรือเป้าหมาย (ป้องกันการแก้ข้อมูลตัวเราเอง)
                 for i = 1, #args do
                     local argType = typeof(args[i])
-                    -- ปรับเงื่อนไขตรงนี้เพิ่มเติมได้ตามรูปแบบเกมที่คุณเล่น
                     if argType == "CFrame" then 
                         args[i] = targetCFrame
                     elseif argType == "Vector3" then 
-                        -- อาจจะเช็คระยะห่างว่าใกล้เคียงกับตำแหน่งตัวเราไหม เพื่อไม่ให้ทับตำแหน่งตัวเอง
                         args[i] = targetPos 
                     end
                 end
@@ -757,15 +777,15 @@ local ENV = getgenv()
 ENV=ENV or {}
 
 ENV.ESPConfig=ENV.ESPConfig or {
-	ShowName=true,
-	ShowDistance=true,
-	ShowLevel=true,
-	ShowBounty=true,
-	ShowHealth=true,
-	ShowStatus=true,
-	ShowAllTeams=true,
-	Pirates=true,
-	Marines=true
+    ShowName=false,
+    ShowDistance=false,
+    ShowLevel=false,
+    ShowBounty=false,
+    ShowHealth=false,
+    ShowStatus=false,
+    ShowAllTeams=true,
+    Pirates=true,
+    Marines=true
 }
 
 ENV.COLORS=ENV.COLORS or {
@@ -1461,6 +1481,38 @@ ENV.__ESPCleanup=function()
 	table.clear(Registry)
 end
 
+
+local function RefreshESP()
+    for _,entry in pairs(Registry) do
+        if entry.UI then
+            UpdateInfo(entry)
+        end
+    end
+end
+
+local function AddESPToggle(title,desc,flag,key)
+    Visuals:Toggle({
+        Title=title,
+        Type="Checkbox",
+        Desc=desc,
+        Flag=flag,
+        Value=ESPConfig[key] == true,
+        Callback=function(state)
+            ESPConfig[key]=state == true
+            RefreshESP()
+        end
+    })
+end
+
+AddESPToggle("Show Name","Displays player usernames.","ESP_Name","ShowName")
+AddESPToggle("Show Distance","Shows distance to players.","ESP_Distance","ShowDistance")
+AddESPToggle("Show Level","Displays player levels.","ESP_Level","ShowLevel")
+AddESPToggle("Show Bounty","Shows current bounty or honor.","ESP_Bounty","ShowBounty")
+AddESPToggle("Show Health","Renders health bars and percentages.","ESP_HP","ShowHealth")
+AddESPToggle("Show Player Status","Displays PvP, SafeZone, and combat status.","ESP_Status","ShowStatus")
+
+
+
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -1706,9 +1758,6 @@ local function createDraggableButton(text,accentColor,x,y,callback)
         end
     }
 end
---// =========================================================
---// SILENT AIM FLOATING TOGGLE
---// =========================================================
 
 local SilentAimSyncing = false
 local SilentAimNotifyCooldown = false
@@ -1719,10 +1768,8 @@ local SilentAimButton
 local function SetSilentAim1State(state, updateWindUI, message)
     state = state == true
 
-    --// State หลัก
     getgenv().SilentAimEnabled = state
 
-    --// Clear target ตอน OFF
     if not state then
         getgenv().CurrentTarget = nil
 
@@ -1732,8 +1779,6 @@ local function SetSilentAim1State(state, updateWindUI, message)
             end)
         end
     end
-
-    --// Sync WindUI
     if updateWindUI
         and CombatTabToggle
         and not SilentAimSyncing then
@@ -1750,8 +1795,6 @@ local function SetSilentAim1State(state, updateWindUI, message)
             SilentAimSyncing = false
         end)
     end
-
-    --// Sync Floating Button
     if SilentAimButton
         and SilentAimButton.Set then
 
@@ -1760,7 +1803,6 @@ local function SetSilentAim1State(state, updateWindUI, message)
         end)
     end
 
-    --// Notification
     if WindUI
         and WindUI.Notify
         and not SilentAimNotifyCooldown then
@@ -1809,8 +1851,6 @@ SilentAimButton = createDraggableButton(
     66,
 
     function(state)
-
-        --// Floating button เป็นตัวสั่ง state
         SetSilentAim1State(state, true)
 
     end
@@ -1839,6 +1879,11 @@ end)
 --==================================================
 -- FOLLOW
 --==================================================
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
 
 local FollowEnabled = false;
 local FollowDistance = 300;
@@ -1883,20 +1928,14 @@ local function FollowTarget(player)
         return false;
     end
 
-    -- คำนวณตำแหน่งด้านหลังเป้าหมายตามที่ตั้งค่าไว้ (TpBehindDistance)
     local targetCF = targetRoot.CFrame;
-    local behind = targetCF * CFrame.new(0, 0, TpBehindDistance);
+    local behindCF = targetCF * CFrame.new(0, 2, TpBehindDistance);
     
-    local params = RaycastParams.new();
-    params.FilterType = Enum.RaycastFilterType.Exclude;
-    params.FilterDescendantsInstances = {char, targetChar};
+    local targetCFrame = CFrame.new(behindCF.Position, targetRoot.Position + Vector3.new(0, 2, 0));
 
-    local hit = Workspace:Raycast(behind.Position + Vector3.new(0, 5, 0), Vector3.new(0, -15, 0), params);
-    local pos = hit and (hit.Position + Vector3.new(0, 3, 0)) or behind.Position;
-    local targetCFrame = CFrame.new(pos, pos + targetCF.LookVector);
-
-    -- ใช้ Lerp ดึงตัวละครไปติดหลังเป้าหมายแบบสมูท (เลข 0.3 คือความเร็วในการตาม ยิ่งมากยิ่งไว)
-    root.CFrame = root.CFrame:Lerp(targetCFrame, 0.5);
+    root.CFrame = root.CFrame:Lerp(targetCFrame, 0.4);
+    
+    root.AssemblyLinearVelocity = targetRoot.AssemblyLinearVelocity;
 
     return true;
 end
@@ -2096,10 +2135,10 @@ local healthRecoveryThreshold = 100
 local ascentVelocity = 200  
 
 local blockedStates = {
-    Enum.HumanoidStateType.Ragdoll,       -- สถานะตัวอ่อน/ล้ม
-    Enum.HumanoidStateType.FallingDown,   -- สถานะโดนกระแทกล้ม
-    Enum.HumanoidStateType.Physics,       -- สถานะถูกควบคุมแรงฟิสิกส์ภายนอก
-    Enum.HumanoidStateType.PlatformStanding -- สถานะลอยตัว/ทรงตัวบนแพลตฟอร์ม
+    Enum.HumanoidStateType.Ragdoll,  
+    Enum.HumanoidStateType.FallingDown, 
+    Enum.HumanoidStateType.Physics, 
+    Enum.HumanoidStateType.PlatformStanding 
 }
 local function executeDefenseProtocol(character, humanoid, rootPart)
     if not defenseProtocolEnabled or not humanoid or humanoid.Health <= 0 or not rootPart then
@@ -2247,7 +2286,7 @@ local FOVSection = CombatTab:Section({
 })
 CombatTab:Dropdown({
     Title = "Silent Aim Mode",
-    Desc  = "...",
+    Desc  = "FOV, 180° or 360° aim range.",
     Flag  = "silent_aim_mode_dropdown",
     Values = { "FOV", "180°", "360°" },
     Value  = getgenv().SilentAimMode,
@@ -2272,7 +2311,7 @@ CombatTab:Dropdown({
 })
 CombatTab:Slider({
     Title = "FOV Size",
-    Desc  = "...",
+    Desc  = "Adjust the aim FOV radius",
     Flag  = "fov_size_slider",
     Increment = 1,
     Value = {
@@ -2291,7 +2330,7 @@ CombatTab:Slider({
 })
 CombatTab:Dropdown({
     Title = "FOV Position",
-    Desc  = "...",
+    Desc  = "Set the FOV position.",
     Flag  = "fov_position_dropdown",
     Values = { "Mouse/Touch", "Middle" },
     Value  = getgenv().FOVPositionMode,
@@ -2303,7 +2342,7 @@ CombatTab:Dropdown({
 CombatTab:Toggle({
     Title = "Show FOV Circle",
     Type =  "Checkbox",
-    Desc  = "...",
+    Desc  = "Show or hide the FOV circle.",
     Flag  = "show_fov_toggle",
     Value = getgenv().ShowFOV,
     Callback = function(state)
@@ -2321,7 +2360,7 @@ local VisualsSection = CombatTab:Section({
 CombatTab:Toggle({
     Title = "Show Snapline",
     Type =  "Checkbox",
-    Desc  = ".",
+    Desc = "Show or hide the target snapline.",
     Flag  = "show_snapline_toggle",
     Value = getgenv().ShowTracer,
     Callback = function(state)
@@ -2333,7 +2372,7 @@ CombatTab:Toggle({
 })
 CombatTab:Slider({
     Title = "Distance",
-    Desc  = ".",
+    Desc = "Set the maximum target distance.",
     Flag  = "max_distance_slider",
     Increment = 1,
     Value = {
@@ -2347,8 +2386,8 @@ CombatTab:Slider({
 })
 getgenv().TargetMode = "Players Only" 
 CombatTab:Dropdown({
-    Title = "Select ",
-    Desc  = "Players, or NPC",
+    Title = "Enemy Type",
+    Desc  = "Choose Players or NPCs.",
     Flag  = "target_type_dropdown",
     Values = { "Players Only", "Enemies Only" },
     Value  = "Players Only",
@@ -2363,19 +2402,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
-local modules = ReplicatedStorage:WaitForChild("Modules", 10)
-local net = modules and modules:WaitForChild("Net", 10)
-local registerHit = net and net:WaitForChild("RE/RegisterHit", 10)
-local registerAttack = net and net:WaitForChild("RE/RegisterAttack", 10)
+local modules = ReplicatedStorage:FindFirstChild("Modules")
+local net = modules and modules:FindFirstChild("Net")
+local registerHit = net and net:FindFirstChild("RE/RegisterHit")
+local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")
 
-local attackSpeed = 0.1
 local fastAttackRunning = false
 local connection
-local lastAttack = 0
 
 local function Attack(targetPart, tool)
-    if not targetPart then return end
-
     local leftClickRemote = tool and tool:FindFirstChild("LeftClickRemote")
     
     if leftClickRemote and leftClickRemote:IsA("RemoteEvent") then
@@ -2390,8 +2425,6 @@ local function Attack(targetPart, tool)
             registerAttack:FireServer(0.4000000059604645, 1)
         end
     end
-    
-    lastAttack = tick()
 end
 
 local function SetFastAttack(state)
@@ -2406,19 +2439,16 @@ local function SetFastAttack(state)
 
     connection = RunService.Heartbeat:Connect(function()
         if not fastAttackRunning then return end
-        if tick() - lastAttack < attackSpeed then return end
 
         pcall(function()
             local char = player.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             if not root then return end
 
-            -- ตรวจสอบอาวุธที่ถืออยู่ในมือปัจจุบัน
+            -- ค้นหาอาวุธ (ถ้าไม่มี จะให้ค่าเป็น nil แต่ยังให้ตีต่อได้หากเกมรองรับ)
             local currentTool = char:FindFirstChildOfClass("Tool")
-            if not currentTool then return end
 
             local enemies = workspace:FindFirstChild("Enemies")
-
             if enemies then
                 for _, enemy in ipairs(enemies:GetChildren()) do
                     local rootPart = enemy:FindFirstChild("HumanoidRootPart")
@@ -2449,9 +2479,9 @@ local function SetFastAttack(state)
         end)
     end)
 end
-
 local FastAttackToggle = GeneralTab:Toggle({
-    Title = "Fast Attack",
+    Title = "Attack Aura",
+     Desc = "(Melee, Sword, Fruit M1)",
     Type =  "Checkbox",
     Flag = "FastAttack",
     Value = false,
@@ -2459,34 +2489,37 @@ local FastAttackToggle = GeneralTab:Toggle({
         SetFastAttack(state)
     end,
 })
-
-local Slider = GeneralTab:Slider({
-    Title = "Attack Speed",
-    Type =  "Checkbox",
-    Value = {
-        Min = 0,
-        Max = 0.7,
-        Default = 0.1
-    },
-    Step = 0.01,
-    Locked = false,
-    Flag = "attack_speed_slider",
-    Callback = function(value)
-        _G.AttackSpeed = value
-    end
-})
-
-GeneralTab:Divider() 
-
 GeneralTab:Toggle({
-    Title = "Auto Buso",
+    Title = "Auto Race V4",
+    Desc = "Enable to activate Race V3",
+    Type =  "Checkbox",
+    Flag = "AutoRaceV4_Toggle",
+    Value = false,
+    Callback = function(state)
+        SetAutoRaceV4(state)
+    end,
+})
+GeneralTab:Toggle({
+    Title = "Auto Race V3",
+    Desc = "Enable to activate Race V4",
+    Type =  "Checkbox",
+    Flag = "AutoRaceAbility",
+    Value = false,
+    Callback = function(state)
+        SetAutoRaceAbility(state)
+    end,
+})
+GeneralTab:Divider() 
+GeneralTab:Toggle({
+    Title = "Buso Haki",
+    Desc = "Enable to activate Buso Haki", -- optional
     Type =  "Checkbox",
     Flag = "AutoHakiCheck",
     Value = false,
     Callback = function(state)
         _G.AutoBusoRunning = state
         
-        if state then
+        if state then 
             task.spawn(function()
                 while _G.AutoBusoRunning do
                     pcall(function() 
@@ -2507,7 +2540,8 @@ local CommE = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
 local autoKenEnabled = false
 
 GeneralTab:Toggle({
-    Title = "Auto Ken",
+    Title = "Ken Haki",
+     Desc = "Enable to activate Ken Haki",
     Type =  "Checkbox",
     Flag = "AutoKenCheck",
     Value = false,
@@ -2531,26 +2565,6 @@ task.spawn(function()
     end
 end)
 
-
-GeneralTab:Toggle({
-    Title = "Auto Race V4",
-    Type =  "Checkbox",
-    Flag = "AutoRaceV4_Toggle",
-    Value = false,
-    Callback = function(state)
-        SetAutoRaceV4(state)
-    end,
-})
-
-GeneralTab:Toggle({
-    Title = "Auto Race V3",
-    Type =  "Checkbox",
-    Flag = "AutoRaceAbility",
-    Value = false,
-    Callback = function(state)
-        SetAutoRaceAbility(state)
-    end,
-})
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -2601,7 +2615,8 @@ function IceWalkUtils.GetOrCreateFloor()
     return floor
 end
 GeneralTab:Toggle({
-    Title = "Auto Sea",
+    Title = "Walk On Water",
+    Desc = "Enable to walk on water",
     Type =  "Checkbox",
     Flag = "IceWalk",
     Value = false,
@@ -2669,6 +2684,7 @@ GeneralTab:Toggle({
 GeneralTab:Divider() 
 GeneralTab:Toggle({
     Title = "Jump Boost",
+    Desc = "Enable to activate Jump Power",
     Type =  "Checkbox",
     Flag = "JumpToggle",
     Value = false,
@@ -2678,6 +2694,7 @@ GeneralTab:Toggle({
 })
 GeneralTab:Slider({
     Title = "Jump Multiplier",
+    Desc = "Multiply the Jump of the player",
     Flag = "JumpSlider",
     Increment = 0.1, 
     Value = {
@@ -2690,7 +2707,8 @@ GeneralTab:Slider({
     end,
 })
 GeneralTab:Toggle({
-    Title = "Speed Dash",
+    Title = "Speed Boost",
+    Desc = "Enable to activate Speed Boost",
     Type =  "Checkbox",
     Flag = "DashToggle",
     Value = false,
@@ -2699,7 +2717,8 @@ GeneralTab:Toggle({
     end,
 })
 GeneralTab:Slider({
-    Title = "Speed Dash",
+    Title = "Speed Multiply",
+    Desc = "Multiply the speed of the player",
     Flag = "DashSlider",
     Increment = 0.1, 
     Value = {
@@ -2711,69 +2730,10 @@ GeneralTab:Slider({
         DashMultiplier = state
     end,
 })
-Visuals:Toggle({
-    Title = "Show Name",
-    Type =  "Checkbox",
-    Desc = "Displays player usernames.",
-    Flag = "ESP_Name",
-    Value = true,
-    Callback = function(state)
-        ESPConfig.ShowName = state
-    end,
-})
-Visuals:Toggle({
-    Title = "Show Distance",
-    Type =  "Checkbox",
-    Desc = "Shows distance to players.",
-    Flag = "ESP_Distance",
-    Value = true,
-    Callback = function(state)
-        ESPConfig.ShowDistance = state
-    end,
-})
-Visuals:Toggle({
-    Title = "Show Level",
-    Type =  "Checkbox",
-    Desc = "Displays player levels.",
-    Flag = "ESP_Level",
-    Value = true,
-    Callback = function(state)
-        ESPConfig.ShowLevel = state
-    end,
-})
-Visuals:Toggle({
-    Title = "Show Bounty",
-    Type =  "Checkbox",
-    Desc = "Shows current bounty or honor.",
-    Flag = "ESP_Bounty",
-    Value = true,
-    Callback = function(state)
-        ESPConfig.ShowBounty = state
-    end,
-})
-Visuals:Toggle({
-    Title = "Show Health",
-    Type =  "Checkbox",
-    Desc = "Renders health bars and percentages.",
-    Flag = "ESP_HP",
-    Value = true,
-    Callback = function(state)
-        ESPConfig.ShowHealth = state
-    end,
-})
-Visuals:Toggle({
-    Title = "Show Player Status",
-    Type =  "Checkbox",
-    Desc = "Displays PvP, SafeZone, and combat status.",
-    Flag = "ESP_Status",
-    Value = true,
-    Callback = function(state)
-        ESPConfig.ShowStatus = state
-    end,
-})
 GeneralTab:Divider() 
 FollowToggle = GeneralTab:Toggle({
     Title = "Teleport Player",
+    Desc = "Warps instantly when within range.",
     Type = "Checkbox",
     Flag = "FollowToggle",
     Value = false,
@@ -2783,6 +2743,7 @@ FollowToggle = GeneralTab:Toggle({
 })
 local Keybind = GeneralTab:Keybind({
     Title = "Keybind Key",
+    Desc = "Keyboard controls",
     Flag = "UIKeybind",
     Value = "E",
     Callback = function(key)
@@ -2797,6 +2758,7 @@ local Keybind = GeneralTab:Keybind({
 })
 local Slider = GeneralTab:Slider({
     Title = "Pursuit Radius",
+    Desc = "Maximum tracking range",
     Flag = "VolumeSlider",
     Increment = 1,
     Value = {
@@ -3099,7 +3061,6 @@ SettingsGroup3:Toggle({
 end
 initializeSkillSettings()
 
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -3369,7 +3330,6 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
 
-        -- ส่วนของการรันคอมโบสกิล
         if tick() - lastComboTime >= comboCooldown then
             lastComboTime = tick()
 
@@ -3735,10 +3695,6 @@ local Toggle = Bounty:Toggle({
         end
 
         if autoBountyEnabled then
-            if not selectedFaction then
-                warn("[Auto Bounty] กรุณาเลือกทีม (Faction) ใน Dropdown ก่อนใช้งาน!")
-            end
-
             isTeamSwitchVerified = false  
             lastTargetSearchTime = 0
             cachedNearestTarget = nil
@@ -3951,12 +3907,6 @@ local dashboardText = table.concat({
         font(C.White, username)
     ),
 
-    string.format(
-        '%s  Display      %s',
-        font(C.Purple, "◆"),
-        font(C.White, displayName)
-    ),
-
     "",
 
     string.format(
@@ -3979,7 +3929,7 @@ local dashboardText = table.concat({
     string.format(
         '%s %s',
         font(C.Muted, "Enjoy your experience with"),
-        font(C.Purple, "<b>Destiny Hub</b> ✦")
+        font(C.Purple, "<b>Destiny Hub</b>")
     ),
 
 }, "\n")
