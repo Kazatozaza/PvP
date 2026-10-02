@@ -2782,59 +2782,84 @@ getgenv().HitboxSize = getgenv().HitboxSize or 18
 getgenv().HitboxColor = getgenv().HitboxColor or Color3.fromRGB(96, 205, 255)
 getgenv().HitboxShowBox = getgenv().HitboxShowBox or true
 
--- Cache ไว้เพื่อไม่ให้ scan ทุกเฟรม
-local hitboxCache = {}
-local lastUpdateTime = 0
-local UPDATE_INTERVAL = 0.5 -- แปลง 0.3 เป็น 0.5 ให้นาน
 local hitboxConnection = nil
+local lastUpdateTime = 0
+local UPDATE_INTERVAL = 0.5
 
 local function resetPlayerHitbox(char)
     if not char then return end
     local head = char:FindFirstChild("Head")
     if head then
         local orig = head:FindFirstChild("OriginalSize")
-        if orig then head.Size = orig.Value; orig:Destroy() end
+        if orig then
+            head.Size = orig.Value
+            orig:Destroy()
+        end
+
         local box = head:FindFirstChild("CustomHitboxSelectionBox")
-        if box then box:Destroy() end
-        head.Transparency, head.CanCollide, head.CastShadow = 0, true, true
+        if box then
+            box:Destroy()
+        end
+
+        head.Transparency = 0
+        head.CanCollide = true
+        head.CastShadow = true
     end
 end
 
--- ลบ task.spawn + while true ออก แทนด้วย Heartbeat
+local function stopHitboxLoop()
+    if hitboxConnection then
+        hitboxConnection:Disconnect()
+        hitboxConnection = nil
+    end
+end
+
 local function startHitboxLoop()
     if hitboxConnection then return end
-    
+
     hitboxConnection = RunService.Heartbeat:Connect(function()
         if not getgenv().HitboxEnabled then return end
-        
+
         local now = tick()
         if now - lastUpdateTime < UPDATE_INTERVAL then return end
         lastUpdateTime = now
-        
+
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
                 local char = p.Character
                 local hum = char:FindFirstChildOfClass("Humanoid")
+
                 if hum and hum.Health > 0 then
                     local head = char:FindFirstChild("Head")
                     if head then
                         local orig = head:FindFirstChild("OriginalSize")
                         if not orig then
-                            orig = Instance.new("Vector3Value", head)
-                            orig.Name, orig.Value = "OriginalSize", head.Size
+                            orig = Instance.new("Vector3Value")
+                            orig.Name = "OriginalSize"
+                            orig.Value = head.Size
+                            orig.Parent = head
                         end
+
                         local box = head:FindFirstChild("CustomHitboxSelectionBox")
                         if getgenv().HitboxShowBox then
                             if not box then
-                                box = Instance.new("SelectionBox", head)
+                                box = Instance.new("SelectionBox")
                                 box.Name = "CustomHitboxSelectionBox"
+                                box.Adornee = head
+                                box.Parent = head
                             end
-                            box.Adornee, box.Color3, box.LineThickness = head, getgenv().HitboxColor, 0.001
-                        elseif box then
-                            box:Destroy()
+                            box.Color3 = getgenv().HitboxColor
+                            box.LineThickness = 0.001
+                        else
+                            if box then
+                                box:Destroy()
+                            end
                         end
+
                         head.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                        head.Transparency, head.CanCollide, head.CastShadow = 1, false, false
+                        head.Transparency = 1
+                        head.CanCollide = false
+                        head.CastShadow = false
                     end
                 else
                     resetPlayerHitbox(char)
@@ -2844,7 +2869,6 @@ local function startHitboxLoop()
     end)
 end
 
--- เริ่มตอนตัว script โหลด
 startHitboxLoop()
 
 CombatTab:Section({ Title = "Hitbox Expander" })
@@ -2857,11 +2881,9 @@ CombatTab:Toggle({
     Value = getgenv().HitboxEnabled,
     Callback = function(state)
         getgenv().HitboxEnabled = state
+
         if not state then
-            if hitboxConnection then
-                hitboxConnection:Disconnect()
-                hitboxConnection = nil
-            end
+            stopHitboxLoop()
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character then
                     resetPlayerHitbox(p.Character)
@@ -2881,11 +2903,15 @@ CombatTab:Toggle({
     Value = getgenv().HitboxShowBox,
     Callback = function(state)
         getgenv().HitboxShowBox = state
+
         if not state then
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character then
-                    local box = p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("CustomHitboxSelectionBox")
-                    if box then box:Destroy() end
+                    local head = p.Character and p.Character:FindFirstChild("Head")
+                    local box = head and head:FindFirstChild("CustomHitboxSelectionBox")
+                    if box then
+                        box:Destroy()
+                    end
                 end
             end
         end
@@ -2907,12 +2933,6 @@ CombatTab:Slider({
     end,
 })
 
-
-CombatTab:Slider({
-    Title = "Hitbox Scale", Desc = "Adjust hitbox size multiplier.", Flag = "HitboxSizeSlider",
-    Value = { Min = 10, Max = 50, Default = getgenv().HitboxSize }, Increment = 1,
-    Callback = function(v) getgenv().HitboxSize = v end,
-})
 local SettingsGroup2 = Config:Group({})
 local SettingsGroup3 = Config:Group({})
 local UIKeybind = Config:Keybind({
