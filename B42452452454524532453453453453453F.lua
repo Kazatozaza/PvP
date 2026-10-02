@@ -2367,6 +2367,47 @@ local HPRestoreSlider = System:Slider({
     end
 })
 System:Divider() 
+local Button = System:Button({
+    Title = "Fast Mode",
+    Desc = "Enhance efficiency",
+    Callback = function()
+        -- ลบทุกอย่างใน Lighting เมื่อกดปุ่ม
+        pcall(function()
+            for _, obj in ipairs(game:GetService("Lighting"):GetChildren()) do
+                obj:Destroy()
+            end
+        end)
+        
+        local btnPath = game:GetService("Players").LocalPlayer.PlayerGui.Main.SettingsMenu.Content.ScrollingFrame.FastMode
+        local targetBtn = btnPath.FirstButton
+        
+        if targetBtn then
+            task.spawn(function()
+                for i = 1, 10 do
+                    local col = targetBtn.BackgroundColor3
+                    -- เช็คสีเขียวเป้าหมาย (50, 185, 65)[cite: 2, 3]
+                    local isGreen = (math.abs(col.R * 255 - 50) < 5 and math.abs(col.G * 255 - 185) < 5 and math.abs(col.B * 255 - 65) < 5)
+                    
+                    if isGreen then
+                        break
+                    end
+                    
+                    -- ถ้ายังไม่เปลี่ยนสี ให้คลิกซ้ำ
+                    if firesignal then
+                        firesignal(targetBtn.MouseButton1Click)
+                        firesignal(targetBtn.Activated)
+                    elseif fireclickdetector then
+                        fireclickdetector(targetBtn)
+                    else
+                        for _, connection in ipairs(getconnections(targetBtn.MouseButton1Click)) do
+                            connection:Fire()
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
 
 
 CombatTab:Toggle({
