@@ -302,7 +302,6 @@ local function ShouldIgnoreTarget(targetCharacter, targetPlayer)
     return false
 end
 
--- ===== OPTIMIZATION: Cache valid targets ทุก 0.1 วินาที =====
 local cachedValidTargets = {}
 local lastTargetUpdate = 0
 local targetUpdateInterval = 0.5
@@ -2503,33 +2502,26 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
-local modules = ReplicatedStorage:FindFirstChild("Modules")
-local net = modules and modules:FindFirstChild("Net")
-local registerHit = net and net:FindFirstChild("RE/RegisterHit")
-local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")
+local modules = ReplicatedStorage:WaitForChild("Modules", 10)
+local net = modules and modules:WaitForChild("Net", 10)
+local registerHit = net and net:WaitForChild("RE/RegisterHit", 10)
+local registerAttack = net and net:WaitForChild("RE/RegisterAttack", 10)
 
-local fastAttackRunning = false
+local AttackSpeed = 0.1
+local FastAttackRunning = false
 local connection
+local lastAttack = 0
 
-local function Attack(targetPart, tool)
-    local leftClickRemote = tool and tool:FindFirstChild("LeftClickRemote")
-    
-    if leftClickRemote and leftClickRemote:IsA("RemoteEvent") then
-        local args = {
-            vector.create(0.4720563590526581, -0, -0.881568431854248),
-            1
-        }
-        leftClickRemote:FireServer(unpack(args))
-    else
-        if registerHit and registerAttack then
-            registerHit:FireServer(targetPart, {}, "211ee8ef")
-            registerAttack:FireServer(0.4000000059604645, 1)
-        end
-    end
+local function Attack(target)
+    if not target then return end
+
+    registerHit:FireServer(target, {}, "211ee8ef")
+    registerAttack:FireServer(0.4000000059604645, 1)
+    lastAttack = tick()
 end
 
 local function SetFastAttack(state)
-    fastAttackRunning = state
+    FastAttackRunning = state
 
     if connection then
         connection:Disconnect()
@@ -2539,17 +2531,16 @@ local function SetFastAttack(state)
     if not state then return end
 
     connection = RunService.Heartbeat:Connect(function()
-        if not fastAttackRunning then return end
+        if not FastAttackRunning then return end
+        if tick() - lastAttack < AttackSpeed then return end
 
         pcall(function()
             local char = player.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             if not root then return end
 
-            -- ค้นหาอาวุธ (ถ้าไม่มี จะให้ค่าเป็น nil แต่ยังให้ตีต่อได้หากเกมรองรับ)
-            local currentTool = char:FindFirstChildOfClass("Tool")
-
             local enemies = workspace:FindFirstChild("Enemies")
+
             if enemies then
                 for _, enemy in ipairs(enemies:GetChildren()) do
                     local rootPart = enemy:FindFirstChild("HumanoidRootPart")
@@ -2558,7 +2549,7 @@ local function SetFastAttack(state)
 
                     if rootPart and hum and hum.Health > 0
                         and (root.Position - rootPart.Position).Magnitude <= 60 then
-                        Attack(rootPart, currentTool)
+                        Attack(rootPart)
                         return
                     end
                 end
@@ -2572,7 +2563,7 @@ local function SetFastAttack(state)
 
                     if rootPart and hum and hum.Health > 0
                         and (root.Position - rootPart.Position).Magnitude <= 60 then
-                        Attack(rootPart, currentTool)
+                        Attack(rootPart)
                         return
                     end
                 end
@@ -2583,7 +2574,7 @@ end
 
 local FastAttackToggle = GeneralTab:Toggle({
     Title = "Attack Aura",
-     Desc = "(Melee, Sword, Fruit M1)",
+     Desc = "(Melee, Sword,)",
     Type =  "Checkbox",
     Flag = "FastAttack",
     Value = false,
