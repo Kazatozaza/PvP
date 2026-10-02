@@ -2177,9 +2177,9 @@ local function findSoru()
 end
 
 local Toggle = System:Toggle({
-    Title = "Infinite Soru",
+    Title = "Cooldown Soru",
     Type = "Checkbox",
-    Desc = "Unlimited Soru Latest update",
+    Desc = "Cooldown reduction",
     Flag = "SoruToggle",
 
     Callback = function(state)
