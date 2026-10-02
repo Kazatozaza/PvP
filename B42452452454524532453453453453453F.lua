@@ -428,7 +428,6 @@ local function getPredictedPosition(rootPart)
     return predictedPos, rootPart.CFrame
 end
 
--- ===== OPTIMIZATION: Hook แบบ lightweight =====
 task.spawn(function()
     local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local Humanoid = Character:WaitForChild("Humanoid")
@@ -437,14 +436,19 @@ task.spawn(function()
     local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
     if not success or not Mouse then return end
 
-    local lastHookCheck = 0
-    
+    local lastCachedFrame = 0
+    local cachedScreenPoint = nil
+    local lastPredPos = nil
+
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        if self ~= Mouse then return oldIndex(self, idx) end
+        -- เช็คเงื่อนไขพื้นฐานให้ออกไวที่สุด (Early return) เพื่อความเร็วสูงสุด
+        if self ~= Mouse or not getgenv().SilentAimEnabled then 
+            return oldIndex(self, idx) 
+        end
         
-        local now = tick()
-        if not getgenv().SilentAimEnabled or (now - lastHookCheck > 0.016 and not (idx == "Hit" or idx == "Target" or idx == "X" or idx == "Y")) then
+        -- กรองเฉพาะ properties ที่ต้องการดักจับ
+        if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
             return oldIndex(self, idx)
         end
         
@@ -458,8 +462,13 @@ task.spawn(function()
         elseif idx == "Target" then 
             return rootPart
         elseif idx == "X" or idx == "Y" then 
-            local screenPoint = Camera:WorldToScreenPoint(predPos)
-            return screenPoint[idx]
+            local currentFrame = tick()
+            if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
+                lastCachedFrame = currentFrame
+                lastPredPos = predPos
+                cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+            end
+            return cachedScreenPoint[idx]
         end
         
         return oldIndex(self, idx)
@@ -745,9 +754,9 @@ local function SetAutoRaceV4(state)
     end)
 end
 
--- BUSO CHECKER (เพิ่ม Cooldown ป้องกันการส่งข้อมูลถี่เกินไป)
+-- BUSO CHECKER (ส่งรีโมทซ้ำๆ ทันทีหากยังไม่พบ HasBuso)
 local function CheckAndEnableBuso()
-    local c = LocalPlayer.Character
+    local c = GetCharacter()
     if not c then return end
 
     local b = c:FindFirstChild("HasBuso")
@@ -760,8 +769,7 @@ local function CheckAndEnableBuso()
     end
 end
 
--- ลูปหลักสำหรับควบคุมการเคลื่อนไหวและออร่า
-local busoLastCheck = 0
+-- ลูปหลักสำหรับควบคุมการเคลื่อนไหว, Dash และออร่า (เช็คฮาคิตลอดเวลาไม่มีคูลดาวน์)
 RunService.RenderStepped:Connect(function(dt)
     local c = GetCharacter()
     if not c then return end
@@ -781,12 +789,8 @@ RunService.RenderStepped:Connect(function(dt)
         UpdateDash(c, h, dt)
     end
 
-    -- ตรวจสอบและเปิดฮากีเกราะทุกๆ 1.5 วินาที (ป้องกันการรัว Remote)
-    local now = tick()
-    if now - busoLastCheck >= 1.5 then
-        busoLastCheck = now
-        CheckAndEnableBuso()
-    end
+    -- ตรวจสอบและส่งรีโมทเปิดฮาคิเกราะซ้ำๆ ทันที
+    CheckAndEnableBuso()
 end)
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
@@ -2230,7 +2234,7 @@ local defenseProtocolEnabled = false
 local isEmergencyAscending = false
 
 local healthTriggerThreshold = 30
-local healthRecoveryThreshold = 100 
+local healthRecoveryThreshold = 85 
 local ascentVelocity = 200  
 
 local blockedStates = {
@@ -2640,29 +2644,51 @@ local CommE = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
 
 local autoKenEnabled = false
 
+-- ฟังก์ชันตรวจสอบและเปิด Ken Haki ถ้ายังไม่มี Highlight
+local function CheckAndEnableKen()
+    if not autoKenEnabled then return end
+    
+    local c = GetCharacter() -- ใช้ฟังก์ชันดึงตัวละคร (รองรับ Workspace.Characters)
+    if not c then return end
+
+    -- ตรวจสอบว่ามี Highlight หรือไม่ (ปกติฮาคิสังเกต/Ken จะสร้าง Highlight หรือเอฟเฟกต์ลักษณะนี้ที่ตัวละคร)
+    local highlight = c:FindFirstChild("Highlight")
+    
+    -- ถ้าไม่พบ Highlight ให้ส่งรีโมทเปิด Ken ทันที
+    if not highlight then
+        pcall(function()
+            CommE:FireServer("Ken", "true")
+        end)
+    end
+end
+
 GeneralTab:Toggle({
     Title = "Ken Haki",
-     Desc = "Enable to activate Ken Haki",
-    Type =  "Checkbox",
+    Desc = "Enable to activate Ken Haki",
+    Type = "Checkbox",
     Flag = "AutoKenCheck",
     Value = false,
 
     Callback = function(state)
         autoKenEnabled = state
 
-        pcall(function()
-            CommE:FireServer("Ken", tostring(state))
-        end)
-    end,
-})
-
-task.spawn(function()
-    while task.wait(1.5) do
-        if autoKenEnabled then
+        -- ถ้ากดเปิด ให้สั่งยิงรีโมททันที 1 ครั้ง
+        if state then
             pcall(function()
                 CommE:FireServer("Ken", "true")
             end)
+        else
+            pcall(function()
+                CommE:FireServer("Ken", "false")
+            end)
         end
+    end,
+})
+
+-- ลูปเช็คและส่งรีโมทซ้ำๆ ทุกๆ 1.5 วินาที (หรือจะปรับให้เร็วขึ้นตามต้องการ)
+task.spawn(function()
+    while task.wait(1) do
+        CheckAndEnableKen()
     end
 end)
 
@@ -3245,9 +3271,9 @@ local selectedSwordSkills = {"None"}
 local selectedFruitSkills = {"None"}
 local selectedGunSkills = {"None"}
 
-local flySpeed = 200 
+local flySpeed = 210 
 
-local healthTriggerThreshold = 40 
+local healthTriggerThreshold = 30 
 local healthRecoveryThreshold = 85 
 local defenseProtocolEnabled = true 
 local isEmergencyAscending = false
@@ -3465,21 +3491,10 @@ end
 local lastComboTime = 0
 local comboCooldown = 1
 
--- ประกาศตัวแปรสำหรับควบคุมจังหวะ (วางไว้นอกฟังก์ชัน)
-local wTimer = 0
-local wState = "WAITING" -- สถานะเริ่มต้น: "WAITING" (รอครบเวลาเพื่อกด), "HOLDING" (กำลังกดค้าง), "RELEASING" (เพิ่งปล่อย รอนับ 1 วิ)
-
 local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceToTarget)
     local localPlayer = Players.LocalPlayer
     local myChar = localPlayer.Character
-    if not myChar then 
-        if wState == "HOLDING" then
-            pcall(function() keyrelease(0x57) end)
-        end
-        wState = "WAITING"
-        wTimer = tick()
-        return 
-    end
+    if not myChar then return end
 
     local myRoot = myChar:FindFirstChild("HumanoidRootPart")
     if not myRoot then return end
@@ -3500,13 +3515,6 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
 
     if distance <= maxDistance then
-        -- เมื่อถึงเป้าหมายแล้ว ให้ปล่อยปุ่ม W ทันทีและรีเซ็ตสถานะ
-        if wState == "HOLDING" then
-            pcall(function() keyrelease(0x57) end)
-        end
-        wState = "WAITING"
-        wTimer = tick()
-
         local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
 
         if targetRoot then
@@ -3547,27 +3555,10 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     end
 
     if distance > 0 then
-        -- ระบบลอยไปหา: กด W ค้าง 0.7 วิ -> ปล่อย -> รอ 1 วิ แล้ววนลูปใหม่
-        local currentTime = tick()
-        
-        if wState == "WAITING" then
-            if currentTime - wTimer >= 1 then -- รอ 1 วิหลังจากรอบก่อนหน้า (หรือเริ่มต้น)
-                pcall(function() keypress(0x57) end) -- กดปุ่ม W
-                wState = "HOLDING"
-                wTimer = currentTime
-            end
-        elseif wState == "HOLDING" then
-            if currentTime - wTimer >= 0.7 then -- กดค้างไว้ 0.7 วิ
-                pcall(function() keyrelease(0x57) end) -- ปล่อยปุ่ม W
-                wState = "WAITING" -- กลับไปรอนับ 1 วิใหม่
-                wTimer = currentTime
-            end
-        end
-
         local elevatedTargetPos = targetPos + Vector3.new(0, 120, 0)
         local direction = (elevatedTargetPos - currentPos).Unit
-        local currentSpeed = speed or (Bounty and Bounty.Flags and Bounty.Flags.FlySpeed) or 200
-        local clampedSpeed = math.min(currentSpeed, 200)
+        local currentSpeed = speed or (Bounty and Bounty.Flags and Bounty.Flags.FlySpeed) or 210
+        local clampedSpeed = math.min(currentSpeed, 210)
 
         local targetVelocity = direction * clampedSpeed
         myRoot.AssemblyLinearVelocity = targetVelocity
@@ -4050,7 +4041,6 @@ local C = {
     Dim    = "#3B3F58",
     White  = "#F5F3FF",
 }
-
 local function font(color, text)
     return string.format(
         '<font color="%s">%s</font>',
@@ -4058,7 +4048,6 @@ local function font(color, text)
         text
     )
 end
-
 local executorName = "Unknown"
 
 pcall(function()
