@@ -242,7 +242,7 @@ getgenv().ShowFOV = getgenv().ShowFOV ~= false and true
 getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
 getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle" 
-getgenv().LockedPartName = "Head"
+getgenv().LockedPartName = "HumanoidRootPart"
 getgenv().PredictionEnabled = getgenv().PredictionEnabled ~= false and true
 getgenv().PredictionFactor = getgenv().PredictionFactor or 0.135
 getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
@@ -304,19 +304,20 @@ Snapline.To = Vector2.new(0, 0)
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
--- ===== OPTIMIZATION: อัปเดตตำแหน่ง FOV ทันทีที่เม้าส์ขยับ ลดอาการหน่วง =====
+-- ===== OPTIMIZATION: อัปเดตตำแหน่ง FOV และจุดสัมผัสสำหรับมือถือ =====
 local function UpdateFOVPosition(pos)
     if not FOVUI or not FOVUI.Visible then return end
     local cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
     local viewportSize = Camera.ViewportSize
     
-    if cachedFOVMode:find("mouse") then
+    if cachedFOVMode:find("mouse") or cachedFOVMode:find("touch") or cachedFOVMode:find("finger") then
         FOVUI.Position = UDim2.new(0, pos.X, 0, pos.Y)
     else
         FOVUI.Position = UDim2.new(0, viewportSize.X / 2, 0, viewportSize.Y / 2)
     end
 end
 
+-- รองรับทั้งการลากนิ้ว (TouchMove), การจิ้มหน้าจอ (TouchStarted) และเมาส์
 UserInputService.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
@@ -325,7 +326,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
         UpdateFOVPosition(LastMousePosition)
     end
