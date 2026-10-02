@@ -398,27 +398,9 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = game:GetService("Players").LocalPlayer
-local Camera = workspace.CurrentCamera
-
 local cachedPart = nil
 local lastTarget = nil
-
--- เช็คสถานะการกดปุ่ม R แบบเรียลไทม์
-local isPressingR = false
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.R then
-        isPressingR = true
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.R then
-        isPressingR = false
-    end
-end)
+local PredictionFactor = 0.135 
 
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
@@ -443,7 +425,7 @@ local function getPredictedPosition(rootPart)
     
     local velocity = rootPart.AssemblyLinearVelocity
     local predictedPos = pos + (Vector3.new(velocity.X, 0, velocity.Z) * getgenv().PredictionFactor)
-    return predictedPos, rootCFrame
+    return predictedPos, rootPart.CFrame
 end
 
 task.spawn(function()
@@ -460,11 +442,12 @@ task.spawn(function()
 
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        -- ถ้ากำลังกดปุ่ม R อยู่ จะไม่สนใจ Silent Aim ทันที (คืนค่าเดิมของเกมไปเลย)
-        if isPressingR or self ~= Mouse or not getgenv().SilentAimEnabled then 
+        -- เช็คเงื่อนไขพื้นฐานให้ออกไวที่สุด (Early return) เพื่อความเร็วสูงสุด
+        if self ~= Mouse or not getgenv().SilentAimEnabled then 
             return oldIndex(self, idx) 
         end
         
+        -- กรองเฉพาะ properties ที่ต้องการดักจับ
         if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
             return oldIndex(self, idx)
         end
@@ -493,8 +476,7 @@ task.spawn(function()
 
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        -- ถ้ากำลังกดปุ่ม R อยู่ จะข้ามการเล็งทันที
-        if isPressingR or not getgenv().SilentAimEnabled then
+        if not getgenv().SilentAimEnabled then
             return oldNamecall(self, ...)
         end
         
@@ -524,6 +506,7 @@ task.spawn(function()
         return oldNamecall(self, unpack(args))
     end))
 end)
+
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 local lastFOVUpdate = 0
