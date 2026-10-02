@@ -551,114 +551,136 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-local cachedPart = nil
-local lastTarget = nil
-local lastPredPos = nil
 
-local function clearCache()
-    cachedPart = nil
-    lastTarget = nil
-    lastPredPos = nil
-    if combatCache and type(combatCache) == "table" then table.clear(combatCache) end
-    if safeZoneCache and type(safeZoneCache) == "table" then table.clear(safeZoneCache) end
-end
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
-local function getTargetCFrame()
-    local target = getgenv().CurrentTarget
-    if not target or not target.Parent then 
-        clearCache()
-        return nil 
+getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
+getgenv().CurrentTarget = getgenv().CurrentTarget or nil
+
+-- Cache global functions for speed
+local type = type
+local typeof = typeof
+local unpack = unpack
+local pairs = pairs
+
+local allowedRemotes = {
+    shoot = true, fire = true, attack = true, 
+    combat = true, ability = true, skill = true, gun = true
+}
+
+local blockedRemotes = {
+    equip = true, tool = true, inventory = true, 
+    backpack = true, loadout = true, anim = true, sound = true
+}
+
+-- Memoization cache to avoid repeated string scanning on the same remote
+local remoteCache = {}
+
+local function isAllowedRemote(self)
+    local name = self.Name
+    local cached = remoteCache[name]
+    if cached ~= nil then
+        return cached
     end
 
-    if target ~= lastTarget then
-        clearCache()
-        lastTarget = target
-        cachedPart = target.Parent:FindFirstChild("HumanoidRootPart")
+    local lowerName = name:lower()
+    for blockWord in pairs(blockedRemotes) do
+        if lowerName:find(blockWord, 1, true) then
+            remoteCache[name] = false
+            return false
+        end
     end
-    
-    return cachedPart
-end
 
-local function GetPredictedPosition(targetPart)
-    if not targetPart then return Vector3.new(0,0,0), nil end
-    local basePos = targetPart.Position
-    local rootCFrame = targetPart.CFrame
-    if getgenv().PredictionEnabled then
-        local velocity = targetPart.AssemblyLinearVelocity or Vector3.new(0,0,0)
-        return basePos + (velocity * (getgenv().PredictionFactor or 0.135)), rootCFrame
+    for keyword in pairs(allowedRemotes) do
+        if lowerName:find(keyword, 1, true) then
+            remoteCache[name] = true
+            return true
+        end
     end
-    return basePos, rootCFrame
+
+    remoteCache[name] = false
+    return false
 end
 
 task.spawn(function()
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-
-    repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
-
     local success, Mouse = pcall(function()
         return LocalPlayer:GetMouse()
     end)
     if not success or not Mouse then return end
 
-    -- แก้ไขให้เรียกใช้ getTargetCFrame() และ GetPredictedPosition() ที่ถูกต้อง
+local function getRoot()
+    local target = getgenv().CurrentTarget
+    if target and target.Parent then
+        local character = target.Parent
+        -- ค้นหาชิ้นส่วนส่วนลำตัวรองรับทั้ง R6 และ R15
+        return character:FindFirstChild("HumanoidRootPart") 
+            or character:FindFirstChild("UpperTorso") 
+            or character:FindFirstChild("Torso")
+    end
+    return nil
+end
+
+    -- Combined / Optimized __index Hook
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
         if getgenv().SilentAimEnabled and self == Mouse then
-            local r = getTargetCFrame()
+            local r = getRoot()
             if r then
-                local predPos, rootCFrame = GetPredictedPosition(r)
-                if predPos then
-                    if idx == "Hit" then 
-                        return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-                    elseif idx == "Target" then 
-                        return r
-                    elseif idx == "X" or idx == "Y" then 
-                        return Camera:WorldToScreenPoint(predPos)[idx]
-                    end
+                if idx == "Hit" then 
+                    return r.CFrame
+                elseif idx == "Target" then 
+                    return r
+                elseif idx == "X" or idx == "Y" then 
+                    return Camera:WorldToScreenPoint(r.Position)[idx]
                 end
             end
         end
         return oldIndex(self, idx)
     end))
 
+    -- Combined / Optimized __namecall Hook
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        if not getgenv().SilentAimEnabled then
-            clearCache()
-            return oldNamecall(self, ...)
-        end
-        
         local method = getnamecallmethod()
-        if method ~= "FireServer" and method ~= "InvokeServer" then
-            return oldNamecall(self, ...)
-        end
-        
-        local rootPart = getTargetCFrame()
-        if not rootPart then
-            clearCache()
-            return oldNamecall(self, ...)
-        end
-        
-        local predPos, rootCFrame = GetPredictedPosition(rootPart)
-        if not predPos then 
-            clearCache()
-            return oldNamecall(self, ...) 
-        end
-        
-        local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        
-        local args = {...}
-        for i = 1, #args do
-            local argType = typeof(args[i])
-            if argType == "CFrame" then 
-                args[i] = targetCFrame
-            elseif argType == "Vector3" then 
-                args[i] = predPos 
+        local target = getgenv().CurrentTarget
+        local enabled = getgenv().SilentAimEnabled
+
+        if target then
+            -- Handle Raycast / Viewport overrides
+            if enabled or UserInputService.TouchEnabled then
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                    local r = getRoot()
+                    if r then 
+                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
+                    end
+                end
+            end
+
+            -- Handle Remote FireServer / InvokeServer overrides
+            if enabled and (method == "FireServer" or method == "InvokeServer") then
+                if isAllowedRemote(self) then
+                    local targetPos = GetPredictedPosition(target)
+                    if targetPos then
+                        local args = { ... }
+                        for i = 1, #args do
+                            local arg = args[i]
+                            local argType = typeof(arg)
+                            if argType == "Vector3" then
+                                args[i] = targetPos
+                            elseif argType == "CFrame" then
+                                args[i] = arg - arg.Position + targetPos
+                            end
+                        end
+                        return oldNamecall(self, unpack(args))
+                    end
+                end
             end
         end
-        
-        return oldNamecall(self, unpack(args))
+
+        return oldNamecall(self, ...)
     end))
 end)
 
