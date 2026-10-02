@@ -398,9 +398,27 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local Camera = workspace.CurrentCamera
+
 local cachedPart = nil
 local lastTarget = nil
-local PredictionFactor = 0.135 
+
+-- เช็คสถานะการกดปุ่ม R แบบเรียลไทม์
+local isPressingR = false
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.R then
+        isPressingR = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.R then
+        isPressingR = false
+    end
+end)
 
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
@@ -425,7 +443,7 @@ local function getPredictedPosition(rootPart)
     
     local velocity = rootPart.AssemblyLinearVelocity
     local predictedPos = pos + (Vector3.new(velocity.X, 0, velocity.Z) * getgenv().PredictionFactor)
-    return predictedPos, rootPart.CFrame
+    return predictedPos, rootCFrame
 end
 
 task.spawn(function()
@@ -442,12 +460,11 @@ task.spawn(function()
 
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        -- เช็คเงื่อนไขพื้นฐานให้ออกไวที่สุด (Early return) เพื่อความเร็วสูงสุด
-        if self ~= Mouse or not getgenv().SilentAimEnabled then 
+        -- ถ้ากำลังกดปุ่ม R อยู่ จะไม่สนใจ Silent Aim ทันที (คืนค่าเดิมของเกมไปเลย)
+        if isPressingR or self ~= Mouse or not getgenv().SilentAimEnabled then 
             return oldIndex(self, idx) 
         end
         
-        -- กรองเฉพาะ properties ที่ต้องการดักจับ
         if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
             return oldIndex(self, idx)
         end
@@ -476,7 +493,8 @@ task.spawn(function()
 
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        if not getgenv().SilentAimEnabled then
+        -- ถ้ากำลังกดปุ่ม R อยู่ จะข้ามการเล็งทันที
+        if isPressingR or not getgenv().SilentAimEnabled then
             return oldNamecall(self, ...)
         end
         
@@ -506,7 +524,6 @@ task.spawn(function()
         return oldNamecall(self, unpack(args))
     end))
 end)
-
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 local lastFOVUpdate = 0
@@ -2644,17 +2661,13 @@ local CommE = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
 
 local autoKenEnabled = false
 
--- ฟังก์ชันตรวจสอบและเปิด Ken Haki ถ้ายังไม่มี Highlight
 local function CheckAndEnableKen()
     if not autoKenEnabled then return end
     
-    local c = GetCharacter() -- ใช้ฟังก์ชันดึงตัวละคร (รองรับ Workspace.Characters)
-    if not c then return end
+    local c = GetCharacter() 
 
-    -- ตรวจสอบว่ามี Highlight หรือไม่ (ปกติฮาคิสังเกต/Ken จะสร้าง Highlight หรือเอฟเฟกต์ลักษณะนี้ที่ตัวละคร)
     local highlight = c:FindFirstChild("Highlight")
-    
-    -- ถ้าไม่พบ Highlight ให้ส่งรีโมทเปิด Ken ทันที
+
     if not highlight then
         pcall(function()
             CommE:FireServer("Ken", "true")
@@ -2685,7 +2698,6 @@ GeneralTab:Toggle({
     end,
 })
 
--- ลูปเช็คและส่งรีโมทซ้ำๆ ทุกๆ 1.5 วินาที (หรือจะปรับให้เร็วขึ้นตามต้องการ)
 task.spawn(function()
     while task.wait(1) do
         CheckAndEnableKen()
