@@ -2499,7 +2499,6 @@ CombatTab:Dropdown({
         getgenv().TargetMode = mode
     end,
 })
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -2992,7 +2991,6 @@ end
 startHitboxLoop()
 
 CombatTab:Section({ Title = "Hitbox Expander" })
-
 CombatTab:Toggle({
     Title = "Expand Hitboxes",
     Type = "Checkbox",
@@ -3014,7 +3012,6 @@ CombatTab:Toggle({
         end
     end,
 })
-
 CombatTab:Toggle({
     Title = "Show Hitbox Visual",
     Type = "Checkbox",
@@ -3037,7 +3034,6 @@ CombatTab:Toggle({
         end
     end,
 })
-
 CombatTab:Slider({
     Title = "Hitbox Scale",
     Desc = "Adjust hitbox size multiplier.",
@@ -3052,7 +3048,6 @@ CombatTab:Slider({
         getgenv().HitboxSize = v
     end,
 })
-
 local SettingsGroup2 = Config:Group({})
 local SettingsGroup3 = Config:Group({})
 local UIKeybind = Config:Keybind({
@@ -3104,7 +3099,6 @@ Config:Toggle({
         end
     end,
 })
-
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.5)
 
@@ -3112,7 +3106,6 @@ LocalPlayer.CharacterAdded:Connect(function()
         setNoclip(true)
     end
 end)
-
 local HideShowUI = SettingsGroup2:Section({ 
     Title = "Settings 2", 
     Icon = "monitor" 
@@ -3130,7 +3123,6 @@ SettingsGroup2:Toggle({
         end
     end,
 })
-
 SettingsGroup2:Toggle({
     Title = "",
     Type =  "Checkbox",
@@ -3147,7 +3139,6 @@ local HideShowUI = SettingsGroup3:Section({
     Title = "Settings 3", 
     Icon = "monitor" 
 })
-
 SettingsGroup3:Toggle({
     Title = "",
     Type =  "Checkbox",
@@ -3164,19 +3155,15 @@ local P=game:GetService("Players")
 local UIS=game:GetService("UserInputService")
 local L=P.LocalPlayer
 local CG=game:GetService("CoreGui")
-
 local old=CG:FindFirstChild("JumpButtonUI")
 if old then old:Destroy() end
-
 local G=Instance.new("ScreenGui")
 G.Name="JumpButtonUI"
 G.IgnoreGuiInset=true
 G.Parent=CG
-
 local B=Instance.new("TextButton")
 B.Parent=G
 B.Size=UDim2.fromOffset(90,90)
--- ใช้ Scale เป็น 1 และปรับ Offset เพื่อความเสถียร
 B.Position=UDim2.new(1,-75,1,-100)
 B.AnchorPoint=Vector2.new(.5,.5)
 B.BackgroundColor3=Color3.fromRGB(15,15,15)
@@ -3185,11 +3172,8 @@ B.TextColor3=Color3.fromRGB(0,200,255)
 B.TextSize=48
 B.Font=Enum.Font.GothamBold
 B.AutoButtonColor=false
-
 Instance.new("UICorner",B).CornerRadius=UDim.new(1,0)
-
 local dragging,dragInput,dragStart,startPos,moved
-
 B.InputBegan:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1
     or i.UserInputType==Enum.UserInputType.Touch then
@@ -3199,33 +3183,25 @@ B.InputBegan:Connect(function(i)
         startPos=B.Position
     end
 end)
-
 B.InputChanged:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseMovement
     or i.UserInputType==Enum.UserInputType.Touch then
         dragInput=i
     end
 end)
-
 UIS.InputChanged:Connect(function(i)
     if not dragging or i~=dragInput then return end
-
     local d=i.Position-dragStart
     if d.Magnitude>8 then moved=true end
-
-    -- แก้ไขจุดที่คำนวณตำแหน่งใหม่ให้อ้างอิงจากตำแหน่งเดิม (Scale และ Offset)
     B.Position=UDim2.new(
         startPos.X.Scale, startPos.X.Offset + d.X,
         startPos.Y.Scale, startPos.Y.Offset + d.Y
     )
 end)
-
 B.InputEnded:Connect(function(i)
     if i.UserInputType~=Enum.UserInputType.MouseButton1
     and i.UserInputType~=Enum.UserInputType.Touch then return end
-
     dragging=false
-
     if not moved then
         local c=L.Character
         local h=c and c:FindFirstChildOfClass("Humanoid")
@@ -3235,10 +3211,8 @@ B.InputEnded:Connect(function(i)
             h:ChangeState(Enum.HumanoidStateType.Jumping)
         end
     end
-
     dragInput=nil
 end)
-
 SettingsGroup3:Toggle({
     Title="",
     Type="Checkbox",
@@ -3248,26 +3222,19 @@ SettingsGroup3:Toggle({
         G.Enabled=Value==true
     end,
 })
-
-
 end
 initializeSkillSettings()
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local localPlayer = Players.LocalPlayer
-
 local autoBountyEnabled = false
 local bountyConnection = nil
-
 local selectedMeleeSkills = {"None"}
 local selectedSwordSkills = {"None"}
 local selectedFruitSkills = {"None"}
 local selectedGunSkills = {"None"}
-
 local flySpeed = 210 
-
 local healthTriggerThreshold = 30 
 local healthRecoveryThreshold = 85 
 local defenseProtocolEnabled = true 
@@ -3276,12 +3243,10 @@ local cachedNearestTarget = nil
 local lastTargetSearchTime = 0
 local targetSearchInterval = 0.5
 local selectedFaction = nil 
-
 local teamCheckInProgress = false
 local isTeamSwitchVerified = false
 local teamCheckLoopRunning = false
 local ascentVelocity = 300 
-
 local playerCache = {}
 local lastPlayerCacheTime = 0
 local playerCacheInterval = 0.5
@@ -3291,12 +3256,11 @@ local function updatePlayerCache()
     if now - lastPlayerCacheTime < playerCacheInterval then
         return playerCache
     end
-    
+
     lastPlayerCacheTime = now
     playerCache = Players:GetPlayers()
     return playerCache
 end
-
 local function verifyTeamSwitch()
     local player = Players.LocalPlayer
     if not player or not selectedFaction then return false end
@@ -3304,7 +3268,6 @@ local function verifyTeamSwitch()
     local team = player.Team
     return team and team.Name == selectedFaction
 end
-
 local function checkAndSwitchTeam()
     if teamCheckInProgress then return end
 
