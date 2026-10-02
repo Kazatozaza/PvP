@@ -3465,10 +3465,21 @@ end
 local lastComboTime = 0
 local comboCooldown = 1
 
+-- ประกาศตัวแปรสำหรับควบคุมจังหวะ (วางไว้นอกฟังก์ชัน)
+local wTimer = 0
+local wState = "WAITING" -- สถานะเริ่มต้น: "WAITING" (รอครบเวลาเพื่อกด), "HOLDING" (กำลังกดค้าง), "RELEASING" (เพิ่งปล่อย รอนับ 1 วิ)
+
 local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceToTarget)
     local localPlayer = Players.LocalPlayer
     local myChar = localPlayer.Character
-    if not myChar then return end
+    if not myChar then 
+        if wState == "HOLDING" then
+            pcall(function() keyrelease(0x57) end)
+        end
+        wState = "WAITING"
+        wTimer = tick()
+        return 
+    end
 
     local myRoot = myChar:FindFirstChild("HumanoidRootPart")
     if not myRoot then return end
@@ -3489,6 +3500,13 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
 
     if distance <= maxDistance then
+        -- เมื่อถึงเป้าหมายแล้ว ให้ปล่อยปุ่ม W ทันทีและรีเซ็ตสถานะ
+        if wState == "HOLDING" then
+            pcall(function() keyrelease(0x57) end)
+        end
+        wState = "WAITING"
+        wTimer = tick()
+
         local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
 
         if targetRoot then
@@ -3529,6 +3547,23 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     end
 
     if distance > 0 then
+        -- ระบบลอยไปหา: กด W ค้าง 0.7 วิ -> ปล่อย -> รอ 1 วิ แล้ววนลูปใหม่
+        local currentTime = tick()
+        
+        if wState == "WAITING" then
+            if currentTime - wTimer >= 1 then -- รอ 1 วิหลังจากรอบก่อนหน้า (หรือเริ่มต้น)
+                pcall(function() keypress(0x57) end) -- กดปุ่ม W
+                wState = "HOLDING"
+                wTimer = currentTime
+            end
+        elseif wState == "HOLDING" then
+            if currentTime - wTimer >= 0.7 then -- กดค้างไว้ 0.7 วิ
+                pcall(function() keyrelease(0x57) end) -- ปล่อยปุ่ม W
+                wState = "WAITING" -- กลับไปรอนับ 1 วิใหม่
+                wTimer = currentTime
+            end
+        end
+
         local elevatedTargetPos = targetPos + Vector3.new(0, 120, 0)
         local direction = (elevatedTargetPos - currentPos).Unit
         local currentSpeed = speed or (Bounty and Bounty.Flags and Bounty.Flags.FlySpeed) or 200
