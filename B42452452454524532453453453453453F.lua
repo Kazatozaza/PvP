@@ -553,18 +553,14 @@ end
 
 local cachedPart = nil
 local lastTarget = nil
-local cachedScreenPoint = nil
 local lastPredPos = nil
-local lastCachedFrame = 0
 
 local function clearCache()
     cachedPart = nil
     lastTarget = nil
-    cachedScreenPoint = nil
     lastPredPos = nil
-    lastCachedFrame = 0
-    table.clear(combatCache)
-    table.clear(safeZoneCache)
+    if combatCache and type(combatCache) == "table" then table.clear(combatCache) end
+    if safeZoneCache and type(safeZoneCache) == "table" then table.clear(safeZoneCache) end
 end
 
 local function getTargetCFrame()
@@ -599,48 +595,46 @@ task.spawn(function()
     local Humanoid = Character:WaitForChild("Humanoid")
 
     repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
+
+    -- รองรับทั้ง Mouse (PC) และ Touch (Mobile)
     local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
-    if not success or not Mouse then return end
 
-    local oldIndex
-    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        if self ~= Mouse or not getgenv().SilentAimEnabled then 
-            return oldIndex(self, idx) 
-        end
-        
-        if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
-            return oldIndex(self, idx)
-        end
-        
-        local rootPart = getTargetCFrame()
-        if not rootPart then 
-            clearCache()
-            return oldIndex(self, idx) 
-        end
-        
-        local predPos, rootCFrame = getPredictedPosition(rootPart)
-        if not predPos then 
-            clearCache()
-            return oldIndex(self, idx) 
-        end
-        
-        if idx == "Hit" then 
-            return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        elseif idx == "Target" then 
-            return rootPart
-        elseif idx == "X" or idx == "Y" then 
-            local currentFrame = tick()
-            if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
-                lastCachedFrame = currentFrame
-                lastPredPos = predPos
-                cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+    if success and Mouse then
+        local oldIndex
+        oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+            if self ~= Mouse or not getgenv().SilentAimEnabled then 
+                return oldIndex(self, idx) 
             end
-            return cachedScreenPoint[idx]
-        end
-        
-        return oldIndex(self, idx)
-    end))
+            
+            if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
+                return oldIndex(self, idx)
+            end
+            
+            local rootPart = getTargetCFrame()
+            if not rootPart then 
+                clearCache()
+                return oldIndex(self, idx) 
+            end
+            
+            local predPos, rootCFrame = getPredictedPosition(rootPart)
+            if not predPos then 
+                clearCache()
+                return oldIndex(self, idx) 
+            end
+            
+            if idx == "Hit" then 
+                return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
+            elseif idx == "Target" then 
+                return rootPart
+            elseif idx == "X" or idx == "Y" then 
+                return Camera:WorldToScreenPoint(predPos)[idx]
+            end
+            
+            return oldIndex(self, idx)
+        end))
+    end
 
+    -- รองรับการยิงผ่าน RemoteEvent สำหรับมือถือและทุกแพลตฟอร์ม
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         if not getgenv().SilentAimEnabled then
