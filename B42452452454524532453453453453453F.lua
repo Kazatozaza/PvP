@@ -94,6 +94,145 @@ Group:Button({
         WindUI:Notify({ Title = "System Warning", Content = "Settings reset!", Icon = "bell-ring", Duration = 3 })
     end,
 })
+
+
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
+local C = {
+    Green  = "#4ADE80",
+    Amber  = "#FBBF24",
+    Red    = "#F87171",
+    Cyan   = "#A78BFA",
+    Purple = "#C4B5FD",
+    Muted  = "#9CA3BC",
+    Dim    = "#3B3F58",
+    White  = "#F5F3FF",
+}
+local function font(color, text)
+    return string.format(
+        '<font color="%s">%s</font>',
+        color,
+        text
+    )
+end
+local executorName = "Unknown"
+
+pcall(function()
+    if type(identifyexecutor) == "function" then
+        local n = identifyexecutor()
+        if n then
+            executorName = tostring(n)
+        end
+    elseif type(getexecutorname) == "function" then
+        local n = getexecutorname()
+        if n then
+            executorName = tostring(n)
+        end
+    end
+end)
+
+local username = LP and LP.Name or "Unknown"
+local displayName = LP and LP.DisplayName or username
+
+local function copyToClipboard(text, label)
+    local ok, err = pcall(function()
+        if type(setclipboard) == "function" then
+            setclipboard(text)
+        else
+            error("setclipboard is not available")
+        end
+    end)
+
+    if not ok then
+        warn("[Destiny Hub] " .. label .. " error: " .. tostring(err))
+    end
+end
+local dashboardText = table.concat({
+
+    string.format(
+        '<b>%s</b>  %s',
+        font(C.White, "SYSTEM OVERVIEW"),
+        font(C.Muted, "• live")
+    ),
+
+    font(C.Dim, "━━━━━━━━━━━━━━━━━━━━"),
+
+    string.format(
+        '%s  Executor     %s',
+        font(C.Cyan, "◆"),
+        font(C.Cyan, "<b>" .. executorName .. "</b>")
+    ),
+
+    string.format(
+        '%s  Username     %s',
+        font(C.Purple, "◆"),
+        font(C.White, username)
+    ),
+
+    "",
+
+    string.format(
+        '%s  Status       %s',
+        font(C.Green, "◆"),
+        font(C.Green, "<b>Ready</b>")
+    ),
+
+    "",
+
+    font(C.Dim, "━━━━━━━━━━━━━━━━━━━━"),
+
+    string.format(
+        '%s <b>%s</b>%s',
+        font(C.Muted, "Welcome back,"),
+        font(C.White, displayName),
+        font(C.Muted, ".")
+    ),
+
+    string.format(
+        '%s %s',
+        font(C.Muted, "Enjoy your experience with"),
+        font(C.Purple, "<b>Destiny Hub</b>")
+    ),
+
+}, "\n")
+
+Home:Paragraph({
+    Title = "✦ Destiny Hub | Dashboard",
+    Desc = dashboardText,
+
+    ImageSize = 50,
+    Thumbnail = "rbxassetid://71825656372618",
+    ThumbnailSize = 70,
+
+    Buttons = {
+        {
+            Title = "Discord",
+            Callback = function()
+                copyToClipboard(
+                    "https://discord.gg/hUMaVECvBz",
+                    "Clipboard"
+                )
+            end,
+        },
+
+        {
+            Title = "Report",
+            Callback = function()
+                local report = table.concat({
+                    "Destiny Hub | Dashboard",
+                    "Executor: " .. executorName,
+                    "Username: " .. username,
+                    "Display: " .. displayName,
+                    "Status: Ready",
+                }, "\n")
+
+                copyToClipboard(report, "Report")
+            end,
+        },
+    },
+})
+
+
 getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
 getgenv().SilentAimMode = getgenv().SilentAimMode or "FOV"
 getgenv().FOVRadius = getgenv().FOVRadius or 100
@@ -2559,8 +2698,8 @@ CombatTab:Slider({
     Flag  = "max_distance_slider",
     Increment = 1,
     Value = {
-        Min     = 50,
-        Max     = 2000,
+        Min     = 0,
+        Max     = 1200,
         Default = getgenv().MaxDistance
     },
     Callback = function(state)
@@ -3231,6 +3370,8 @@ SettingsGroup3:Toggle({
         end
     end,
 })
+
+
 local P=game:GetService("Players")
 local UIS=game:GetService("UserInputService")
 local L=P.LocalPlayer
@@ -3341,6 +3482,7 @@ local function updatePlayerCache()
     playerCache = Players:GetPlayers()
     return playerCache
 end
+
 local function verifyTeamSwitch()
     local player = Players.LocalPlayer
     if not player or not selectedFaction then return false end
@@ -3348,6 +3490,7 @@ local function verifyTeamSwitch()
     local team = player.Team
     return team and team.Name == selectedFaction
 end
+
 local function checkAndSwitchTeam()
     if teamCheckInProgress then return end
 
@@ -3606,6 +3749,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         myRoot.CFrame = myRoot.CFrame:Lerp(lookAtCFrame, 0.2)
     end
 end
+
 local hopServersEnabled = false
 
 local function shouldSkipTarget(targetPlayer, LocalPlayer)
@@ -3801,7 +3945,6 @@ local function handleDefenseProtocol(myChar, rootPart, charHumanoid, deltaTime)
         charHumanoid.PlatformStand = true
         local pos = rootPart.Position
         
-        -- บินขึ้นไปเรื่อยๆ อย่างต่อเนื่องโดยไม่มีขีดจำกัด
         local newY = pos.Y + (ascentVelocity * deltaTime)
         rootPart.CFrame = CFrame.new(pos.X, newY, pos.Z)
 
@@ -4067,138 +4210,401 @@ local DropdownGun = Bounty:Dropdown({
     end
 })
 
-local Players = game:GetService("Players")
-local LP = Players.LocalPlayer
-local C = {
-    Green  = "#4ADE80",
-    Amber  = "#FBBF24",
-    Red    = "#F87171",
-    Cyan   = "#A78BFA",
-    Purple = "#C4B5FD",
-    Muted  = "#9CA3BC",
-    Dim    = "#3B3F58",
-    White  = "#F5F3FF",
-}
-local function font(color, text)
-    return string.format(
-        '<font color="%s">%s</font>',
-        color,
-        text
-    )
-end
-local executorName = "Unknown"
+-- ==================================================
+-- AUTOMATIC TARGET CLEANUP MODULE (ล้างเฉพาะข้อมูลเป้าหมาย)
+-- ==================================================
+RunService.RenderStepped:Connect(function()
+    if not autoBountyEnabled then
+        cachedNearestTarget = nil
+        currentTargetPlayer = nil
+        return
+    end
 
-pcall(function()
-    if type(identifyexecutor) == "function" then
-        local n = identifyexecutor()
-        if n then
-            executorName = tostring(n)
-        end
-    elseif type(getexecutorname) == "function" then
-        local n = getexecutorname()
-        if n then
-            executorName = tostring(n)
+    local char = localPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not char or not hum or hum.Health <= 0 then
+        cachedNearestTarget = nil
+        currentTargetPlayer = nil
+        return
+    end
+
+    if currentTargetPlayer and currentTargetPlayer.Character then
+        local targetHum = currentTargetPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if not targetHum or targetHum.Health <= 0 then
+            cachedNearestTarget = nil
+            currentTargetPlayer = nil
         end
     end
 end)
 
-local username = LP and LP.Name or "Unknown"
-local displayName = LP and LP.DisplayName or username
 
-local function copyToClipboard(text, label)
-    local ok, err = pcall(function()
-        if type(setclipboard) == "function" then
-            setclipboard(text)
-        else
-            error("setclipboard is not available")
+local P=game:GetService("Players")
+local UIS=game:GetService("UserInputService")
+local CG=game:GetService("CoreGui")
+local TS=game:GetService("TweenService")
+local Debris=game:GetService("Debris")
+
+local L=P.LocalPlayer
+local Cam=workspace.CurrentCamera
+
+local old=CG:FindFirstChild("SoruUltimateUI")
+if old then old:Destroy() end
+
+local G=Instance.new("ScreenGui",CG)
+G.Name="SoruUltimateUI"
+G.IgnoreGuiInset=true
+G.ResetOnSpawn=false
+G.ZIndexBehavior=Enum.ZIndexBehavior.Global
+
+local B=Instance.new("TextButton",G)
+B.Size=UDim2.fromOffset(84,84)
+B.Position=UDim2.new(1,-60,.5,0)
+B.AnchorPoint=Vector2.new(.5,.5)
+B.BackgroundColor3=Color3.fromRGB(8,12,18)
+B.BackgroundTransparency=.02
+B.Text=""
+B.AutoButtonColor=false
+B.ZIndex=10
+
+Instance.new("UICorner",B).CornerRadius=UDim.new(1,0)
+
+local S=Instance.new("UIStroke",B)
+S.Color=Color3.fromRGB(0,220,255)
+S.Thickness=2
+S.Transparency=.05
+
+local Gd=Instance.new("UIGradient",B)
+Gd.Rotation=45
+Gd.Color=ColorSequence.new{
+    ColorSequenceKeypoint.new(0,Color3.fromRGB(35,45,55)),
+    ColorSequenceKeypoint.new(.5,Color3.fromRGB(8,12,18)),
+    ColorSequenceKeypoint.new(1,Color3.fromRGB(0,90,130))
+}
+
+local T=Instance.new("TextLabel",B)
+T.Size=UDim2.fromScale(1,1)
+T.BackgroundTransparency=1
+T.Text="SORU"
+T.TextColor3=Color3.new(1,1,1)
+T.TextSize=17
+T.Font=Enum.Font.GothamBold
+T.TextStrokeColor3=Color3.new(0,0,0)
+T.TextStrokeTransparency=0
+T.ZIndex=20
+
+local function tw(o,t,p)
+    TS:Create(o,TweenInfo.new(t,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),p):Play()
+end
+
+local function part(f,pos,size,c,tr)
+    local p=Instance.new("Part",f)
+    p.Anchored=true
+    p.CanCollide=false
+    p.CanTouch=false
+    p.CanQuery=false
+    p.Material=Enum.Material.Neon
+    p.Color=c
+    p.Transparency=tr or 0
+    p.Size=size
+    p.Position=pos
+    return p
+end
+
+local function WarpFX(pos)
+    local F=Instance.new("Folder",workspace)
+    F.Name="SoruFX"
+
+    local C=Color3.fromRGB(0,220,255)
+    local BC=Color3.fromRGB(0,100,255)
+    local W=Color3.fromRGB(220,250,255)
+
+    for i=1,5 do
+        task.delay(i*.035,function()
+            local r=part(F,pos+Vector3.new(0,.1,0),Vector3.new(.15,.08,.15),i%2==0 and BC or C,.1)
+            local m=Instance.new("SpecialMesh",r)
+            m.MeshType=Enum.MeshType.Cylinder
+            local z=7+i*3
+            tw(r,.45,{Size=Vector3.new(z,.1,z),Transparency=1})
+        end)
+    end
+
+    for i=1,8 do
+        local a=i/8*math.pi*2
+        local r=3+math.random()*2
+        local p=part(
+            F,
+            pos+Vector3.new(math.cos(a)*r,3,math.sin(a)*r),
+            Vector3.new(.12,6,.12),
+            i%2==0 and C or BC,.2
+        )
+        tw(p,.35,{Size=Vector3.new(.02,.2,.02),Transparency=1})
+    end
+
+    for i=1,3 do
+        local r=part(F,pos+Vector3.new(0,i*.45,0),Vector3.new(5+i*2,.08,5+i*2),i==2 and W or C,.15)
+        local m=Instance.new("SpecialMesh",r)
+        m.MeshType=Enum.MeshType.Cylinder
+
+        task.spawn(function()
+            for _=1,20 do
+                if not r.Parent then return end
+                r.CFrame=r.CFrame*CFrame.Angles(0,math.rad(18),math.rad(12))
+                task.wait(.02)
+            end
+        end)
+
+        tw(r,.65,{Transparency=1})
+    end
+
+    local h=Instance.new("Part",F)
+    h.Anchored=true
+    h.CanCollide=false
+    h.CanTouch=false
+    h.CanQuery=false
+    h.Transparency=1
+    h.Position=pos
+
+    local A=Instance.new("Attachment",h)
+
+    local p=Instance.new("ParticleEmitter",A)
+    p.Texture="rbxasset://textures/particles/sparkles_main.dds"
+    p.Rate=0
+    p.Lifetime=NumberRange.new(.25,.7)
+    p.Speed=NumberRange.new(15,35)
+    p.SpreadAngle=Vector2.new(360,360)
+    p.Drag=4
+    p.LightEmission=1
+    p.LightInfluence=0
+    p.Color=ColorSequence.new{
+        ColorSequenceKeypoint.new(0,W),
+        ColorSequenceKeypoint.new(.4,C),
+        ColorSequenceKeypoint.new(1,BC)
+    }
+    p.Size=NumberSequence.new{
+        NumberSequenceKeypoint.new(0,.8),
+        NumberSequenceKeypoint.new(.5,.3),
+        NumberSequenceKeypoint.new(1,0)
+    }
+    p.Transparency=NumberSequence.new{
+        NumberSequenceKeypoint.new(0,0),
+        NumberSequenceKeypoint.new(.7,.3),
+        NumberSequenceKeypoint.new(1,1)
+    }
+    p:Emit(100)
+
+    local sp=Instance.new("ParticleEmitter",A)
+    sp.Texture="rbxasset://textures/particles/sparkles_main.ddds"
+    sp.Rate=0
+    sp.Lifetime=NumberRange.new(.15,.35)
+    sp.Speed=NumberRange.new(30,55)
+    sp.SpreadAngle=Vector2.new(360,360)
+    sp.Drag=8
+    sp.LightEmission=1
+    sp.LightInfluence=0
+    sp.Color=ColorSequence.new(W)
+    sp.Size=NumberSequence.new{
+        NumberSequenceKeypoint.new(0,.3),
+        NumberSequenceKeypoint.new(1,0)
+    }
+    sp:Emit(60)
+
+    Debris:AddItem(F,1)
+end
+
+local cooldown=false
+local selecting=false
+local targetConnection
+
+local function normal()
+    selecting=false
+    T.Text="SORU"
+    T.TextSize=17
+    T.TextColor3=Color3.new(1,1,1)
+    T.TextStrokeTransparency=0
+
+    tw(B,.2,{BackgroundColor3=Color3.fromRGB(8,12,18)})
+    tw(S,.2,{Color=Color3.fromRGB(0,220,255),Thickness=2})
+end
+
+local function selectTarget()
+    if cooldown or selecting then return end
+
+    selecting=true
+    T.Text="TARGET"
+    T.TextSize=14
+
+    tw(B,.2,{BackgroundColor3=Color3.fromRGB(35,27,10)})
+    tw(S,.2,{Color=Color3.fromRGB(255,190,45),Thickness=3})
+
+    targetConnection=UIS.InputBegan:Connect(function(i,gp)
+        if gp then return end
+        if i.UserInputType~=Enum.UserInputType.MouseButton1
+        and i.UserInputType~=Enum.UserInputType.Touch then return end
+
+        local char=L.Character
+        local root=char and char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local ray=Cam:ScreenPointToRay(i.Position.X,i.Position.Y)
+        local rp=RaycastParams.new()
+        rp.FilterType=Enum.RaycastFilterType.Exclude
+        rp.FilterDescendantsInstances={char}
+
+        local hit=workspace:Raycast(ray.Origin,ray.Direction*1500,rp)
+        if not hit then return end
+
+        local target=hit.Position
+        local d=target-root.Position
+        local dist=d.Magnitude
+
+        if dist>200 then
+            target=root.Position+d.Unit*200
         end
-    end)
 
-    if not ok then
-        warn("[Destiny Hub] " .. label .. " error: " .. tostring(err))
+        WarpFX(root.Position)
+        root.CFrame=CFrame.new(target+Vector3.new(0,3,0))
+
+        task.delay(.02,function()
+            if root.Parent then WarpFX(root.Position) end
+        end)
+
+        if targetConnection then
+            targetConnection:Disconnect()
+            targetConnection=nil
+        end
+
+        selecting=false
+        cooldown=true
+
+        task.spawn(function()
+            for n=20,1,-1 do
+                if not B.Parent then return end
+                T.Text=string.format("%.1f",n/10)
+                T.TextSize=21
+                task.wait(.1)
+            end
+
+            cooldown=false
+            normal()
+        end)
+    end)
+end
+
+B.Activated:Connect(function()
+    if cooldown then return end
+
+    if selecting then
+        if targetConnection then
+            targetConnection:Disconnect()
+            targetConnection=nil
+        end
+        normal()
+    else
+        selectTarget()
+    end
+end)
+
+-- Drag
+local dragging,moved=false,false
+local dragStart,startPos,dragInput
+
+B.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1
+    or i.UserInputType==Enum.UserInputType.Touch then
+        dragging=true
+        moved=false
+        dragStart=i.Position
+        startPos=B.Position
+    end
+end)
+
+B.InputChanged:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseMovement
+    or i.UserInputType==Enum.UserInputType.Touch then
+        dragInput=i
+    end
+end)
+
+UIS.InputChanged:Connect(function(i)
+    if not dragging or i~=dragInput then return end
+
+    local d=i.Position-dragStart
+    if d.Magnitude>8 then moved=true end
+
+    B.Position=UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset+d.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset+d.Y
+    )
+end)
+
+B.InputEnded:Connect(function(i)
+    if i.UserInputType~=Enum.UserInputType.MouseButton1
+    and i.UserInputType~=Enum.UserInputType.Touch then return end
+
+    dragging=false
+    dragInput=nil
+end)
+
+-- Hover
+B.MouseEnter:Connect(function()
+    if cooldown then return end
+    tw(B,.15,{Size=UDim2.fromOffset(89,89)})
+    tw(S,.15,{Thickness=3,Transparency=0})
+end)
+
+B.MouseLeave:Connect(function()
+    if cooldown then return end
+    tw(B,.15,{Size=UDim2.fromOffset(84,84)})
+    tw(S,.15,{Thickness=2})
+end)
+
+-- Pulse
+task.spawn(function()
+    while G.Parent do
+        if not selecting and not cooldown then
+            tw(S,.8,{Transparency=.5})
+            task.wait(.8)
+
+            if not selecting and not cooldown then
+                tw(S,.8,{Transparency=.05})
+            end
+        end
+        task.wait(.8)
+    end
+end)
+
+-- เปิด/ปิดจากภายนอก
+getgenv().ToggleSoruUI=function(state)
+    if G and G.Parent then
+        G.Enabled=state
+
+        if not state then
+            if targetConnection then
+                targetConnection:Disconnect()
+                targetConnection=nil
+            end
+            selecting=false
+            normal()
+        end
     end
 end
-local dashboardText = table.concat({
 
-    string.format(
-        '<b>%s</b>  %s',
-        font(C.White, "SYSTEM OVERVIEW"),
-        font(C.Muted, "• live")
-    ),
+-- ค่าเริ่มต้น
+getgenv().ToggleSoruUI(true)
 
-    font(C.Dim, "━━━━━━━━━━━━━━━━━━━━"),
+local SettingsGroup4 = Config:Group({})
 
-    string.format(
-        '%s  Executor     %s',
-        font(C.Cyan, "◆"),
-        font(C.Cyan, "<b>" .. executorName .. "</b>")
-    ),
+SettingsGroup4:Toggle({
+    Title = "Soru Button",
+    Type = "Checkbox",
+    Flag = "ToggleTeleportUI",
+    Value = true,
 
-    string.format(
-        '%s  Username     %s',
-        font(C.Purple, "◆"),
-        font(C.White, username)
-    ),
-
-    "",
-
-    string.format(
-        '%s  Status       %s',
-        font(C.Green, "◆"),
-        font(C.Green, "<b>Ready</b>")
-    ),
-
-    "",
-
-    font(C.Dim, "━━━━━━━━━━━━━━━━━━━━"),
-
-    string.format(
-        '%s <b>%s</b>%s',
-        font(C.Muted, "Welcome back,"),
-        font(C.White, displayName),
-        font(C.Muted, ".")
-    ),
-
-    string.format(
-        '%s %s',
-        font(C.Muted, "Enjoy your experience with"),
-        font(C.Purple, "<b>Destiny Hub</b>")
-    ),
-
-}, "\n")
-
-Home:Paragraph({
-    Title = "✦ Destiny Hub | Dashboard",
-    Desc = dashboardText,
-
-    ImageSize = 50,
-    Thumbnail = "rbxassetid://71825656372618",
-    ThumbnailSize = 70,
-
-    Buttons = {
-        {
-            Title = "Discord",
-            Callback = function()
-                copyToClipboard(
-                    "https://discord.gg/hUMaVECvBz",
-                    "Clipboard"
-                )
-            end,
-        },
-
-        {
-            Title = "Report",
-            Callback = function()
-                local report = table.concat({
-                    "Destiny Hub | Dashboard",
-                    "Executor: " .. executorName,
-                    "Username: " .. username,
-                    "Display: " .. displayName,
-                    "Status: Ready",
-                }, "\n")
-
-                copyToClipboard(report, "Report")
-            end,
-        },
-    },
+    Callback = function(Value)
+        if getgenv().ToggleSoruUI then
+            getgenv().ToggleSoruUI(Value)
+        end
+    end
 })
