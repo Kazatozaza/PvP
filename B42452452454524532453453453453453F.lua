@@ -305,7 +305,7 @@ end
 -- ===== OPTIMIZATION: Cache valid targets ทุก 0.1 วินาที =====
 local cachedValidTargets = {}
 local lastTargetUpdate = 0
-local targetUpdateInterval = 0.1
+local targetUpdateInterval = 0.5
 
 local function UpdateValidTargets()
     table.clear(cachedValidTargets)  
