@@ -2155,7 +2155,7 @@ end)
 
 
 local toggleState = false
-local soruCooldown = 0.5
+local soruCooldown = 1
 local MIN_COOLDOWN = 0.1
 local runId = 0
 
