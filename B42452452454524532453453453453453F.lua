@@ -2684,6 +2684,7 @@ CombatTab:Dropdown({
         getgenv().TargetMode = mode
     end,
 })
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -2696,12 +2697,12 @@ local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")
 
 local fastAttackRunning = false
 local connection
+local lastAttackTime = 0
+local attackDelay = 0.1 -- ปรับค่านี้ (0.1 คือ 10 ครั้งต่อวินาที) ยิ่งน้อยยิ่งเร็ว แต่เสี่ยงโดน Kick
 
--- // ฟังก์ชันคำนวณทิศทางการตีให้เหมาะสมกับทุกผล //
+-- // ฟังก์ชันคำนวณทิศทาง //
 local function GetAttackDirection(root, target)
-    -- คำนวณทิศทางจากตัวเราไปหาเป้าหมาย
     local direction = (target.Position - root.Position).Unit
-    -- สร้าง Vector ที่จำลองการเหวี่ยงอาวุธ (Random เล็กน้อยเพื่อให้ดูเป็นธรรมชาติ)
     return Vector3.new(
         direction.X + (math.random(-10, 10)/100),
         0, 
@@ -2718,13 +2719,10 @@ local function Attack(targetPart, tool)
     local attackDir = GetAttackDirection(root, targetPart)
     
     if leftClickRemote and leftClickRemote:IsA("RemoteEvent") then
-        -- ส่งค่าทิศทางที่คำนวณได้ แทนการใช้ค่าคงที่
-        -- สิ่งนี้ทำให้ใช้ได้กับทุกผลปีศาจที่มี M1 เพราะทิศทางจะชี้ไปที่เป้าหมายเสมอ
         pcall(function()
             leftClickRemote:FireServer(attackDir, 1)
         end)
     else
-        -- สำหรับอาวุธที่ใช้ระบบ RegisterHit
         if registerHit and registerAttack then
             pcall(function()
                 registerHit:FireServer(targetPart, {["HitPos"] = targetPart.Position}, "211ee8ef")
@@ -2744,18 +2742,23 @@ local function SetFastAttack(state)
 
     if not state then return end
 
-    -- ใช้ Heartbeat เพื่อความเร็วสูงสุด
     connection = RunService.Heartbeat:Connect(function()
         if not fastAttackRunning then return end
+        
+        -- เพิ่มระบบ Delay เพื่อให้ใช้บนมือถือได้เสถียรขึ้นและไม่โดนเตะ
+        if tick() - lastAttackTime < attackDelay then return end
+        lastAttackTime = tick()
 
         pcall(function()
             local char = player.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if not char then return end
+            local root = char:FindFirstChild("HumanoidRootPart")
             if not root then return end
 
+            -- ตรวจสอบ Tool ใน Character หรือใน Backpack (สำหรับบางระบบ)
             local currentTool = char:FindFirstChildOfClass("Tool")
             
-            -- 1. ตรวจสอบ NPC (Enemies)
+            -- 1. ตรวจสอบ NPC
             local enemies = workspace:FindFirstChild("Enemies")
             if enemies then
                 for _, enemy in ipairs(enemies:GetChildren()) do
@@ -2765,12 +2768,12 @@ local function SetFastAttack(state)
                     if rootPart and hum and hum.Health > 0
                         and (root.Position - rootPart.Position).Magnitude <= 60 then
                         Attack(rootPart, currentTool)
-                        return -- โจมตีทีละเป้าหมายเพื่อลดการโดน Kick
+                        return 
                     end
                 end
             end
 
-            -- 2. ตรวจสอบผู้เล่น (Players)
+            -- 2. ตรวจสอบผู้เล่น
             for _, target in ipairs(Players:GetPlayers()) do
                 if target ~= player then
                     local targetChar = target.Character
@@ -2788,17 +2791,19 @@ local function SetFastAttack(state)
     end)
 end
 
--- // เชื่อมต่อกับ UI //
-local FastAttackToggle = GeneralTab:Toggle({
-    Title = "Attack Aura",
-    Desc = "(All Fruits, Melee, Swords)",
-    Type =  "Checkbox",
-    Flag = "FastAttack",
-    Value = false,
-    Callback = function(state)
-        SetFastAttack(state)
-    end,
-})
+if GeneralTab then
+    local FastAttackToggle = GeneralTab:Toggle({
+        Title = "Attack Aura",
+        Desc = "(All Fruits, Melee, Swords)",
+        Type =  "Checkbox",
+        Flag = "FastAttack",
+        Value = false,
+        Callback = function(state)
+            SetFastAttack(state)
+        end,
+    })
+end
+
 
 GeneralTab:Toggle({
     Title = "Auto Race V4",
