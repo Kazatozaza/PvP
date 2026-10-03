@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.0] ",
+        Title = "Project Destiny [v3.1] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -234,8 +234,6 @@ Home:Paragraph({
 
 
 
-
-
 getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
 getgenv().SilentAimMode = getgenv().SilentAimMode or "FOV"
 getgenv().FOVRadius = getgenv().FOVRadius or 100
@@ -256,6 +254,9 @@ local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
+
+-- ตรวจสอบว่าเป็นมือถือหรือแพลตฟอร์ม Touchscreen
+local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 
 if LocalPlayer.PlayerGui:FindFirstChild("MobileAimbotGui") then
     LocalPlayer.PlayerGui.MobileAimbotGui:Destroy()
@@ -307,7 +308,6 @@ Snapline.To = Vector2.new(0, 0)
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
--- ===== OPTIMIZATION: อัปเดตตำแหน่ง FOV ทันทีที่เม้าส์ขยับ ลดอาการหน่วง =====
 local function UpdateFOVPosition(pos)
     if not FOVUI or not FOVUI.Visible then return end
     local cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
@@ -334,7 +334,6 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
--- ===== OPTIMIZATION: Pre-cache เพื่อลดเวลาค้นหา =====
 local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("SafeZones")
 local combatCache = {}
 local safeZoneCache = {}
@@ -370,29 +369,6 @@ local function isPlayerInCombat(player, character)
         return true
     end
     
-    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
-    if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
-        combatCache[player] = true
-        return true
-    end
-
-    if character then
-        local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
-        if cCombat == true or cCombat == 1 or cCombat == "1" then
-            combatCache[player] = true
-            return true
-        end
-        local combatObj = character:FindFirstChild("InCombat") 
-            or character:FindFirstChild("Combat") 
-            or character:FindFirstChild("CombatTag")
-            or character:FindFirstChild("PvpTag")
-
-        if combatObj then
-            combatCache[player] = true
-            return true
-        end
-    end
-
     combatCache[player] = false
     return false
 end
@@ -402,38 +378,25 @@ local function isInSafeZoneRadius(character)
     if not safeZonesFolder then return false end
     
     local charPos = character.HumanoidRootPart.Position
-    
     for _, zonePart in ipairs(safeZonesFolder:GetChildren()) do
         if zonePart:IsA("BasePart") then
             local zonePos = zonePart.Position
-            local radius
-            
-            local mesh = zonePart:FindFirstChildOfClass("SpecialMesh")
-            radius = mesh and (mesh.Scale.X / 2) * math.max(zonePart.Size.X, zonePart.Size.Z) or math.max(zonePart.Size.X, zonePart.Size.Z) / 2
-            
+            local radius = math.max(zonePart.Size.X, zonePart.Size.Z) / 2
             if (charPos - zonePos).Magnitude <= radius then
                 return true
             end
         end
     end
-    
     return false
 end
 
 local function isPlayerInSafeZone(player, character)
     if not player then return false end
-    if isPlayerInCombat(player, character) then
-        safeZoneCache[player] = false
-        return false
-    end
-
+    if isPlayerInCombat(player, character) then return false end
     if safeZoneCache[player] ~= nil then return safeZoneCache[player] end
 
     local inSafeZoneAttr = player:GetAttribute("SafeZone") or (character and character:GetAttribute("SafeZone"))
-    local inRadius = character and isInSafeZoneRadius(character)
-    local hasTempSafeZone = character and character:FindFirstChild("TempSafeZone")
-    
-    local result = (inSafeZoneAttr == true or inRadius or hasTempSafeZone) == true
+    local result = (inSafeZoneAttr == true or (character and isInSafeZoneRadius(character))) == true
     safeZoneCache[player] = result
     return result
 end
@@ -498,18 +461,9 @@ local function GetAllValidTargets()
     return cachedValidTargets
 end
 
-local cachedFOVMode = "Middle"
-local lastModeCheck = 0
-
 local function GetReferencePosition()
-    local now = tick()
-    if now - lastModeCheck > 0.5 then
-        cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
-        lastModeCheck = now
-    end
-    
     local viewportSize = Camera.ViewportSize
-    if cachedFOVMode:find("mouse") then
+    if tostring(getgenv().FOVPositionMode):lower():find("mouse") then
         return LastMousePosition
     else
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
@@ -519,7 +473,7 @@ end
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
     local fovRadius = getgenv().FOVRadius or 100
-    local ShortestDistance = (fovRadius >= 99999) and 99999 or fovRadius
+    local ShortestDistance = fovRadius
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
     
@@ -537,7 +491,6 @@ local function GetTargetInFOV(refPos)
             local targetPlayer = Players:GetPlayerFromCharacter(char)
             if not ShouldIgnoreTarget(char, targetPlayer) then
                 local worldDistance = (targetPart.Position - myHRP.Position).Magnitude
-                
                 if worldDistance <= maxDistance then
                     local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
                     if onScreen then
@@ -580,15 +533,13 @@ local function getTargetCFrame()
     if target ~= lastTarget then
         clearCache()
         lastTarget = target
-        cachedPart = target.Parent:FindFirstChild("HumanoidRootPart")
+        cachedPart = target.Parent:FindFirstChild("HumanoidRootPart") or target
     end
-    
     return cachedPart
 end
 
 local function getPredictedPosition(rootPart)
     if not rootPart then return nil, nil end
-    
     local pos = rootPart.Position
     if not getgenv().PredictionEnabled then return pos, rootPart.CFrame end
     
@@ -597,86 +548,63 @@ local function getPredictedPosition(rootPart)
     return predictedPos, rootPart.CFrame
 end
 
+-- ===== HOOK SYSTEM (รองรับมือถือและคอมพิวเตอร์อย่างสมบูรณ์) =====
 task.spawn(function()
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-
-    repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
     local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
 
-    local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
-
-local oldIndex
-oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-    -- ถ้าปิด Silent Aim ให้ทำงานตามปกติ
-    if not getgenv().SilentAimEnabled then 
-        return oldIndex(self, idx) 
-    end
-    
-    -- จัดการกรณีอยู่บนมือถือ (ใช้กล้อง/มุมมองตรงกลางแทน Mouse)
-    if isMobile then
-        -- ดักจับการเรียกตำแหน่งเป้าหมายกลางจอหรือทิศทางกล้องบนมือถือ
-        if idx == "Hit" then
-            local rootPart = getTargetCFrame()
-            if not rootPart then 
-                clearCache()
-                return oldIndex(self, idx) 
-            end
-            
-            local predPos, rootCFrame = getPredictedPosition(rootPart)
-            if not predPos then 
-                clearCache()
-                return oldIndex(self, idx) 
-            end
-            
-            -- คืนค่า CFrame ไปที่เป้าหมายที่คำนวณไว้
-            return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        elseif idx == "Target" then
-            local rootPart = getTargetCFrame()
-            return rootPart or oldIndex(self, idx)
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+        if not getgenv().SilentAimEnabled then 
+            return oldIndex(self, idx) 
         end
-    else
-        -- โค้ดเดิมสำหรับคอมพิวเตอร์ (Mouse)
-        if self == Mouse then
-            if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
-                return oldIndex(self, idx)
-            end
-            
-            local rootPart = getTargetCFrame()
-            if not rootPart then 
-                clearCache()
-                return oldIndex(self, idx) 
-            end
-            
-            local predPos, rootCFrame = getPredictedPosition(rootPart)
-            if not predPos then 
-                clearCache()
-                return oldIndex(self, idx) 
-            end
-            
-            if idx == "Hit" then 
+        
+        -- ถ้าอยู่บนมือถือ ให้จำลองค่าพฤติกรรมผ่านกล้อง/เป้าหมายตรงกลางแทน Mouse
+        if isMobile then
+            if idx == "Hit" then
+                local rootPart = getTargetCFrame()
+                if not rootPart then clearCache() return oldIndex(self, idx) end
+                local predPos, rootCFrame = getPredictedPosition(rootPart)
+                if not predPos then clearCache() return oldIndex(self, idx) end
                 return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-            elseif idx == "Target" then 
-                return rootPart
-            elseif idx == "X" or idx == "Y" then 
-                local currentFrame = tick()
-                if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
-                    lastCachedFrame = currentFrame
-                    lastPredPos = predPos
-                    cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+            elseif idx == "Target" then
+                local rootPart = getTargetCFrame()
+                return rootPart or oldIndex(self, idx)
+            end
+        else
+            -- บนคอมพิวเตอร์ (ใช้ Mouse ปกติ)
+            if success and self == Mouse then
+                if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
+                    return oldIndex(self, idx)
                 end
-                return cachedScreenPoint[idx]
+                
+                local rootPart = getTargetCFrame()
+                if not rootPart then clearCache() return oldIndex(self, idx) end
+                local predPos, rootCFrame = getPredictedPosition(rootPart)
+                if not predPos then clearCache() return oldIndex(self, idx) end
+                
+                if idx == "Hit" then 
+                    return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
+                elseif idx == "Target" then 
+                    return rootPart
+                elseif idx == "X" or idx == "Y" then 
+                    local currentFrame = tick()
+                    if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
+                        lastCachedFrame = currentFrame
+                        lastPredPos = predPos
+                        cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+                    end
+                    return cachedScreenPoint[idx]
+                end
             end
         end
-    end
-    
-    return oldIndex(self, idx)
-end))
+        
+        return oldIndex(self, idx)
+    end))
 
+    -- รองรับการยิงผ่าน Remote (Namecall) ทั้งมือถือและพีซี
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         if not getgenv().SilentAimEnabled then
-            clearCache()
             return oldNamecall(self, ...)
         end
         
@@ -686,19 +614,12 @@ end))
         end
         
         local rootPart = getTargetCFrame()
-        if not rootPart then
-            clearCache()
-            return oldNamecall(self, ...)
-        end
+        if not rootPart then return oldNamecall(self, ...) end
         
         local predPos, rootCFrame = getPredictedPosition(rootPart)
-        if not predPos then 
-            clearCache()
-            return oldNamecall(self, ...) 
-        end
+        if not predPos then return oldNamecall(self, ...) end
         
         local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        
         local args = {...}
         for i = 1, #args do
             local argType = typeof(args[i])
@@ -718,42 +639,34 @@ local displayedUiColor = currentUiColor
 local lastFOVUpdate = 0
 local lastSnaplineUpdate = 0
 
-local function clearOldData()
-    getgenv().CurrentTarget = nil
-end
-
 RunService.RenderStepped:Connect(function(dt)
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled and not getgenv().ShowFOV then
-        clearOldData()
+        getgenv().CurrentTarget = nil
         return
     end
 
-    if typeof(clearCacheIfNeeded) == "function" then
-        clearCacheIfNeeded()
-    end
-
+    clearCacheIfNeeded()
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
     local character = LocalPlayer.Character
     if not character or not Camera then
-        clearOldData()
+        getgenv().CurrentTarget = nil
         return
     end
 
     local myRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
     if not myRoot then
-        clearOldData()
+        getgenv().CurrentTarget = nil
         return
     end
 
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
-
-    -- ===== FOV UI: ลดภาระการรันซ้ำซ้อนใน RenderStepped =====
     local now = tick()
+
+    -- อัปเดต FOV UI
     if now - lastFOVUpdate > 0.05 then
         lastFOVUpdate = now
-        
         if FOVUI then
             if mode == "360°" or mode == "180°" then
                 FOVUI.Visible = false
@@ -770,12 +683,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
-        clearOldData()
-        return
-    end
-
-    -- ===== TARGET FINDING =====
+    -- ค้นหาเป้าหมาย
     local bestTarget = nil
     local shortestDistance = math.huge
     local maxDistance = getgenv().MaxDistance or 1000
@@ -816,7 +724,7 @@ RunService.RenderStepped:Connect(function(dt)
     
     getgenv().CurrentTarget = bestTarget
 
-    -- ===== CAMLOCK =====
+    -- Camlock
     if getgenv().CamlockEnabled and bestTarget then
         local targetPos, _ = getPredictedPosition(bestTarget)
         if targetPos then
@@ -824,40 +732,19 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ===== SNAPLINE =====
+    -- Snapline (Tracer)
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
-        
         if bestTarget and getgenv().ShowTracer and Snapline then
-            local targetPart = bestTarget
-            if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
-                targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
-            end
-
-            if targetPart and targetPart:IsA("BasePart") then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                if onScreen and screenPos.Z > 0 then
-                    local origin = getgenv().TracerOrigin or "Center"
-                    local startPos
-
-                    if origin == "Center" then
-                        startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                    elseif origin == "Bottom" then
-                        startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                    else
-                        local myPos = Camera:WorldToViewportPoint(myRoot.Position)
-                        startPos = Vector2.new(myPos.X, myPos.Y)
-                    end
-
-                    Snapline.From = startPos
-                    Snapline.To = Vector2.new(screenPos.X, screenPos.Y)
-                    Snapline.Color = displayedUiColor
-                    Snapline.Thickness = getgenv().TracerThickness or 1
-                    Snapline.Transparency = getgenv().TracerTransparency or 1
-                    Snapline.Visible = true
-                else
-                    Snapline.Visible = false
-                end
+            local screenPos, onScreen = Camera:WorldToViewportPoint(bestTarget.Position)
+            if onScreen and screenPos.Z > 0 then
+                local startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                Snapline.From = startPos
+                Snapline.To = Vector2.new(screenPos.X, screenPos.Y)
+                Snapline.Color = displayedUiColor
+                Snapline.Thickness = getgenv().TracerThickness or 1
+                Snapline.Transparency = getgenv().TracerTransparency or 1
+                Snapline.Visible = true
             else
                 Snapline.Visible = false
             end
@@ -866,6 +753,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
+
 
 local function initializeSkillSettings()
 local Players = game:GetService("Players")
