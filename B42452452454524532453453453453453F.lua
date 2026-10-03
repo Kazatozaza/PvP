@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [3.0] ",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -4222,7 +4222,6 @@ local P = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local CG = game:GetService("CoreGui")
 local TS = game:GetService("TweenService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local L = P.LocalPlayer
 
@@ -4276,7 +4275,7 @@ local function tw(o, t, p)
 end
 
 local function SoruAction()
-    -- ค้นหาปุ่ม Soru ของมือถือในเกมแล้วกดจำลองการทัชทันทีโดยไม่มีคูลดาวน์
+    -- ค้นหาปุ่ม Soru ของเกมต้นฉบับ แล้วสั่งกดปุ่มนั้นโดยตรงผ่านฟังก์ชัน Built-in ของ Roblox
     local playerGui = L:FindFirstChild("PlayerGui")
     if playerGui then
         local mobileContext = playerGui:FindFirstChild("MobileContextButtons")
@@ -4284,15 +4283,30 @@ local function SoruAction()
             local contextFrame = mobileContext:FindFirstChild("ContextButtonFrame")
             if contextFrame then
                 local soruBtn = contextFrame:FindFirstChild("BoundActionSoru")
-                if soruBtn and soruBtn:IsA("GuiObject") then
-                    local absPos = soruBtn.AbsolutePosition
-                    local absSize = soruBtn.AbsoluteSize
-                    local clickX = absPos.X + (absSize.X / 2)
-                    local clickY = absPos.Y + (absSize.Y / 2)
-
-                    VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.Begin, clickX, clickY, soruBtn)
-                    task.wait(0.05)
-                    VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.End, clickX, clickY, soruBtn)
+                if soruBtn then
+                    -- วิธีที่ดีที่สุด: จำลองการกดปุ่ม UI โดยตรง (รองรับทั้ง MouseButton1Click, Activated หรือ Event ของเกม)
+                    if soruBtn:IsA("GuiButton") then
+                        -- ลองสั่ง Trigger ผ่าน Activated หรือ MouseButton1Click ถ้ามี
+                        local success, err = pcall(function()
+                            -- จำลองการคลิกปุ่มตรงๆ แบบสะอาดที่สุด
+                            for _, connection in pairs(getconnections(soruBtn.Activated or soruBtn.MouseButton1Click)) do
+                                connection:Fire()
+                            end
+                        end)
+                        
+                        -- เผื่อเกมใช้ระบบ Input แบบอื่นหรือ getconnections ถูกปิดกั้น ให้ fallback ไปสั่งผ่าน MouseButton1Click ปกติ
+                        if not success then
+                            if soruBtn:IsA("TextButton") or soruBtn:IsA("ImageButton") then
+                                -- ถ้าปุ่มมีฟังก์ชันสคริปต์ผูกไว้ เราสามารถจำลองกดแบบเบสิกได้
+                                local vim = game:GetService("VirtualInputManager")
+                                local absPos = soruBtn.AbsolutePosition
+                                local absSize = soruBtn.AbsoluteSize
+                                vim:SendMouseButtonEvent(absPos.X + absSize.X/2, absPos.Y + absSize.Y/2, 0, true, game, 0)
+                                task.wait(0.02)
+                                vim:SendMouseButtonEvent(absPos.X + absSize.X/2, absPos.Y + absSize.Y/2, 0, false, game, 0)
+                            end
+                        end
+                    end
                 end
             end
         end
