@@ -2398,9 +2398,9 @@ end)
 
 -- UI Toggle
 local Toggle = System:Toggle({
-    Title = "Cooldown Soru (CommE Hook)",
+    Title = "Instant Soru",
     Type = "Checkbox",
-    Desc = "สลับเปิด/ปิด Soru 1 ครั้งทุกครั้งที่ยิงรีโมท Soru",
+    Desc = "Bypass Soru Cooldown",
     Flag = "SoruToggle",
 
     Callback = function(state)
