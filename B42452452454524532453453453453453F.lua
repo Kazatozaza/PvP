@@ -331,22 +331,40 @@ UserInputService.InputBegan:Connect(function(input)
 end)
 
 local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("SafeZones")
+local combatCache = {}
+local safeZoneCache = {}
+local lastEnemiesCheck = 0
+local cachedEnemiesFolder = nil
 
 local function getCachedEnemiesFolder()
-    return Workspace:FindFirstChild("Enemies")
+    local now = os.clock()
+    if now - lastEnemiesCheck > 1 then
+        cachedEnemiesFolder = Workspace:FindFirstChild("Enemies")
+        lastEnemiesCheck = now
+    end
+    return cachedEnemiesFolder
 end
 
 local function isPlayerInCombat(player, character)
     if not player then return false end
+    if combatCache[player] ~= nil then return combatCache[player] end
     
     local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag")
     if pCombat == true or pCombat == 1 or pCombat == "1" then
+        combatCache[player] = true
         return true
     end
     
+    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
+    if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
+        combatCache[player] = true
+        return true
+    end
+
     if character then
         local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
         if cCombat == true or cCombat == 1 or cCombat == "1" then
+            combatCache[player] = true
             return true
         end
         local combatObj = character:FindFirstChild("InCombat") 
@@ -355,10 +373,12 @@ local function isPlayerInCombat(player, character)
             or character:FindFirstChild("PvpTag")
 
         if combatObj then
+            combatCache[player] = true
             return true
         end
     end
 
+    combatCache[player] = false
     return false
 end
 
@@ -388,14 +408,19 @@ end
 local function isPlayerInSafeZone(player, character)
     if not player then return false end
     if isPlayerInCombat(player, character) then
+        safeZoneCache[player] = false
         return false
     end
+
+    if safeZoneCache[player] ~= nil then return safeZoneCache[player] end
 
     local inSafeZoneAttr = player:GetAttribute("SafeZone") or (character and character:GetAttribute("SafeZone"))
     local inRadius = character and isInSafeZoneRadius(character)
     local hasTempSafeZone = character and character:FindFirstChild("TempSafeZone")
     
-    return (inSafeZoneAttr == true or inRadius or hasTempSafeZone) == true
+    local result = (inSafeZoneAttr == true or inRadius or hasTempSafeZone) == true
+    safeZoneCache[player] = result
+    return result
 end
 
 local function ShouldIgnoreTarget(targetCharacter, targetPlayer)
@@ -418,8 +443,12 @@ local function ShouldIgnoreTarget(targetCharacter, targetPlayer)
     return false
 end
 
-local function GetAllValidTargets()
-    local targets = {}
+local cachedValidTargets = {}
+local lastTargetUpdate = 0
+local targetUpdateInterval = 0.5
+
+local function UpdateValidTargets()
+    table.clear(cachedValidTargets)  
     local mode = getgenv().TargetMode or "Both"
     
     if mode == "Both" or mode == "Players Only" then
@@ -427,7 +456,7 @@ local function GetAllValidTargets()
         for i = 1, #players do
             local player = players[i]
             if player ~= LocalPlayer and player.Character then
-                table.insert(targets, player.Character)
+                table.insert(cachedValidTargets, player.Character)
             end
         end
     end
@@ -439,16 +468,31 @@ local function GetAllValidTargets()
             for i = 1, #children do
                 local enemyModel = children[i]
                 if enemyModel:IsA("Model") then
-                    table.insert(targets, enemyModel)
+                    table.insert(cachedValidTargets, enemyModel)
                 end
             end
         end
     end
-    return targets
 end
 
+local function GetAllValidTargets()
+    if os.clock() - lastTargetUpdate >= targetUpdateInterval then
+        lastTargetUpdate = os.clock()
+        UpdateValidTargets()
+    end
+    return cachedValidTargets
+end
+
+local cachedFOVMode = "Middle"
+local lastModeCheck = 0
+
 local function GetReferencePosition()
-    local cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
+    local now = os.clock()
+    if now - lastModeCheck > 0.5 then
+        cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
+        lastModeCheck = now
+    end
+    
     local viewportSize = Camera.ViewportSize
     if cachedFOVMode:find("mouse") then
         return LastMousePosition
@@ -495,12 +539,35 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
+local cachedPart = nil
+local lastTarget = nil
+local cachedScreenPoint = nil
+local lastPredPos = nil
+
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
     if not target or not target.Parent then 
+        cachedPart = nil
+        lastTarget = nil
+        cachedScreenPoint = nil
+        lastPredPos = nil
+        table.clear(combatCache)
+        table.clear(safeZoneCache)
         return nil 
     end
-    return target.Parent:FindFirstChild("HumanoidRootPart") or target
+
+    if target ~= lastTarget then
+        cachedPart = nil
+        lastTarget = nil
+        cachedScreenPoint = nil
+        lastPredPos = nil
+        table.clear(combatCache)
+        table.clear(safeZoneCache)
+        lastTarget = target
+        cachedPart = target.Parent:FindFirstChild("HumanoidRootPart")
+    end
+    
+    return cachedPart
 end
 
 local function getPredictedPosition(rootPart)
@@ -534,11 +601,23 @@ task.spawn(function()
         
         local rootPart = getTargetCFrame()
         if not rootPart then 
+            cachedPart = nil
+            lastTarget = nil
+            cachedScreenPoint = nil
+            lastPredPos = nil
+            table.clear(combatCache)
+            table.clear(safeZoneCache)
             return oldIndex(self, idx) 
         end
         
         local predPos, rootCFrame = getPredictedPosition(rootPart)
         if not predPos then 
+            cachedPart = nil
+            lastTarget = nil
+            cachedScreenPoint = nil
+            lastPredPos = nil
+            table.clear(combatCache)
+            table.clear(safeZoneCache)
             return oldIndex(self, idx) 
         end
         
@@ -547,7 +626,10 @@ task.spawn(function()
         elseif idx == "Target" then 
             return rootPart
         elseif idx == "X" or idx == "Y" then 
-            local cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+            if lastPredPos ~= predPos then
+                lastPredPos = predPos
+                cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+            end
             return cachedScreenPoint[idx]
         end
         
@@ -557,6 +639,12 @@ task.spawn(function()
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         if not getgenv().SilentAimEnabled then
+            cachedPart = nil
+            lastTarget = nil
+            cachedScreenPoint = nil
+            lastPredPos = nil
+            table.clear(combatCache)
+            table.clear(safeZoneCache)
             return oldNamecall(self, ...)
         end
         
@@ -567,11 +655,23 @@ task.spawn(function()
         
         local rootPart = getTargetCFrame()
         if not rootPart then
+            cachedPart = nil
+            lastTarget = nil
+            cachedScreenPoint = nil
+            lastPredPos = nil
+            table.clear(combatCache)
+            table.clear(safeZoneCache)
             return oldNamecall(self, ...)
         end
         
         local predPos, rootCFrame = getPredictedPosition(rootPart)
         if not predPos then 
+            cachedPart = nil
+            lastTarget = nil
+            cachedScreenPoint = nil
+            lastPredPos = nil
+            table.clear(combatCache)
+            table.clear(safeZoneCache)
             return oldNamecall(self, ...) 
         end
         
