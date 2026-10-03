@@ -2690,21 +2690,21 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
-local modules = ReplicatedStorage:FindFirstChild("Modules")
-local net = modules and modules:FindFirstChild("Net")
-local registerHit = net and net:FindFirstChild("RE/RegisterHit")
-local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")
+-- ใช้ WaitForChild แทน FindFirstChild เพื่อให้มั่นใจว่ามือถือโหลด Modules เสร็จก่อนรัน
+local modules = ReplicatedStorage:WaitForChild("Modules", 5)
+local net = modules and modules:WaitForChild("Net", 5)
+local registerHit = net and net:WaitForChild("RE/RegisterHit", 5)
+local registerAttack = net and net:WaitForChild("RE/RegisterAttack", 5)
 
 local fastAttackRunning = false
-local attackDelay = 0.15 -- [ชัวๆ] ปรับเป็น 0.15 (ประมาณ 6-7 ครั้ง/วินาที) ปลอดภัยต่อการโดน Kick มากกว่า
+local attackDelay = 0.15 -- [สำคัญ] มือถือควรใช้ 0.15 เพื่อไม่ให้ Script ถูกระงับ (Freeze)
 
--- ฟังก์ชันคำนวณทิศทางแบบเนียนๆ (ใส่ Random เล็กน้อยเพื่อให้ Server ไม่มองว่าเป็น Bot)
 local function GetAttackDirection(root, target)
     local direction = (target.Position - root.Position).Unit
     return Vector3.new(
-        direction.X + (math.random(-5, 5)/100),
+        direction.X + (math.random(-10, 10)/100),
         0, 
-        direction.Z + (math.random(-5, 5)/100)
+        direction.Z + (math.random(-10, 10)/100)
     )
 end
 
@@ -2716,76 +2716,89 @@ local function Attack(targetPart, tool)
     local leftClickRemote = tool and tool:FindFirstChild("LeftClickRemote")
     local attackDir = GetAttackDirection(root, targetPart)
     
-    -- ใช้ pcall เพื่อป้องกันสคริปต์หยุดทำงานหาก Remote ถูกเปลี่ยนชื่อหรือหายไป
-    pcall(function()
-        if leftClickRemote and leftClickRemote:IsA("RemoteEvent") then
+    if leftClickRemote and leftClickRemote:IsA("RemoteEvent") then
+        -- ใช้ pcall เพื่อไม่ให้ Error บนมือถือทำให้ Loop หยุดทำงาน
+        pcall(function()
             leftClickRemote:FireServer(attackDir, 1)
-        elseif registerHit and registerAttack then
+        end)
+    elseif registerHit and registerAttack then
+        pcall(function()
+            -- ใช้ Key ล่าสุด หรือลองเปลี่ยนเป็น Key ที่ดักได้จากคอม
             registerHit:FireServer(targetPart, {["HitPos"] = targetPart.Position}, "211ee8ef")
             registerAttack:FireServer(0.4, 1)
-        end
-    end)
+        end)
+    end
 end
 
 local function SetFastAttack(state)
     fastAttackRunning = state
     if not state then return end
 
-    -- ใช้ task.spawn เพื่อให้ UI ไม่ค้าง และใช้ while loop เพื่อความเสถียรบนมือถือ
-    task.spawn(function()
+    -- ใช้ task.defer แทน task.spawn เพื่อให้มือถือจัดการคิวงานได้ดีขึ้น
+    task.defer(function()
         while fastAttackRunning do
-            pcall(function()
+            -- ใช้ pcall ครอบทั้ง Loop เพื่อป้องกันมือถือ Crash
+            local success, err = pcall(function()
                 local char = player.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                if root then
-                    local currentTool = char:FindFirstChildOfClass("Tool")
-                    local target = nil
-                    
-                    -- [ชัวๆ] ระยะ 30-40 studs คือระยะที่ Server ส่วนใหญ่ยอมรับว่า "เป็นไปได้" (ไม่ดูโกงเกินไป)
-                    local searchRange = 35 
+                if not char then return end
+                
+                local root = char:FindFirstChild("HumanoidRootPart")
+                if not root then return end
 
-                    -- 1. หา NPC
-                    local enemies = workspace:FindFirstChild("Enemies")
-                    if enemies then
-                        for _, enemy in ipairs(enemies:GetChildren()) do
-                            local ep = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
-                            local eh = enemy:FindFirstChildOfClass("Humanoid")
-                            if ep and eh and eh.Health > 0 and (root.Position - ep.Position).Magnitude <= searchRange then
-                                target = ep
+                -- [แก้จุดบอดมือถือ] ตรวจสอบ Tool ทั้งในตัวและใน Backpack
+                local currentTool = char:FindFirstChildOfClass("Tool") or player.Backpack:FindFirstChildOfClass("Tool")
+                
+                local target = nil
+                
+                -- เช็ค NPC
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    for _, enemy in ipairs(enemies:GetChildren()) do
+                        local ep = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
+                        local eh = enemy:FindFirstChildOfClass("Humanoid")
+
+                        if ep and eh and eh.Health > 0
+                            and (root.Position - ep.Position).Magnitude <= 60 then
+                            target = ep
+                            break
+                        end
+                    end
+                end
+
+                -- เช็คผู้เล่น
+                if not target then
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        if p ~= player and p.Character then
+                            local rp = p.Character:FindFirstChild("HumanoidRootPart")
+                            local rh = p.Character:FindFirstChildOfClass("Humanoid")
+
+                            if rp and rh and rh.Health > 0
+                                and (root.Position - rp.Position).Magnitude <= 60 then
+                                target = rp
                                 break
                             end
                         end
                     end
-                    
-                    -- 2. ถ้าไม่เจอ NPC ให้หาผู้เล่น
-                    if not target then
-                        for _, p in ipairs(Players:GetPlayers()) do
-                            if p ~= player and p.Character then
-                                local rp = p.Character:FindFirstChild("HumanoidRootPart")
-                                local rh = p.Character:FindFirstChildOfClass("Humanoid")
-                                if rp and rh and rh.Health > 0 and (root.Position - rp.Position).Magnitude <= searchRange then
-                                    target = rp
-                                    break
-                                end
-                            end
-                        end
-                    end
+                end
 
-                    if target then
-                        Attack(target, currentTool)
-                    end
+                if target then
+                    Attack(target, currentTool)
                 end
             end)
-            task.wait(attackDelay) -- ใช้ task.wait จะทำให้มือถือไม่ร้อนและไม่ค้าง
+            
+            if not success then
+                warn("Aura Error: " .. tostring(err))
+            end
+            
+            task.wait(attackDelay)
         end
     end)
 end
 
--- ส่วนเชื่อมต่อกับ UI Library ของคุณ
 if GeneralTab then
     GeneralTab:Toggle({
-        Title = "Stable Attack Aura",
-        Desc = "Safe Mode (Mobile Optimized)",
+        Title = "Attack Aura (Mobile Fix)",
+        Desc = "(All Fruits, Melee, Swords)",
         Type =  "Checkbox",
         Flag = "FastAttack",
         Value = false,
@@ -2794,6 +2807,7 @@ if GeneralTab then
         end,
     })
 end
+
 
 
 GeneralTab:Toggle({
