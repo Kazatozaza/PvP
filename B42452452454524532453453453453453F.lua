@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.1] ",
+        Title = "Project Destiny [v3.000] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -547,22 +547,10 @@ local lastPredPos = nil
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
     if not target or not target.Parent then 
-        cachedPart = nil
-        lastTarget = nil
-        cachedScreenPoint = nil
-        lastPredPos = nil
-        table.clear(combatCache)
-        table.clear(safeZoneCache)
         return nil 
     end
 
     if target ~= lastTarget then
-        cachedPart = nil
-        lastTarget = nil
-        cachedScreenPoint = nil
-        lastPredPos = nil
-        table.clear(combatCache)
-        table.clear(safeZoneCache)
         lastTarget = target
         cachedPart = target.Parent:FindFirstChild("HumanoidRootPart")
     end
@@ -601,23 +589,11 @@ task.spawn(function()
         
         local rootPart = getTargetCFrame()
         if not rootPart then 
-            cachedPart = nil
-            lastTarget = nil
-            cachedScreenPoint = nil
-            lastPredPos = nil
-            table.clear(combatCache)
-            table.clear(safeZoneCache)
             return oldIndex(self, idx) 
         end
         
         local predPos, rootCFrame = getPredictedPosition(rootPart)
         if not predPos then 
-            cachedPart = nil
-            lastTarget = nil
-            cachedScreenPoint = nil
-            lastPredPos = nil
-            table.clear(combatCache)
-            table.clear(safeZoneCache)
             return oldIndex(self, idx) 
         end
         
@@ -639,12 +615,6 @@ task.spawn(function()
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         if not getgenv().SilentAimEnabled then
-            cachedPart = nil
-            lastTarget = nil
-            cachedScreenPoint = nil
-            lastPredPos = nil
-            table.clear(combatCache)
-            table.clear(safeZoneCache)
             return oldNamecall(self, ...)
         end
         
@@ -655,23 +625,11 @@ task.spawn(function()
         
         local rootPart = getTargetCFrame()
         if not rootPart then
-            cachedPart = nil
-            lastTarget = nil
-            cachedScreenPoint = nil
-            lastPredPos = nil
-            table.clear(combatCache)
-            table.clear(safeZoneCache)
             return oldNamecall(self, ...)
         end
         
         local predPos, rootCFrame = getPredictedPosition(rootPart)
         if not predPos then 
-            cachedPart = nil
-            lastTarget = nil
-            cachedScreenPoint = nil
-            lastPredPos = nil
-            table.clear(combatCache)
-            table.clear(safeZoneCache)
             return oldNamecall(self, ...) 
         end
         
