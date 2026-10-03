@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.010] ",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -2690,54 +2690,52 @@ CombatTab:Dropdown({
     end,
 })
 
-local Players = game:GetService("Players")  
-local ReplicatedStorage = game:GetService("ReplicatedStorage")  
-local RunService = game:GetService("RunService")  
-local player = Players.LocalPlayer  
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
 
-local modules = ReplicatedStorage:FindFirstChild("Modules")  
-local net = modules and modules:FindFirstChild("Net")  
-local registerHit = net and net:FindFirstChild("RE/RegisterHit")  
-local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")  
+local modules = ReplicatedStorage:FindFirstChild("Modules")
+local net = modules and modules:FindFirstChild("Net")
+local registerHit = net and net:FindFirstChild("RE/RegisterHit")
+local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")
 
-local fastAttackRunning = false  
-local connection  
-local lastAttackTime = 0  
-local attackDelay = 0.15 -- เพิ่มเป็น 0.15 เพื่อความเสถียรบนมือถือ
+local fastAttackRunning = false
+local connection
+local lastAttackTime = 0
+local attackDelay = 0.1 
 
-local function GetAttackDirection(root, target)  
-    local direction = (target.Position - root.Position).Unit  
-    return Vector3.new(  
-        direction.X + (math.random(-10, 10)/100),  
-        0,  
-        direction.Z + (math.random(-10, 10)/100)  
-    )  
-end  
+-- // ฟังก์ชันคำนวณทิศทาง //
+local function GetAttackDirection(root, target)
+    local direction = (target.Position - root.Position).Unit
+    return Vector3.new(
+        direction.X + (math.random(-10, 10)/100),
+        0, 
+        direction.Z + (math.random(-10, 10)/100)
+    )
+end
 
-local function Attack(targetPart, tool)  
-    local char = player.Character  
-    local root = char and char:FindFirstChild("HumanoidRootPart")  
-    if not root or not targetPart then return end  
+local function Attack(targetPart, tool)
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root or not targetPart then return end
 
-    local leftClickRemote = tool and tool:FindFirstChild("LeftClickRemote")  
-    local attackDir = GetAttackDirection(root, targetPart)  
-
-    -- พยายามส่งทั้ง 2 ระบบ เพื่อให้มั่นใจว่าดาบ/หมัด/ผลไม้ จะทำงานทั้งหมด
-    if leftClickRemote and leftClickRemote:IsA("RemoteEvent") then  
-        pcall(function()  
-            leftClickRemote:FireServer(attackDir, 1)  
-        end)  
-    end  
-
-    -- สำหรับดาบและหมัด (Melee/Sword) มักใช้ระบบ RegisterHit
-    if registerHit and registerAttack then  
-        pcall(function()  
-            -- ส่งข้อมูลตำแหน่งที่โดน และ Key สำหรับยืนยัน (ถ้าเกมมีการเปลี่ยน Key ต้องอัปเดต "211ee8ef")
-            registerHit:FireServer(targetPart, {["HitPos"] = targetPart.Position}, "211ee8ef")  
-            registerAttack:FireServer(0.4, 1)  
-        end)  
-    end  
-end  
+    local leftClickRemote = tool and tool:FindFirstChild("LeftClickRemote")
+    local attackDir = GetAttackDirection(root, targetPart)
+    
+    if leftClickRemote and leftClickRemote:IsA("RemoteEvent") then
+        pcall(function()
+            leftClickRemote:FireServer(attackDir, 1)
+        end)
+    else
+        if registerHit and registerAttack then
+            pcall(function()
+                registerHit:FireServer(targetPart, {["HitPos"] = targetPart.Position}, "211ee8ef")
+                registerAttack:FireServer(0.4, 1)
+            end)
+        end
+    end
+end
 
 local function SetFastAttack(state)
     fastAttackRunning = state
@@ -2752,6 +2750,7 @@ local function SetFastAttack(state)
     connection = RunService.Heartbeat:Connect(function()
         if not fastAttackRunning then return end
         
+        -- เพิ่มระบบ Delay เพื่อให้ใช้บนมือถือได้เสถียรขึ้นและไม่โดนเตะ
         if tick() - lastAttackTime < attackDelay then return end
         lastAttackTime = tick()
 
@@ -2761,14 +2760,8 @@ local function SetFastAttack(state)
             local root = char:FindFirstChild("HumanoidRootPart")
             if not root then return end
 
-            -- [ปรับปรุง] ค้นหา Tool ทั้งในตัวละคร และใน Backpack (เผื่อกรณีมือถือยังไม่ได้ equip ทูล)
+            -- ตรวจสอบ Tool ใน Character หรือใน Backpack (สำหรับบางระบบ)
             local currentTool = char:FindFirstChildOfClass("Tool")
-            if not currentTool then
-                local backpack = player:FindFirstChildOfClass("Backpack")
-                if backpack then
-                    currentTool = backpack:FindFirstChildOfClass("Tool")
-                end
-            end
             
             -- 1. ตรวจสอบ NPC
             local enemies = workspace:FindFirstChild("Enemies")
@@ -2803,17 +2796,19 @@ local function SetFastAttack(state)
     end)
 end
 
--- ส่วนของ UI (คงเดิม)
-if GeneralTab then  
-    GeneralTab:Toggle({  
-        Title = "Attack Aura",  
-        Desc = "(All Fruits, Melee, Swords)",  
-        Type = "Checkbox",  
-        Flag = "FastAttack",  
-        Value = false,  
-        Callback = function(state) SetFastAttack(state) end,  
-    })  
+if GeneralTab then
+    local FastAttackToggle = GeneralTab:Toggle({
+        Title = "Attack Aura",
+        Desc = "(All Fruits, Melee, Swords)",
+        Type =  "Checkbox",
+        Flag = "FastAttack",
+        Value = false,
+        Callback = function(state)
+            SetFastAttack(state)
+        end,
+    })
 end
+
 
 GeneralTab:Toggle({
     Title = "Auto Race V4",
