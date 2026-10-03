@@ -4218,26 +4218,24 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
-
 local P = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local CG = game:GetService("CoreGui")
 local TS = game:GetService("TweenService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local L = P.LocalPlayer
 
 local old = CG:FindFirstChild("SoruUltimateUI")
 if old then old:Destroy() end
 
-local G = Instance.new("ScreenGui")
+local G = Instance.new("ScreenGui", CG)
 G.Name = "SoruUltimateUI"
 G.IgnoreGuiInset = true
 G.ResetOnSpawn = false
 G.ZIndexBehavior = Enum.ZIndexBehavior.Global
-G.Parent = CG
 
-local B = Instance.new("TextButton")
+local B = Instance.new("TextButton", G)
 B.Size = UDim2.fromOffset(84, 84)
 B.Position = UDim2.new(1, -60, .5, 0)
 B.AnchorPoint = Vector2.new(.5, .5)
@@ -4246,7 +4244,6 @@ B.BackgroundTransparency = .02
 B.Text = ""
 B.AutoButtonColor = false
 B.ZIndex = 10
-B.Parent = G
 
 Instance.new("UICorner", B).CornerRadius = UDim.new(1, 0)
 
@@ -4263,7 +4260,7 @@ Gd.Color = ColorSequence.new{
     ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 90, 130))
 }
 
-local T = Instance.new("TextLabel")
+local T = Instance.new("TextLabel", B)
 T.Size = UDim2.fromScale(1, 1)
 T.BackgroundTransparency = 1
 T.Text = "SORU"
@@ -4273,151 +4270,46 @@ T.Font = Enum.Font.GothamBold
 T.TextStrokeColor3 = Color3.new(0, 0, 0)
 T.TextStrokeTransparency = 0
 T.ZIndex = 20
-T.Parent = B
 
 local function tw(o, t, p)
-    TS:Create(
-        o,
-        TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-        p
-    ):Play()
-end
-
-local cooldown = false
-local waitingForClick = false
-
-local function normal()
-    T.Text = "SORU"
-    T.TextSize = 17
-    T.TextColor3 = Color3.new(1, 1, 1)
-    T.TextStrokeTransparency = 0
-
-    tw(B, .2, {
-        BackgroundColor3 = Color3.fromRGB(8, 12, 18)
-    })
-
-    tw(S, .2, {
-        Color = Color3.fromRGB(0, 220, 255),
-        Thickness = 2
-    })
-end
-
--- หา Soru Button ของเกม
-local function getGameSoruButton()
-    local playerGui = L:FindFirstChild("PlayerGui")
-    if not playerGui then return nil end
-
-    local mobile = playerGui:FindFirstChild("MobileContextButtons")
-    if not mobile then return nil end
-
-    local frame = mobile:FindFirstChild("ContextButtonFrame")
-    if not frame then return nil end
-
-    local soru = frame:FindFirstChild("BoundActionSoru")
-    if not soru then return nil end
-
-    return soru
-end
-
--- กดปุ่ม Soru ของเกม
-local function pressGameSoru()
-    local soru = getGameSoruButton()
-
-    if not soru then
-        return false
-    end
-
-    -- GuiButton:Activate() จะทำงานเหมือนการกดปุ่มจาก UI
-    if soru:IsA("GuiButton") then
-        pcall(function()
-            soru:Activate()
-        end)
-
-        return true
-    end
-
-    return false
+    TS:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), p):Play()
 end
 
 local function SoruAction()
-    if cooldown or waitingForClick then return end
+    -- ค้นหาปุ่ม Soru ของมือถือในเกมแล้วกดจำลองการทัชทันทีโดยไม่มีคูลดาวน์
+    local playerGui = L:FindFirstChild("PlayerGui")
+    if playerGui then
+        local mobileContext = playerGui:FindFirstChild("MobileContextButtons")
+        if mobileContext then
+            local contextFrame = mobileContext:FindFirstChild("ContextButtonFrame")
+            if contextFrame then
+                local soruBtn = contextFrame:FindFirstChild("BoundActionSoru")
+                if soruBtn and soruBtn:IsA("GuiObject") then
+                    local absPos = soruBtn.AbsolutePosition
+                    local absSize = soruBtn.AbsoluteSize
+                    local clickX = absPos.X + (absSize.X / 2)
+                    local clickY = absPos.Y + (absSize.Y / 2)
 
-    local soru = getGameSoruButton()
-    if not soru then
-        T.Text = "NO SORU"
-        T.TextSize = 13
-
-        task.delay(1, function()
-            if not cooldown and not waitingForClick and T.Parent then
-                normal()
+                    VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.Begin, clickX, clickY, soruBtn)
+                    task.wait(0.05)
+                    VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.End, clickX, clickY, soruBtn)
+                end
             end
-        end)
-
-        return
-    end
-
-    waitingForClick = true
-
-    T.Text = "AIM"
-    T.TextSize = 14
-
-    tw(B, .2, {
-        BackgroundColor3 = Color3.fromRGB(35, 27, 10)
-    })
-
-    tw(S, .2, {
-        Color = Color3.fromRGB(255, 190, 45),
-        Thickness = 3
-    })
-
-    -- กด Soru ของเกม
-    local success = pressGameSoru()
-
-    if not success then
-        waitingForClick = false
-        normal()
-        return
-    end
-
-    -- หลังจากกดแล้ว ปล่อยให้เกมรับนิ้ว/เมาส์เอง
-    -- ไม่มี Raycast และไม่มีการ CFrame วาร์ปจากสคริปต์นี้
-    waitingForClick = false
-    cooldown = true
-
-    task.spawn(function()
-        for n = 20, 1, -1 do
-            if not B.Parent then return end
-
-            T.Text = string.format("%.1f", n / 10)
-            T.TextSize = 21
-
-            task.wait(.1)
         end
-
-        cooldown = false
-        normal()
-    end)
+    end
 end
 
 B.Activated:Connect(function()
-    if cooldown or waitingForClick then return end
     SoruAction()
 end)
 
--- =========================
--- DRAG BUTTON
--- =========================
-
-local dragging = false
-local moved = false
-local dragStart
-local startPos
-local dragInput
+-- Drag (ระบบลากปุ่ม)
+local dragging, moved = false, false
+local dragStart, startPos, dragInput
 
 B.InputBegan:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1
     or i.UserInputType == Enum.UserInputType.Touch then
-
         dragging = true
         moved = false
         dragStart = i.Position
@@ -4428,7 +4320,6 @@ end)
 B.InputChanged:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseMovement
     or i.UserInputType == Enum.UserInputType.Touch then
-
         dragInput = i
     end
 end)
@@ -4437,10 +4328,7 @@ UIS.InputChanged:Connect(function(i)
     if not dragging or i ~= dragInput then return end
 
     local d = i.Position - dragStart
-
-    if d.Magnitude > 8 then
-        moved = true
-    end
+    if d.Magnitude > 8 then moved = true end
 
     B.Position = UDim2.new(
         startPos.X.Scale,
@@ -4452,92 +4340,42 @@ end)
 
 B.InputEnded:Connect(function(i)
     if i.UserInputType ~= Enum.UserInputType.MouseButton1
-    and i.UserInputType ~= Enum.UserInputType.Touch then
-        return
-    end
+    and i.UserInputType ~= Enum.UserInputType.Touch then return end
 
     dragging = false
     dragInput = nil
 end)
 
--- =========================
--- HOVER
--- =========================
-
+-- Hover
 B.MouseEnter:Connect(function()
-    if cooldown or waitingForClick then return end
-
-    tw(B, .15, {
-        Size = UDim2.fromOffset(89, 89)
-    })
-
-    tw(S, .15, {
-        Thickness = 3,
-        Transparency = 0
-    })
+    tw(B, .15, {Size = UDim2.fromOffset(89, 89)})
+    tw(S, .15, {Thickness = 3, Transparency = 0})
 end)
 
 B.MouseLeave:Connect(function()
-    if cooldown or waitingForClick then return end
-
-    tw(B, .15, {
-        Size = UDim2.fromOffset(84, 84)
-    })
-
-    tw(S, .15, {
-        Thickness = 2
-    })
+    tw(B, .15, {Size = UDim2.fromOffset(84, 84)})
+    tw(S, .15, {Thickness = 2})
 end)
 
--- =========================
--- PULSE
--- =========================
-
+-- Pulse
 task.spawn(function()
     while G.Parent do
-        if not cooldown and not waitingForClick then
-
-            tw(S, .8, {
-                Transparency = .5
-            })
-
-            task.wait(.8)
-
-            if not cooldown and not waitingForClick then
-                tw(S, .8, {
-                    Transparency = .05
-                })
-            end
-        end
-
+        tw(S, .8, {Transparency = .5})
+        task.wait(.8)
+        tw(S, .8, {Transparency = .05})
         task.wait(.8)
     end
 end)
 
--- =========================
--- TOGGLE UI
--- =========================
-
 getgenv().ToggleSoruUI = function(state)
-    if not G or not G.Parent then return end
-
-    G.Enabled = state
-
-    if not state then
-        waitingForClick = false
-        cooldown = false
-        normal()
+    if G and G.Parent then
+        G.Enabled = state
     end
 end
 
 getgenv().ToggleSoruUI(true)
 
--- =========================
--- WINDUI
--- =========================
-
 local SettingsGroup3 = Config:Group({})
-
 SettingsGroup3:Toggle({
     Title = "Soru Button",
     Type = "Checkbox",
