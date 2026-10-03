@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v4.0] ",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -556,19 +556,19 @@ local function GetPredictedPosition(rootPart)
     return predictedPos, rootPart.CFrame
 end
 
-
-
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
 local remoteCache = {}
+local lastTarget = nil
+
+-- ฟังก์ชันสำหรับล้างข้อมูลเก่าทั้งหมด (Cache และสถานะเป้าหมายเก่า)
+local function ClearOldData()
+    table.clear(remoteCache) -- ล้างแคชรีโมทเก่าทั้งหมด
+    lastTarget = nil
+end
 
 task.spawn(function()
-
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-
-    repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
     local success, Mouse = pcall(function()
         return LocalPlayer:GetMouse()
     end)
@@ -576,12 +576,31 @@ task.spawn(function()
 
     local function getRoot()
         local target = getgenv().CurrentTarget
+        
+        -- ถ้าเป้าหมายเปลี่ยนไปจากเดิม หรือเป้าหมายตาย/หายไป ให้ทำการล้างข้อมูลเก่าทันที
+        if target ~= lastTarget then
+            ClearOldData()
+            lastTarget = target
+        end
+
         if target and target.Parent then
             local character = target.Parent
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            
+            -- ถ้าเป้าหมายตาย (Health <= 0) ให้ล้างเป้าหมายและข้อมูลเก่าทันที
+            if humanoid and humanoid.Health <= 0 then
+                getgenv().CurrentTarget = nil
+                ClearOldData()
+                return nil
+            end
+
             return character:FindFirstChild("HumanoidRootPart") 
                 or character:FindFirstChild("UpperTorso") 
                 or character:FindFirstChild("Torso")
         end
+        
+        -- ถ้าไม่มีเป้าหมาย ให้ล้างข้อมูลทิ้งด้วย
+        ClearOldData()
         return nil
     end
 
@@ -617,7 +636,7 @@ task.spawn(function()
                     end
                 end
             end
-            
+
             if enabled and (method == "FireServer" or method == "InvokeServer") then
                 local targetPos = GetPredictedPosition(target)
                 if targetPos then
@@ -633,6 +652,11 @@ task.spawn(function()
                     end
                     return oldNamecall(self, unpack(args))
                 end
+            end
+        else
+            -- ถ้าไม่มีเป้าหมาย ให้แน่ใจว่าล้างข้อมูลเก่าเรียบร้อย
+            if lastTarget ~= nil then
+                ClearOldData()
             end
         end
 
