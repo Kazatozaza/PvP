@@ -18,8 +18,9 @@ local success, Window = pcall(function()
         ScrollBarEnabled = true,
     })
 end)
+
 Window:DisableTopbarButtons({ "Close", "Minimize" })
-Window:SetIconSize(27) 
+Window:SetIconSize(25) 
 Window:Section({ Title = "Control Panel" })
 local Home = Window:Tab({ Title = "Changelog !!", Icon = "clipboard-list" })
 local GeneralTab = Window:Tab({ Title = "General Main", Icon = "gauge" })
@@ -1102,23 +1103,18 @@ end
 
 local function GetTeam(player)
 	local name=player.Team and player.Team.Name or "Neutral"
-
 	if ESP.ShowAllTeams then
 		return name,C[name] or C.Neutral,true
 	end
-
 	if name=="Pirates" then
 		return name,C.Pirates,ESP.Pirates==true
 	end
-
 	if name=="Marines" then
 		return name,C.Marines,ESP.Marines==true
 	end
-
 	return name,C.Neutral,true
 end
 
--- ===== OPTIMIZATION: Cache level data =====
 local levelCache={}
 
 local function GetLevel(player)
@@ -1150,7 +1146,6 @@ local function GetLevel(player)
 	return "?"
 end
 
--- ===== OPTIMIZATION: Cache bounty data =====
 local bountyCache={}
 
 local function GetBounty(player)
@@ -2288,9 +2283,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- ==================================================
--- AUTOMATIC TARGET CLEANUP MODULE (ล้างเฉพาะเป้าหมาย)
--- ==================================================
 RunService.RenderStepped:Connect(function()
     local isSilentAimOn = getgenv().SilentAimEnabled == true
     local isCamlockOn = getgenv().CamlockEnabled == true
@@ -2333,9 +2325,7 @@ System:Toggle({
     Value = false,
     Callback = function(state)
         if state then
-            -- เปิดการใช้งาน: ดักฟังปุ่ม Spacebar บนคีย์บอร์ด
             jumpConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-                -- ถ้าพิมพ์แชทอยู่จะไม่ทำงาน (gameProcessed)
                 if gameProcessed then return end
                 
                 if input.KeyCode == Enum.KeyCode.Space then
@@ -2359,17 +2349,17 @@ System:Toggle({
 })
 
 local toggleState = false
-local soruCooldown = 3
-local MIN_COOLDOWN = 0.1
-local runId = 0
+local soruCooldown = 0.05
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 local function setSoru(soruScript, on)
     pcall(function() soruScript.Enabled = on end)
     pcall(function() soruScript.Disabled = not on end)
 end
+
 local function findSoru()
     local char = player.Character
     local soruScript = char and char:FindFirstChild("Soru")
@@ -2380,49 +2370,45 @@ local function findSoru()
     return charFolder and charFolder:FindFirstChild("Soru")
 end
 
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+
+    if toggleState and method == "FireServer" and self.Name == "CommE" and args[1] == "Soru" then
+        task.spawn(function()
+            local soruScript = findSoru()
+            if soruScript then
+                setSoru(soruScript, true)
+                task.wait(soruCooldown)
+                setSoru(soruScript, false)
+                task.wait(soruCooldown)
+                setSoru(soruScript, true)
+            end
+        end)
+    end
+
+    return oldNamecall(self, ...)
+end)
+
+-- UI Toggle
 local Toggle = System:Toggle({
-    Title = "Cooldown Soru",
+    Title = "Cooldown Soru (CommE Hook)",
     Type = "Checkbox",
-    Desc = "Cooldown reduction",
+    Desc = "สลับเปิด/ปิด Soru 1 ครั้งทุกครั้งที่ยิงรีโมท Soru",
     Flag = "SoruToggle",
 
     Callback = function(state)
         toggleState = state
-        runId = runId + 1 
-
         if not state then
-            return
+            local soruScript = findSoru()
+            if soruScript then
+                setSoru(soruScript, true)
+            end
         end
-
-        local myId = runId
-
-        task.spawn(function()
-            local lastSoru = nil
-
-            while toggleState and runId == myId do
-                local soruScript = findSoru()
-
-                if soruScript then
-                    lastSoru = soruScript
-                    local half = math.max(tonumber(soruCooldown) or 1, MIN_COOLDOWN) / 2
-
-                    setSoru(soruScript, true)
-                    task.wait(half)
-                    if not toggleState or runId ~= myId then break end
-
-                    setSoru(soruScript, false)
-                    task.wait(half)
-                else
-                    task.wait(0.5)
-                end
-            end
-
-            if runId == myId and lastSoru and lastSoru.Parent then
-                setSoru(lastSoru, true)
-            end
-        end)
     end
 })
+
 System:Divider() 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -2711,19 +2697,39 @@ local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")
 local fastAttackRunning = false
 local connection
 
+-- // ฟังก์ชันคำนวณทิศทางการตีให้เหมาะสมกับทุกผล //
+local function GetAttackDirection(root, target)
+    -- คำนวณทิศทางจากตัวเราไปหาเป้าหมาย
+    local direction = (target.Position - root.Position).Unit
+    -- สร้าง Vector ที่จำลองการเหวี่ยงอาวุธ (Random เล็กน้อยเพื่อให้ดูเป็นธรรมชาติ)
+    return Vector3.new(
+        direction.X + (math.random(-10, 10)/100),
+        0, 
+        direction.Z + (math.random(-10, 10)/100)
+    )
+end
+
 local function Attack(targetPart, tool)
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root or not targetPart then return end
+
     local leftClickRemote = tool and tool:FindFirstChild("LeftClickRemote")
+    local attackDir = GetAttackDirection(root, targetPart)
     
     if leftClickRemote and leftClickRemote:IsA("RemoteEvent") then
-        local args = {
-            vector.create(0.4720563590526581, -0, -0.881568431854248),
-            1
-        }
-        leftClickRemote:FireServer(unpack(args))
+        -- ส่งค่าทิศทางที่คำนวณได้ แทนการใช้ค่าคงที่
+        -- สิ่งนี้ทำให้ใช้ได้กับทุกผลปีศาจที่มี M1 เพราะทิศทางจะชี้ไปที่เป้าหมายเสมอ
+        pcall(function()
+            leftClickRemote:FireServer(attackDir, 1)
+        end)
     else
+        -- สำหรับอาวุธที่ใช้ระบบ RegisterHit
         if registerHit and registerAttack then
-            registerHit:FireServer(targetPart, {}, "211ee8ef")
-            registerAttack:FireServer(0.4000000059604645, 1)
+            pcall(function()
+                registerHit:FireServer(targetPart, {["HitPos"] = targetPart.Position}, "211ee8ef")
+                registerAttack:FireServer(0.4, 1)
+            end)
         end
     end
 end
@@ -2738,6 +2744,7 @@ local function SetFastAttack(state)
 
     if not state then return end
 
+    -- ใช้ Heartbeat เพื่อความเร็วสูงสุด
     connection = RunService.Heartbeat:Connect(function()
         if not fastAttackRunning then return end
 
@@ -2746,24 +2753,24 @@ local function SetFastAttack(state)
             local root = char and char:FindFirstChild("HumanoidRootPart")
             if not root then return end
 
-            -- ค้นหาอาวุธ (ถ้าไม่มี จะให้ค่าเป็น nil แต่ยังให้ตีต่อได้หากเกมรองรับ)
             local currentTool = char:FindFirstChildOfClass("Tool")
-
+            
+            -- 1. ตรวจสอบ NPC (Enemies)
             local enemies = workspace:FindFirstChild("Enemies")
             if enemies then
                 for _, enemy in ipairs(enemies:GetChildren()) do
-                    local rootPart = enemy:FindFirstChild("HumanoidRootPart")
-                        or enemy:FindFirstChild("Head")
+                    local rootPart = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
                     local hum = enemy:FindFirstChildOfClass("Humanoid")
 
                     if rootPart and hum and hum.Health > 0
                         and (root.Position - rootPart.Position).Magnitude <= 60 then
                         Attack(rootPart, currentTool)
-                        return
+                        return -- โจมตีทีละเป้าหมายเพื่อลดการโดน Kick
                     end
                 end
             end
 
+            -- 2. ตรวจสอบผู้เล่น (Players)
             for _, target in ipairs(Players:GetPlayers()) do
                 if target ~= player then
                     local targetChar = target.Character
@@ -2781,9 +2788,10 @@ local function SetFastAttack(state)
     end)
 end
 
+-- // เชื่อมต่อกับ UI //
 local FastAttackToggle = GeneralTab:Toggle({
     Title = "Attack Aura",
-     Desc = "(Melee, Sword, Fruit M1)",
+    Desc = "(All Fruits, Melee, Swords)",
     Type =  "Checkbox",
     Flag = "FastAttack",
     Value = false,
@@ -2836,20 +2844,20 @@ GeneralTab:Toggle({
         end
     end,
 })
-local RunService = game:GetService("RunService")
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CommE = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
 
 local autoKenEnabled = false
+local kenRunId = 0
 
 local function CheckAndEnableKen()
     if not autoKenEnabled then return end
-    
-    local c = GetCharacter() 
 
-    local highlight = c:FindFirstChild("Highlight")
+    local c = GetCharacter()
+    if not c then return end
 
-    if not highlight then
+    if not c:FindFirstChild("Highlight") then
         pcall(function()
             CommE:FireServer("Ken", "true")
         end)
@@ -2865,11 +2873,20 @@ GeneralTab:Toggle({
 
     Callback = function(state)
         autoKenEnabled = state
+       kenRunId = kenRunId + 1
 
-        -- ถ้ากดเปิด ให้สั่งยิงรีโมททันที 1 ครั้ง
         if state then
             pcall(function()
                 CommE:FireServer("Ken", "true")
+            end)
+
+            local myRun = kenRunId
+
+            task.spawn(function()
+                while autoKenEnabled and myRun == kenRunId do
+                    CheckAndEnableKen()
+                    task.wait(1)
+                end
             end)
         else
             pcall(function()
@@ -2878,12 +2895,6 @@ GeneralTab:Toggle({
         end
     end,
 })
-
-task.spawn(function()
-    while task.wait(1) do
-        CheckAndEnableKen()
-    end
-end)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -3043,7 +3054,7 @@ GeneralTab:Slider({
     Increment = 0.1, 
     Value = {
         Min = 1,
-        Max = 10,
+        Max = 15,
         Default = 1
     },
     Callback = function(state)
@@ -3238,8 +3249,8 @@ CombatTab:Slider({
     Desc = "Adjust hitbox size multiplier.",
     Flag = "HitboxSizeSlider",
     Value = {
-        Min = 10,
-        Max = 100,
+        Min = 0,
+        Max = 50,
         Default = getgenv().HitboxSize
     },
     Increment = 1,
@@ -4190,9 +4201,6 @@ local DropdownGun = Bounty:Dropdown({
     end
 })
 
--- ==================================================
--- AUTOMATIC TARGET CLEANUP MODULE (ล้างเฉพาะข้อมูลเป้าหมาย)
--- ==================================================
 RunService.RenderStepped:Connect(function()
     if not autoBountyEnabled then
         cachedNearestTarget = nil
@@ -4216,7 +4224,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
 
 local P = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -4413,7 +4420,7 @@ local function SoruAction()
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    -- ตัวแปรตรวจสอบระบบเล็ง (Aimbot) เผื่อใช้เรียกเช็คเงื่อนไขรอบตัว
+
     local bestTargetPart = nil
     local shortestDistance = 200
     for _, player in ipairs(P:GetPlayers()) do
