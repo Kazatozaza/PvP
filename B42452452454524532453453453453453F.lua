@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [3.0] ",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -548,12 +548,17 @@ end
 
 local function GetPredictedPosition(rootPart)
     if not rootPart then return nil, nil end
-    
     local pos = rootPart.Position
     if not getgenv().PredictionEnabled then return pos, rootPart.CFrame end
-    
     local velocity = rootPart.AssemblyLinearVelocity
-    local predictedPos = pos + (Vector3.new(velocity.X, 0, velocity.Z) * (getgenv().PredictionFactor or 0.135))
+    local success, acceleration = pcall(function()
+        return rootPart.AssemblyAngularVelocity 
+    end)
+    local factor = getgenv().PredictionFactor or 0.125
+    local predictedPos = pos + (velocity * factor)
+    if not rootPart.Anchored then
+        predictedPos = predictedPos + (Vector3.new(0, -workspace.Gravity * 0.5, 0) * (factor * factor))
+    end
     return predictedPos, rootPart.CFrame
 end
 
@@ -2697,7 +2702,10 @@ local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")
 
 local fastAttackRunning = false
 local connection
+local lastAttackTime = 0
+local attackDelay = 0.1 -- ปรับค่านี้ (0.1 คือ 10 ครั้งต่อวินาที) ยิ่งน้อยยิ่งเร็ว แต่เสี่ยงโดน Kick
 
+-- // ฟังก์ชันคำนวณทิศทาง //
 local function GetAttackDirection(root, target)
     local direction = (target.Position - root.Position).Unit
     return Vector3.new(
@@ -2738,17 +2746,24 @@ local function SetFastAttack(state)
     end
 
     if not state then return end
+
     connection = RunService.Heartbeat:Connect(function()
         if not fastAttackRunning then return end
+        
+        -- เพิ่มระบบ Delay เพื่อให้ใช้บนมือถือได้เสถียรขึ้นและไม่โดนเตะ
+        if tick() - lastAttackTime < attackDelay then return end
+        lastAttackTime = tick()
 
         pcall(function()
             local char = player.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if not char then return end
+            local root = char:FindFirstChild("HumanoidRootPart")
             if not root then return end
 
+            -- ตรวจสอบ Tool ใน Character หรือใน Backpack (สำหรับบางระบบ)
             local currentTool = char:FindFirstChildOfClass("Tool")
             
-            -- 1. ตรวจสอบ NPC (Enemies)
+            -- 1. ตรวจสอบ NPC
             local enemies = workspace:FindFirstChild("Enemies")
             if enemies then
                 for _, enemy in ipairs(enemies:GetChildren()) do
@@ -2758,12 +2773,12 @@ local function SetFastAttack(state)
                     if rootPart and hum and hum.Health > 0
                         and (root.Position - rootPart.Position).Magnitude <= 60 then
                         Attack(rootPart, currentTool)
-                        return -- โจมตีทีละเป้าหมายเพื่อลดการโดน Kick
+                        return 
                     end
                 end
             end
 
-            -- 2. ตรวจสอบผู้เล่น (Players)
+            -- 2. ตรวจสอบผู้เล่น
             for _, target in ipairs(Players:GetPlayers()) do
                 if target ~= player then
                     local targetChar = target.Character
@@ -2781,17 +2796,19 @@ local function SetFastAttack(state)
     end)
 end
 
--- // เชื่อมต่อกับ UI //
-local FastAttackToggle = GeneralTab:Toggle({
-    Title = "Attack Aura",
-    Desc = "(All Fruits, Melee, Swords)",
-    Type =  "Checkbox",
-    Flag = "FastAttack",
-    Value = false,
-    Callback = function(state)
-        SetFastAttack(state)
-    end,
-})
+if GeneralTab then
+    local FastAttackToggle = GeneralTab:Toggle({
+        Title = "Attack Aura",
+        Desc = "(All Fruits, Melee, Swords)",
+        Type =  "Checkbox",
+        Flag = "FastAttack",
+        Value = false,
+        Callback = function(state)
+            SetFastAttack(state)
+        end,
+    })
+end
+
 
 GeneralTab:Toggle({
     Title = "Auto Race V4",
@@ -4222,8 +4239,11 @@ local P = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local CG = game:GetService("CoreGui")
 local TS = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local Workspace = game:GetService("Workspace")
 
 local L = P.LocalPlayer
+local Cam = Workspace.CurrentCamera
 
 local old = CG:FindFirstChild("SoruUltimateUI")
 if old then old:Destroy() end
@@ -4274,33 +4294,219 @@ local function tw(o, t, p)
     TS:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), p):Play()
 end
 
+local function part(f, pos, size, c, tr)
+    local p = Instance.new("Part", f)
+    p.Anchored = true
+    p.CanCollide = false
+    p.CanTouch = false
+    p.CanQuery = false
+    p.Material = Enum.Material.Neon
+    p.Color = c
+    p.Transparency = tr or 0
+    p.Size = size
+    p.Position = pos
+    return p
+end
+
+local function WarpFX(pos)
+    local F = Instance.new("Folder", Workspace)
+    F.Name = "SoruFX"
+
+    local C = Color3.fromRGB(0, 220, 255)
+    local BC = Color3.fromRGB(0, 100, 255)
+    local W = Color3.fromRGB(220, 250, 255)
+
+    for i = 1, 5 do
+        task.delay(i * .035, function()
+            local r = part(F, pos + Vector3.new(0, .1, 0), Vector3.new(.15, .08, .15), i % 2 == 0 and BC or C, .1)
+            local m = Instance.new("SpecialMesh", r)
+            m.MeshType = Enum.MeshType.Cylinder
+            local z = 7 + i * 3
+            tw(r, .45, {Size = Vector3.new(z, .1, z), Transparency = 1})
+        end)
+    end
+
+    for i = 1, 8 do
+        local a = i / 8 * math.pi * 2
+        local r = 3 + math.random() * 2
+        local p = part(
+            F,
+            pos + Vector3.new(math.cos(a) * r, 3, math.sin(a) * r),
+            Vector3.new(.12, 6, .12),
+            i % 2 == 0 and C or BC, .2
+        )
+        tw(p, .35, {Size = Vector3.new(.02, .2, .02), Transparency = 1})
+    end
+
+    for i = 1, 3 do
+        local r = part(F, pos + Vector3.new(0, i * .45, 0), Vector3.new(5 + i * 2, .08, 5 + i * 2), i == 2 and W or C, .15)
+        local m = Instance.new("SpecialMesh", r)
+        m.MeshType = Enum.MeshType.Cylinder
+
+        task.spawn(function()
+            for _ = 1, 20 do
+                if not r.Parent then return end
+                r.CFrame = r.CFrame * CFrame.Angles(0, math.rad(18), math.rad(12))
+                task.wait(.02)
+            end
+        end)
+
+        tw(r, .65, {Transparency = 1})
+    end
+
+    local h = Instance.new("Part", F)
+    h.Anchored = true
+    h.CanCollide = false
+    h.CanTouch = false
+    h.CanQuery = false
+    h.Transparency = 1
+    h.Position = pos
+
+    local A = Instance.new("Attachment", h)
+
+    local p = Instance.new("ParticleEmitter", A)
+    p.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    p.Rate = 0
+    p.Lifetime = NumberRange.new(.25, .7)
+    p.Speed = NumberRange.new(15, 35)
+    p.SpreadAngle = Vector2.new(360, 360)
+    p.Drag = 4
+    p.LightEmission = 1
+    p.LightInfluence = 0
+    p.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, W),
+        ColorSequenceKeypoint.new(.4, C),
+        ColorSequenceKeypoint.new(1, BC)
+    }
+    p.Size = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, .8),
+        NumberSequenceKeypoint.new(.5, .3),
+        NumberSequenceKeypoint.new(1, 0)
+    }
+    p.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(.7, .3),
+        NumberSequenceKeypoint.new(1, 1)
+    }
+    p:Emit(100)
+
+    local sp = Instance.new("ParticleEmitter", A)
+    sp.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    sp.Rate = 0
+    sp.Lifetime = NumberRange.new(.15, .35)
+    sp.Speed = NumberRange.new(30, 55)
+    sp.SpreadAngle = Vector2.new(360, 360)
+    sp.Drag = 8
+    sp.LightEmission = 1
+    sp.LightInfluence = 0
+    sp.Color = ColorSequence.new(W)
+    sp.Size = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, .3),
+        NumberSequenceKeypoint.new(1, 0)
+    }
+    sp:Emit(60)
+
+    Debris:AddItem(F, 1)
+end
+
+local cooldown = false
+local waitingForClick = false
+local currentConnection = nil
+
+local function normal()
+    T.Text = "SORU"
+    T.TextSize = 17
+    T.TextColor3 = Color3.new(1, 1, 1)
+    T.TextStrokeTransparency = 0
+
+    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(8, 12, 18)})
+    tw(S, .2, {Color = Color3.fromRGB(0, 220, 255), Thickness = 2})
+end
+
 local function SoruAction()
-    -- บังคับเรียกใช้งานปุ่ม Soru ของเกมผ่านการยิง Connection ตรงๆ ข้ามการบล็อกทัช
-    local playerGui = L:FindFirstChild("PlayerGui")
-    if playerGui then
-        local mobileContext = playerGui:FindFirstChild("MobileContextButtons")
-        if mobileContext then
-            local contextFrame = mobileContext:FindFirstChild("ContextButtonFrame")
-            if contextFrame then
-                local soruBtn = contextFrame:FindFirstChild("BoundActionSoru")
-                if soruBtn then
-                    for _, conn in pairs(getconnections(soruBtn.MouseButton1Click)) do
-                        conn:Fire()
-                    end
-                    for _, conn in pairs(getconnections(soruBtn.Activated)) do
-                        conn:Fire()
-                    end
-                    -- สั่งกดผ่าน TouchTap ทะลุระบบป้องกัน
-                    for _, conn in pairs(getconnections(soruBtn.TouchTap)) do
-                        conn:Fire(Vector2.new(0,0), 1)
+    if cooldown or waitingForClick then return end
+
+    local char = L.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+
+    local bestTargetPart = nil
+    local shortestDistance = 200
+    for _, player in ipairs(P:GetPlayers()) do
+        if player ~= L and player.Character then
+            local targetChar = player.Character
+            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+            local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
+
+            if targetRoot and humanoid and humanoid.Health > 0 then
+                local ignore = false
+                if type(ShouldIgnoreTarget) == "function" then
+                    ignore = ShouldIgnoreTarget(targetChar, player)
+                end
+                if not ignore then
+                    local dist = (targetRoot.Position - root.Position).Magnitude
+                    if dist <= shortestDistance then
+                        shortestDistance = dist
+                        bestTargetPart = targetRoot
                     end
                 end
             end
         end
     end
+
+    waitingForClick = true
+    T.Text = "AIM"
+    T.TextSize = 14
+
+    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(35, 27, 10)})
+    tw(S, .2, {Color = Color3.fromRGB(255, 190, 45), Thickness = 3})
+
+    -- รอจนกว่าผู้เล่นจะคลิกเลือกตำแหน่งจริง ๆ โดยไม่เปลี่ยนโหมดกลางคัน
+    currentConnection = UIS.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 
+        or input.UserInputType == Enum.UserInputType.Touch then
+            
+            local mousePos = input.Position
+            local ray = Cam:ViewportPointToRay(mousePos.X, mousePos.Y)
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterDescendantsInstances = {char, Workspace:FindFirstChild("SoruFX")}
+            raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+            
+            local raycastResult = Workspace:Raycast(ray.Origin, ray.Direction * 1000, raycastParams)
+            
+            if raycastResult then
+                WarpFX(root.Position)
+                root.CFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 3, 0))
+                WarpFX(root.Position)
+            end
+            
+            if currentConnection then
+                currentConnection:Disconnect()
+                currentConnection = nil
+            end
+            
+            waitingForClick = false
+            cooldown = true
+            
+            -- เริ่มคูลดาวน์หลังกดใช้งานเสร็จ
+            task.spawn(function()
+                for n = 20, 1, -1 do
+                    if not B.Parent then return end
+                    T.Text = string.format("%.1f", n / 10)
+                    T.TextSize = 21
+                    task.wait(.1)
+                end
+
+                cooldown = false
+                normal()
+            end)
+        end
+    end)
 end
 
 B.Activated:Connect(function()
+    if cooldown or waitingForClick then return end
     SoruAction()
 end)
 
@@ -4349,11 +4555,13 @@ end)
 
 -- Hover
 B.MouseEnter:Connect(function()
+    if cooldown or waitingForClick then return end
     tw(B, .15, {Size = UDim2.fromOffset(89, 89)})
     tw(S, .15, {Thickness = 3, Transparency = 0})
 end)
 
 B.MouseLeave:Connect(function()
+    if cooldown or waitingForClick then return end
     tw(B, .15, {Size = UDim2.fromOffset(84, 84)})
     tw(S, .15, {Thickness = 2})
 end)
@@ -4361,9 +4569,14 @@ end)
 -- Pulse
 task.spawn(function()
     while G.Parent do
-        tw(S, .8, {Transparency = .5})
-        task.wait(.8)
-        tw(S, .8, {Transparency = .05})
+        if not cooldown and not waitingForClick then
+            tw(S, .8, {Transparency = .5})
+            task.wait(.8)
+
+            if not cooldown and not waitingForClick then
+                tw(S, .8, {Transparency = .05})
+            end
+        end
         task.wait(.8)
     end
 end)
@@ -4371,6 +4584,15 @@ end)
 getgenv().ToggleSoruUI = function(state)
     if G and G.Parent then
         G.Enabled = state
+        if not state then
+            if currentConnection then
+                currentConnection:Disconnect()
+                currentConnection = nil
+            end
+            waitingForClick = false
+            cooldown = false
+            normal()
+        end
     end
 end
 
