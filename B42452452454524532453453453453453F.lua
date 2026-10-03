@@ -308,58 +308,68 @@ UserInputService.InputBegan:Connect(function(input)
 end)
 
 ---------------------------------------------------------------------------------------
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local LocalPlayer = Players.LocalPlayer
+local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("SafeZones")
+local combatCache = {}
+local safeZoneCache = {}
+local lastCacheClear = tick()
+local lastEnemiesCheck = 0
+local cachedEnemiesFolder = nil
 
-local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") 
-    and Workspace._WorldOrigin:FindFirstChild("SafeZones")
+local function getCachedEnemiesFolder()
+    local now = tick()
+    if now - lastEnemiesCheck > 1 then
+        cachedEnemiesFolder = Workspace:FindFirstChild("Enemies")
+        lastEnemiesCheck = now
+    end
+    return cachedEnemiesFolder
+end
 
--- 1. ฟังก์ชันเช็คสถานะ InCombat (ปรับปรุงให้แม่นยำ ตรวจสอบทุกรูปแบบ)
+local function clearCacheIfNeeded()
+    local now = tick()
+    if now - lastCacheClear >= 1.0 then
+        table.clear(combatCache)
+        table.clear(safeZoneCache)
+        lastCacheClear = now
+    end
+end
+
 local function isPlayerInCombat(player, character)
     if not player then return false end
+    if combatCache[player] ~= nil then return combatCache[player] end
     
-    -- เช็ค Attribute ใน Player (รองรับ Boolean, Number, String, และ Combat Timer)
     local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag")
     if pCombat == true or pCombat == 1 or pCombat == "1" then
+        combatCache[player] = true
         return true
     end
     
     local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
     if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
+        combatCache[player] = true
         return true
     end
 
-    -- เช็คใน Character
     if character then
         local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
         if cCombat == true or cCombat == 1 or cCombat == "1" then
+            combatCache[player] = true
             return true
         end
-
-        -- เช็ค Value Object ชั่วคราวในตัวละคร (BoolValue, NumberValue, StringValue)
         local combatObj = character:FindFirstChild("InCombat") 
             or character:FindFirstChild("Combat") 
             or character:FindFirstChild("CombatTag")
             or character:FindFirstChild("PvpTag")
 
         if combatObj then
-            if combatObj:IsA("BoolValue") and combatObj.Value == true then
-                return true
-            elseif combatObj:IsA("NumberValue") and combatObj.Value > 0 then
-                return true
-            elseif combatObj:IsA("StringValue") and combatObj.Value ~= "" then
-                return true
-            elseif combatObj:IsA("ValueBase") then
-                return true
-            end
+            combatCache[player] = true
+            return true
         end
     end
 
+    combatCache[player] = false
     return false
 end
 
--- 2. ฟังก์ชันเช็คว่าตัวละครอยู่ใน Safe Zone ทรงกลมหรือไม่
 local function isInSafeZoneRadius(character)
     if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
     if not safeZonesFolder then return false end
@@ -369,18 +379,12 @@ local function isInSafeZoneRadius(character)
     for _, zonePart in ipairs(safeZonesFolder:GetChildren()) do
         if zonePart:IsA("BasePart") then
             local zonePos = zonePart.Position
-            local radius = 0
+            local radius
             
             local mesh = zonePart:FindFirstChildOfClass("SpecialMesh")
-            if mesh then
-                radius = mesh.Scale.X / 2
-                radius = radius * math.max(zonePart.Size.X, zonePart.Size.Z)
-            else
-                radius = math.max(zonePart.Size.X, zonePart.Size.Z) / 2
-            end
+            radius = mesh and (mesh.Scale.X / 2) * math.max(zonePart.Size.X, zonePart.Size.Z) or math.max(zonePart.Size.X, zonePart.Size.Z) / 2
             
-            local distance = (charPos - zonePos).Magnitude
-            if distance <= radius then
+            if (charPos - zonePos).Magnitude <= radius then
                 return true
             end
         end
@@ -389,162 +393,129 @@ local function isInSafeZoneRadius(character)
     return false
 end
 
--- 3. ฟังก์ชันเช็คสถานะ Safe Zone (ถ้าติด InCombat อยู่ จะไม่นับว่า Safe)
 local function isPlayerInSafeZone(player, character)
+    if not player then return false end
     if isPlayerInCombat(player, character) then
+        safeZoneCache[player] = false
         return false
     end
+
+    if safeZoneCache[player] ~= nil then return safeZoneCache[player] end
 
     local inSafeZoneAttr = player:GetAttribute("SafeZone") or (character and character:GetAttribute("SafeZone"))
     local inRadius = character and isInSafeZoneRadius(character)
     local hasTempSafeZone = character and character:FindFirstChild("TempSafeZone")
     
-    return (inSafeZoneAttr == true or inRadius or hasTempSafeZone) == true
+    local result = (inSafeZoneAttr == true or inRadius or hasTempSafeZone) == true
+    safeZoneCache[player] = result
+    return result
 end
 
--- 4. เช็คทีมและสถานะเป้าหมาย (สำหรับ Aimbot / Target Targeting)
-local function ShouldIgnoreTarget(targetCharacter)
-    -- เช็คว่าเป็นมอนสเตอร์ใน Enemies หรือไม่
-    local enemiesFolder = Workspace:FindFirstChild("Enemies")
-    local isEnemyNPC = enemiesFolder and targetCharacter:IsDescendantOf(enemiesFolder)
-    
+local function ShouldIgnoreTarget(targetCharacter, targetPlayer)
     local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
     if humanoid and humanoid.Health <= 0 then return true end
 
-    -- ถ้าเป็นมอนสเตอร์ NPC ให้ข้ามเงื่อนไขผู้เล่น
-    if isEnemyNPC then
-        return false -- ไม่เมินมอนสเตอร์ตัวนี้ (สามารถล็อคเป้าได้)
+    local enemiesFolder = getCachedEnemiesFolder()
+    if enemiesFolder and targetCharacter:IsDescendantOf(enemiesFolder) then
+        return false 
     end
 
-    -- เงื่อนไขเดิมสำหรับผู้เล่น (Players)
-    local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
-    if not targetPlayer then return true end
-    if targetPlayer == LocalPlayer then return true end
+    if not targetPlayer or targetPlayer == LocalPlayer then return true end
+    if targetPlayer:GetAttribute("PvpDisabled") == true then return true end
+    if isPlayerInSafeZone(targetPlayer, targetCharacter) then return true end
     
-    local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled")
-    if pvpDisabled == true then 
-        return true 
-    end
-    
-    if isPlayerInSafeZone(targetPlayer, targetCharacter) then
+    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" and targetPlayer.Team == LocalPlayer.Team then
         return true
-    end
-    
-    if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" then
-        if targetPlayer.Team and targetPlayer.Team == LocalPlayer.Team then 
-            return true 
-        end
     end
     
     return false
 end
 
-local function GetAllValidTargets()
-    local targets = {}
-    local mode = getgenv().TargetMode or "Both"
+local cachedValidTargets = {}
+local lastTargetUpdate = 0
+local targetUpdateInterval = 0.5
 
-    -- 1. ถ้าเลือก Players หรือ Both ให้ดึงข้อมูลผู้เล่น
+local function UpdateValidTargets()
+    table.clear(cachedValidTargets)  
+    local mode = getgenv().TargetMode or "Both"
+    
     if mode == "Both" or mode == "Players Only" then
-        for _, player in ipairs(Players:GetPlayers()) do
+        local players = Players:GetPlayers()
+        for i = 1, #players do
+            local player = players[i]
             if player ~= LocalPlayer and player.Character then
-                table.insert(targets, player.Character)
+                table.insert(cachedValidTargets, player.Character)
             end
         end
     end
-
-    -- 2. ถ้าเลือก Enemies หรือ Both ให้ดึงข้อมูลมอนสเตอร์จาก Workspace.Enemies
+    
     if mode == "Both" or mode == "Enemies Only" then
-        local enemiesFolder = Workspace:FindFirstChild("Enemies")
+        local enemiesFolder = getCachedEnemiesFolder()
         if enemiesFolder then
-            for _, enemyModel in ipairs(enemiesFolder:GetChildren()) do
+            local children = enemiesFolder:GetChildren()
+            for i = 1, #children do
+                local enemyModel = children[i]
                 if enemyModel:IsA("Model") then
-                    table.insert(targets, enemyModel)
+                    table.insert(cachedValidTargets, enemyModel)
                 end
             end
         end
     end
-
-    return targets
 end
 
-
--- 5. ฟังก์ชันดึงสถานะสำหรับ ESP
-local function getPlayerStatus(player)
-    local character = player.Character
-    local pvpDisabled = player:GetAttribute("PvpDisabled")
-    local pvpStatus = pvpDisabled == true and "ปิด PvP" or "เปิด PvP"
-    
-    local inCombat = isPlayerInCombat(player, character)
-    local inSafeZone = isPlayerInSafeZone(player, character)
-    
-    local safeZoneStatus = "Normal Zone"
-    if inCombat and isInSafeZoneRadius(character) then
-        safeZoneStatus = "Safe Zone (Combat Bypass)"
-    elseif inSafeZone then
-        safeZoneStatus = "Safe Zone"
+local function GetAllValidTargets()
+    if tick() - lastTargetUpdate >= targetUpdateInterval then
+        lastTargetUpdate = tick()
+        UpdateValidTargets()
     end
-
-    local combatStatus = inCombat and "InCombat" or "Ready"
-   
-    return pvpStatus .. " | " .. safeZoneStatus .. " | " .. combatStatus
+    return cachedValidTargets
 end
 
--- ตัวอย่างการแสดงผล ESP
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        local statusText = getPlayerStatus(player)
-    end
-end
+local cachedFOVMode = "Middle"
+local lastModeCheck = 0
 
--- กำหนดจุดอ้างอิง (กลางจอ หรือ ตามนิ้ว)
 local function GetReferencePosition()
-    local viewportSize = Camera.ViewportSize
-    local mode = tostring(getgenv().FOVPositionMode):lower()
+    local now = tick()
+    if now - lastModeCheck > 0.5 then
+        cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
+        lastModeCheck = now
+    end
     
-    if mode == "mouse/touch" or mode == "mousetouch" or mode == "mouse" then
+    local viewportSize = Camera.ViewportSize
+    if cachedFOVMode:find("mouse") then
         return LastMousePosition
     else
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     end
 end
 
--- คำนวณพรีดิกต์ตำแหน่งเป้าหมายเคลื่อนที่
-local function GetPredictedPosition(targetPart)
-    if not targetPart then return Vector3.new(0,0,0) end
-    local basePos = targetPart.Position
-    if getgenv().PredictionEnabled then
-        local velocity = targetPart.AssemblyLinearVelocity or Vector3.new(0,0,0)
-        return basePos + (velocity * getgenv().PredictionFactor)
-    end
-    return basePos
-end
-
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
-    -- ป้องกันค่า getgenv().FOVRadius เป็น nil
     local fovRadius = getgenv().FOVRadius or 100
     local ShortestDistance = (fovRadius >= 99999) and 99999 or fovRadius
-
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-
-    for _, char in ipairs(GetAllValidTargets()) do
+    
+    if not myHRP then return nil end
+    
+    local maxDistance = getgenv().MaxDistance or 500
+    local validTargets = GetAllValidTargets()
+    
+    for i = 1, #validTargets do
+        local char = validTargets[i]
         local targetPart = char:FindFirstChild(getgenv().LockedPartName) or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
         local humanoid = char:FindFirstChildOfClass("Humanoid")
 
         if targetPart and humanoid and humanoid.Health > 0 then
-            if not ShouldIgnoreTarget(char) then
-                local maxDistance = getgenv().MaxDistance or 500
-                local worldDistance = myHRP and (targetPart.Position - myHRP.Position).Magnitude or 0
+            local targetPlayer = Players:GetPlayerFromCharacter(char)
+            if not ShouldIgnoreTarget(char, targetPlayer) then
+                local worldDistance = (targetPart.Position - myHRP.Position).Magnitude
                 
                 if worldDistance <= maxDistance then
                     local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-
                     if onScreen then
-                        local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                        local distance = (targetPos2D - refPos).Magnitude
-
-                        if distance <= ShortestDistance then
+                        local distance = (Vector2.new(screenPos.X, screenPos.Y) - refPos).Magnitude
+                        if distance < ShortestDistance then
                             ShortestDistance = distance
                             ClosestTarget = targetPart
                         end
@@ -704,6 +675,7 @@ local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
 
 RunService.RenderStepped:Connect(function(dt)
+    clearCacheIfNeeded()
     -- Smooth Color Transition (ปรับความเร็วในการเปลี่ยนสี ยิ่งตัวเลขมากยิ่งเปลี่ยนเร็ว แนะนำ 15-25)
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
