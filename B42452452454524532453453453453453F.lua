@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.111] ",
+        Title = "Project Destiny [v3.1] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -304,7 +304,6 @@ Snapline.To = Vector2.new(0, 0)
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
--- ===== OPTIMIZATION: อัปเดตตำแหน่ง FOV ทันทีที่เม้าส์ขยับ ลดอาการหน่วง =====
 local function UpdateFOVPosition(pos)
     if not FOVUI or not FOVUI.Visible then return end
     local cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
@@ -519,7 +518,7 @@ local function GetTargetInFOV(refPos)
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
     
-    if not myHRP then return nil end
+    if not myHRP then return getgenv().CurrentTarget end
     
     local maxDistance = getgenv().MaxDistance or 500
     local validTargets = GetAllValidTargets()
@@ -547,7 +546,7 @@ local function GetTargetInFOV(refPos)
             end
         end
     end
-    return ClosestTarget
+    return ClosestTarget or getgenv().CurrentTarget
 end
 
 local cachedPart = nil
@@ -569,14 +568,12 @@ end
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
     if not target or not target.Parent then 
-        clearCache()
-        return nil 
+        return cachedPart
     end
 
     if target ~= lastTarget then
-        clearCache()
         lastTarget = target
-        cachedPart = target.Parent:FindFirstChild("HumanoidRootPart")
+        cachedPart = target.Parent:FindFirstChild("HumanoidRootPart") or target
     end
     
     return cachedPart
@@ -598,12 +595,8 @@ task.spawn(function()
     local Humanoid = Character:WaitForChild("Humanoid")
 
     repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
-
-    -- [แก้แล้ว] ครอบ pcall แยกเฉพาะตัว Mouse โดยไม่ใช้คำสั่ง return ตัดจบสคริปต์
-    local success, Mouse = pcall(function() 
-        return LocalPlayer:GetMouse() 
-    end)
-
+    
+    local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
     if success and Mouse then
         local oldIndex
         oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
@@ -617,13 +610,11 @@ task.spawn(function()
             
             local rootPart = getTargetCFrame()
             if not rootPart then 
-                clearCache()
                 return oldIndex(self, idx) 
             end
             
             local predPos, rootCFrame = getPredictedPosition(rootPart)
             if not predPos then 
-                clearCache()
                 return oldIndex(self, idx) 
             end
             
@@ -645,11 +636,9 @@ task.spawn(function()
         end))
     end
 
-    -- ส่วนนี้สำคัญมากสำหรับมือถือ (Blox Fruits) จะทำงานต่อได้ปกติโดยไม่โดน return ตัดทิ้ง
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         if not getgenv().SilentAimEnabled then
-            clearCache()
             return oldNamecall(self, ...)
         end
         
@@ -660,13 +649,11 @@ task.spawn(function()
         
         local rootPart = getTargetCFrame()
         if not rootPart then
-            clearCache()
             return oldNamecall(self, ...)
         end
         
         local predPos, rootCFrame = getPredictedPosition(rootPart)
         if not predPos then 
-            clearCache()
             return oldNamecall(self, ...) 
         end
         
@@ -691,16 +678,7 @@ local displayedUiColor = currentUiColor
 local lastFOVUpdate = 0
 local lastSnaplineUpdate = 0
 
-local function clearOldData()
-    getgenv().CurrentTarget = nil
-end
-
 RunService.RenderStepped:Connect(function(dt)
-    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled and not getgenv().ShowFOV then
-        clearOldData()
-        return
-    end
-
     if typeof(clearCacheIfNeeded) == "function" then
         clearCacheIfNeeded()
     end
@@ -709,13 +687,11 @@ RunService.RenderStepped:Connect(function(dt)
 
     local character = LocalPlayer.Character
     if not character or not Camera then
-        clearOldData()
         return
     end
 
     local myRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
     if not myRoot then
-        clearOldData()
         return
     end
 
@@ -743,7 +719,6 @@ RunService.RenderStepped:Connect(function(dt)
     end
 
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
-        clearOldData()
         return
     end
 
@@ -785,10 +760,12 @@ RunService.RenderStepped:Connect(function(dt)
         bestTarget = GetTargetInFOV(refPos)
     end
     
-    getgenv().CurrentTarget = bestTarget
+    if bestTarget then
+        getgenv().CurrentTarget = bestTarget
+    end
 
-    if getgenv().CamlockEnabled and bestTarget then
-        local targetPos, _ = getPredictedPosition(bestTarget)
+    if getgenv().CamlockEnabled and getgenv().CurrentTarget then
+        local targetPos, _ = getPredictedPosition(getgenv().CurrentTarget)
         if targetPos then
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
         end
@@ -797,15 +774,16 @@ RunService.RenderStepped:Connect(function(dt)
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
         
-        if bestTarget and getgenv().ShowTracer and Snapline then
-            local targetPart = bestTarget
+        local activeTracerTarget = getgenv().CurrentTarget
+        if activeTracerTarget and getgenv().ShowTracer and Snapline then
+            local targetPart = activeTracerTarget
             if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
                 targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
             end
 
             if targetPart and targetPart:IsA("BasePart") then
                 local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                if onScreen and screenPos.Z > 0 then
+                if screenPos.Z > 0 then
                     local origin = getgenv().TracerOrigin or "Center"
                     local startPos
 
