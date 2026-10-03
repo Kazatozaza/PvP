@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.1] ",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -243,9 +243,12 @@ getgenv().ShowTracer = getgenv().ShowTracer ~= false and true
 getgenv().CurrentTarget = nil
 getgenv().FOVPositionMode = getgenv().FOVPositionMode or "Middle" 
 getgenv().LockedPartName = "HumanoidRootPart"
+
 getgenv().PredictionEnabled = getgenv().PredictionEnabled ~= false and true
 getgenv().PredictionFactor = getgenv().PredictionFactor or 0.135
 getgenv().CamlockEnabled = getgenv().CamlockEnabled ~= false and true
+
+---------------------------------------------------------------------------------------
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -263,13 +266,15 @@ ScreenGui.Name = "MobileAimbotGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local FOVThemeColor = _G.FOVThemeColor or Color3.fromRGB(255, 255, 255)
+-- กำหนดสี (เผื่อกรณีลืมประกาศตัวแปร FOVThemeColor ด้านบน)
+local FOVThemeColor = FOVThemeColor or Color3.fromRGB(255, 255, 255)
 
+-- สร้างวงกลม FOV
 local FOVUI = Instance.new("Frame")
 FOVUI.Name = "FOVCircle"
 FOVUI.AnchorPoint = Vector2.new(0.5, 0.5)
 FOVUI.BackgroundTransparency = 1
-FOVUI.Visible = false
+FOVUI.Visible = false -- เปลี่ยนเป็น true ให้เห็นได้เลย หรือจะปรับเป็น false ตามโค้ดเดิมก็ได้ครับ
 FOVUI.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -282,6 +287,7 @@ UIStroke.Color = FOVThemeColor
 UIStroke.Transparency = 0.3
 UIStroke.Parent = FOVUI
 
+-- ✨ เพิ่มจุดตรงกลาง (Center Dot)
 local CenterDot = Instance.new("Frame")
 CenterDot.Name = "CenterDot"
 CenterDot.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -294,13 +300,16 @@ local DotCorner = Instance.new("UICorner")
 DotCorner.CornerRadius = UDim.new(1, 0)
 DotCorner.Parent = CenterDot
 
+
 local Snapline = Drawing.new("Line")
 Snapline.Visible = false
-Snapline.Thickness = 1.5        
+Snapline.Thickness = 1.5         
 Snapline.Color = Color3.fromRGB(255, 255, 255) 
-Snapline.Transparency = 1            
-Snapline.From = Vector2.new(0, 0)        
-Snapline.To = Vector2.new(0, 0)
+Snapline.Transparency = 1              
+Snapline.From = Vector2.new(0, 0)         
+Snapline.To = Vector2.new(0, 0)            
+
+---------------------------------------------------------------------------------------
 
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -317,6 +326,7 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
+---------------------------------------------------------------------------------------
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
@@ -564,6 +574,12 @@ local function GetTargetInFOV(refPos)
     end
     return ClosestTarget
 end
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 getgenv().SkillRedirectEnabled = getgenv().SkillRedirectEnabled or true
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
@@ -856,7 +872,6 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
-
 
 local function initializeSkillSettings()
 local Players = game:GetService("Players")
