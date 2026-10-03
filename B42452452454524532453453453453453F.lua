@@ -621,6 +621,35 @@ oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
     end
     
     local method = getnamecallmethod()
+    local args = {...}
+    
+    -- ดักจับฟังก์ชันประเภท Raycast ของ Workspace (เช่น Workspace:Raycast หรือ FindPartOnRay)
+    if self == Workspace and (method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist") then
+        local rootPart = getTargetCFrame()
+        if rootPart then
+            local predPos, rootCFrame = getPredictedPosition(rootPart)
+            if predPos then
+                if method == "Raycast" then
+                    -- args[1] = origin (จุดเริ่มต้นยิง), args[2] = direction (ทิศทาง)
+                    local origin = args[1]
+                    if typeof(origin) == "Vector3" then
+                        local newDirection = (predPos - origin).Unit * 10000 -- ยิงพุ่งไปทางเป้าหมายด้วยระยะไกลสุด
+                        args[2] = newDirection
+                    end
+                elseif method:find("FindPartOnRay") then
+                    -- args[1] = Ray.new(origin, direction)
+                    local ray = args[1]
+                    if typeof(ray) == "Ray" then
+                        local newDirection = (predPos - ray.Origin).Unit * 10000
+                        args[1] = Ray.new(ray.Origin, newDirection)
+                    end
+                end
+            end
+        end
+        return oldNamecall(self, unpack(args))
+    end
+    
+    -- ดักจับรีโมทปกติ (FireServer / InvokeServer) เหมือนเดิม
     if method ~= "FireServer" and method ~= "InvokeServer" and method ~= "fire" and method ~= "invoke" then
         return oldNamecall(self, ...)
     end
@@ -637,14 +666,11 @@ oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
     
     local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
     
-    local args = {...}
     for i = 1, #args do
         local argType = typeof(args[i])
-        -- ดักจับกรณีที่ส่งค่าตำแหน่งเป็น Vector3, CFrame หรือทิศทางพุ่งกระสุน
         if argType == "CFrame" then 
             args[i] = targetCFrame
         elseif argType == "Vector3" then 
-            -- ถ้าเป็น Vector3 ให้เช็คว่าเป็นตำแหน่งเป้าหมายการยิงหรือไม่ (พุ่งไปที่ตัวเป้าหมายโดยตรง)
             args[i] = predPos 
         elseif argType == "table" then
             for k, v in pairs(args[i]) do
@@ -659,6 +685,7 @@ oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
     
     return oldNamecall(self, unpack(args))
 end))
+
 end)
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
