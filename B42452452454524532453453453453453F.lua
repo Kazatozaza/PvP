@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.000] ",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -317,115 +317,57 @@ UserInputService.InputBegan:Connect(function(input)
 end)
 
 local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("SafeZones")
-local combatCache = {}
-local safeZoneCache = {}
-local lastEnemiesCheck = 0
-local cachedEnemiesFolder = nil
-
-local function getCachedEnemiesFolder()
-    local now = tick()
-    if now - lastEnemiesCheck > 1 then
-        cachedEnemiesFolder = Workspace:FindFirstChild("Enemies")
-        lastEnemiesCheck = now
-    end
-    return cachedEnemiesFolder
-end
 
 local function isPlayerInCombat(player, character)
     if not player then return false end
-    if combatCache[player] ~= nil then return combatCache[player] end
-    
     local pCombat = player:GetAttribute("InCombat") or player:GetAttribute("Combat") or player:GetAttribute("CombatTag")
-    if pCombat == true or pCombat == 1 or pCombat == "1" then
-        combatCache[player] = true
-        return true
-    end
-    
-    local combatTime = player:GetAttribute("CombatTimer") or player:GetAttribute("InCombatTime")
-    if type(combatTime) == "number" and combatTime > workspace:GetServerTimeNow() then
-        combatCache[player] = true
-        return true
-    end
+    if pCombat == true or pCombat == 1 or pCombat == "1" then return true end
 
     if character then
         local cCombat = character:GetAttribute("InCombat") or character:GetAttribute("Combat") or character:GetAttribute("CombatTag")
-        if cCombat == true or cCombat == 1 or cCombat == "1" then
-            combatCache[player] = true
-            return true
-        end
-        local combatObj = character:FindFirstChild("InCombat") 
-            or character:FindFirstChild("Combat") 
-            or character:FindFirstChild("CombatTag")
-            or character:FindFirstChild("PvpTag")
-
-        if combatObj then
-            combatCache[player] = true
-            return true
-        end
+        if cCombat == true or cCombat == 1 or cCombat == "1" then return true end
     end
-
-    combatCache[player] = false
     return false
 end
 
 local function isInSafeZoneRadius(character)
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
-    if not safeZonesFolder then return false end
-    
+    if not character or not character:FindFirstChild("HumanoidRootPart") or not safeZonesFolder then return false end
     local charPos = character.HumanoidRootPart.Position
-    
+
     for _, zonePart in ipairs(safeZonesFolder:GetChildren()) do
         if zonePart:IsA("BasePart") then
-            local zonePos = zonePart.Position
-            local radius
-            
-            local mesh = zonePart:FindFirstChildOfClass("SpecialMesh")
-            radius = mesh and (mesh.Scale.X / 2) * math.max(zonePart.Size.X, zonePart.Size.Z) or math.max(zonePart.Size.X, zonePart.Size.Z) / 2
-            
-            if (charPos - zonePos).Magnitude <= radius then
+            local radius = math.max(zonePart.Size.X, zonePart.Size.Z) / 2
+            if (charPos - zonePart.Position).Magnitude <= radius then
                 return true
             end
         end
     end
-    
     return false
 end
 
 local function isPlayerInSafeZone(player, character)
-    if not player then return false end
-    if isPlayerInCombat(player, character) then
-        safeZoneCache[player] = false
-        return false
-    end
-
-    if safeZoneCache[player] ~= nil then return safeZoneCache[player] end
-
+    if isPlayerInCombat(player, character) then return false end
     local inSafeZoneAttr = player:GetAttribute("SafeZone") or (character and character:GetAttribute("SafeZone"))
-    local inRadius = character and isInSafeZoneRadius(character)
-    local hasTempSafeZone = character and character:FindFirstChild("TempSafeZone")
-    
-    local result = (inSafeZoneAttr == true or inRadius or hasTempSafeZone) == true
-    safeZoneCache[player] = result
-    return result
+    return (inSafeZoneAttr == true or isInSafeZoneRadius(character)) == true
 end
 
+-- แก้ไขให้รองรับ 2 อาร์กิวเมนต์ (targetPlayer, targetCharacter)
 local function ShouldIgnoreTarget(targetPlayer, targetCharacter)
-    local humanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid.Health <= 0 then return true end
+    local enemiesFolder = Workspace:FindFirstChild("Enemies")
+    local isEnemyNPC = enemiesFolder and targetCharacter:IsDescendantOf(enemiesFolder)
 
-    local enemiesFolder = getCachedEnemiesFolder()
-    if enemiesFolder and targetCharacter and targetCharacter:IsDescendantOf(enemiesFolder) then
-        return false 
-    end
+    local humanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return true end
+    if isEnemyNPC then return false end
 
     if not targetPlayer or targetPlayer == LocalPlayer then return true end
     if targetPlayer:GetAttribute("PvpDisabled") == true then return true end
     if isPlayerInSafeZone(targetPlayer, targetCharacter) then return true end
-    
+
     if LocalPlayer.Team and LocalPlayer.Team.Name == "Marines" and targetPlayer.Team == LocalPlayer.Team then
         return true
     end
-    
+
     return false
 end
 
@@ -510,6 +452,7 @@ local function GetTargetInFOV(refPos)
 end
 
 getgenv().SkillRedirectEnabled = getgenv().SkillRedirectEnabled or true
+local allowedSkillRemotes = { toMouse = true, castskill = true, useability = true, attack = true, combat = true, skill = true, shoot = true, miniclick = true, mouseclick = true, remote = true }
 local blockedRemotes = { equip = true, unequip = true, store = true, reset = true, chat = true, data = true, load = true, save = true }
 local remoteCache = {}
 
