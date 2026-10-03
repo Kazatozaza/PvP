@@ -2732,64 +2732,61 @@ local function Attack(targetPart, tool)
     end
 end
 
+-- เปลี่ยนจาก RunService.Heartbeat เป็น loop ที่ควบคุมเวลาได้ดีกว่า
 local function SetFastAttack(state)
     fastAttackRunning = state
-
-    if connection then
-        connection:Disconnect()
-        connection = nil
-    end
+    if connection then connection:Disconnect() end
 
     if not state then return end
 
-    connection = RunService.Heartbeat:Connect(function()
-        if not fastAttackRunning then return end
-        
-        -- เพิ่มระบบ Delay เพื่อให้ใช้บนมือถือได้เสถียรขึ้นและไม่โดนเตะ
-        if tick() - lastAttackTime < attackDelay then return end
-        lastAttackTime = tick()
-
-        pcall(function()
+    -- ใช้ task.spawn เพื่อไม่ให้ Loop ไปขัดขวางการทำงานของ UI
+    task.spawn(function()
+        while fastAttackRunning do
             local char = player.Character
-            if not char then return end
-            local root = char:FindFirstChild("HumanoidRootPart")
-            if not root then return end
-
-            -- ตรวจสอบ Tool ใน Character หรือใน Backpack (สำหรับบางระบบ)
-            local currentTool = char:FindFirstChildOfClass("Tool")
+            local root = char and char:FindFirstChild("HumanoidRootPart")
             
-            -- 1. ตรวจสอบ NPC
-            local enemies = workspace:FindFirstChild("Enemies")
-            if enemies then
-                for _, enemy in ipairs(enemies:GetChildren()) do
-                    local rootPart = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
-                    local hum = enemy:FindFirstChildOfClass("Humanoid")
-
-                    if rootPart and hum and hum.Health > 0
-                        and (root.Position - rootPart.Position).Magnitude <= 60 then
-                        Attack(rootPart, currentTool)
-                        return 
+            if root then
+                local currentTool = char:FindFirstChildOfClass("Tool")
+                
+                -- รวมการหาเป้าหมาย (NPC + Players) ไว้ในฟังก์ชันเดียวเพื่อลดความซับซ้อน
+                local target = nil
+                
+                -- เช็ค NPC
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    for _, enemy in ipairs(enemies:GetChildren()) do
+                        local ep = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
+                        local eh = enemy:FindFirstChildOfClass("Humanoid")
+                        if ep and eh and eh.Health > 0 and (root.Position - ep.Position).Magnitude <= 60 then
+                            target = ep
+                            break
+                        end
                     end
                 end
-            end
-
-            -- 2. ตรวจสอบผู้เล่น
-            for _, target in ipairs(Players:GetPlayers()) do
-                if target ~= player then
-                    local targetChar = target.Character
-                    local rootPart = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-                    local hum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
-
-                    if rootPart and hum and hum.Health > 0
-                        and (root.Position - rootPart.Position).Magnitude <= 60 then
-                        Attack(rootPart, currentTool)
-                        return
+                
+                -- ถ้าไม่เจอ NPC ให้เช็คผู้เล่น
+                if not target then
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        if p ~= player and p.Character then
+                            local rp = p.Character:FindFirstChild("HumanoidRootPart")
+                            local rh = p.Character:FindFirstChildOfClass("Humanoid")
+                            if rp and rh and rh.Health > 0 and (root.Position - rp.Position).Magnitude <= 60 then
+                                target = rp
+                                break
+                            end
+                        end
                     end
                 end
+
+                if target then
+                    Attack(target, currentTool)
+                end
             end
-        end)
+            task.wait(attackDelay) -- ใช้ task.wait จะเสถียรกว่าสำหรับมือถือ
+        end
     end)
 end
+
 
 if GeneralTab then
     local FastAttackToggle = GeneralTab:Toggle({
