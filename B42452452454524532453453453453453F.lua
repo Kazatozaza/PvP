@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v4.0] ",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -4224,27 +4224,20 @@ local P = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local CG = game:GetService("CoreGui")
 local TS = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
-local Workspace = game:GetService("Workspace")
-local RS = game:GetService("ReplicatedStorage")
 
 local L = P.LocalPlayer
-local Cam = Workspace.CurrentCamera
-
--- // GAME REMOTES
-local CommE = RS:WaitForChild("Remotes"):WaitForChild("CommE")
 
 local old = CG:FindFirstChild("SoruUltimateUI")
 if old then old:Destroy() end
 
--- // UI SETUP (Kept your beautiful style)
-local G = Instance.new("ScreenGui", CG)
+local G = Instance.new("ScreenGui")
 G.Name = "SoruUltimateUI"
 G.IgnoreGuiInset = true
 G.ResetOnSpawn = false
 G.ZIndexBehavior = Enum.ZIndexBehavior.Global
+G.Parent = CG
 
-local B = Instance.new("TextButton", G)
+local B = Instance.new("TextButton")
 B.Size = UDim2.fromOffset(84, 84)
 B.Position = UDim2.new(1, -60, .5, 0)
 B.AnchorPoint = Vector2.new(.5, .5)
@@ -4253,6 +4246,7 @@ B.BackgroundTransparency = .02
 B.Text = ""
 B.AutoButtonColor = false
 B.ZIndex = 10
+B.Parent = G
 
 Instance.new("UICorner", B).CornerRadius = UDim.new(1, 0)
 
@@ -4269,7 +4263,7 @@ Gd.Color = ColorSequence.new{
     ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 90, 130))
 }
 
-local T = Instance.new("TextLabel", B)
+local T = Instance.new("TextLabel")
 T.Size = UDim2.fromScale(1, 1)
 T.BackgroundTransparency = 1
 T.Text = "SORU"
@@ -4279,115 +4273,129 @@ T.Font = Enum.Font.GothamBold
 T.TextStrokeColor3 = Color3.new(0, 0, 0)
 T.TextStrokeTransparency = 0
 T.ZIndex = 20
+T.Parent = B
 
--- // UTILITIES
 local function tw(o, t, p)
-    TS:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), p):Play()
+    TS:Create(
+        o,
+        TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+        p
+    ):Play()
 end
 
-local function part(f, pos, size, c, tr)
-    local p = Instance.new("Part", f)
-    p.Anchored = true
-    p.CanCollide = false
-    p.CanTouch = false
-    p.CanQuery = false
-    p.Material = Enum.Material.Neon
-    p.Color = c
-    p.Transparency = tr or 0
-    p.Size = size
-    p.Position = pos
-    return p
-end
-
-local function WarpFX(pos)
-    local F = Instance.new("Folder", Workspace)
-    F.Name = "SoruFX"
-    local C, BC, W = Color3.fromRGB(0, 220, 255), Color3.fromRGB(0, 100, 255), Color3.fromRGB(220, 250, 255)
-
-    for i = 1, 5 do
-        task.delay(i * .035, function()
-            local r = part(F, pos + Vector3.new(0, .1, 0), Vector3.new(.15, .08, .15), i % 2 == 0 and BC or C, .1)
-            Instance.new("SpecialMesh", r).MeshType = Enum.MeshType.Cylinder
-            tw(r, .45, {Size = Vector3.new(7 + i * 3, .1, 7 + i * 3), Transparency = 1})
-        end)
-    end
-    Debris:AddItem(F, 1)
-end
-
--- // CORE LOGIC
 local cooldown = false
 local waitingForClick = false
-local currentConnection = nil
 
 local function normal()
     T.Text = "SORU"
     T.TextSize = 17
     T.TextColor3 = Color3.new(1, 1, 1)
-    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(8, 12, 18)})
-    tw(S, .2, {Color = Color3.fromRGB(0, 220, 255), Thickness = 2})
+    T.TextStrokeTransparency = 0
+
+    tw(B, .2, {
+        BackgroundColor3 = Color3.fromRGB(8, 12, 18)
+    })
+
+    tw(S, .2, {
+        Color = Color3.fromRGB(0, 220, 255),
+        Thickness = 2
+    })
+end
+
+-- หา Soru Button ของเกม
+local function getGameSoruButton()
+    local playerGui = L:FindFirstChild("PlayerGui")
+    if not playerGui then return nil end
+
+    local mobile = playerGui:FindFirstChild("MobileContextButtons")
+    if not mobile then return nil end
+
+    local frame = mobile:FindFirstChild("ContextButtonFrame")
+    if not frame then return nil end
+
+    local soru = frame:FindFirstChild("BoundActionSoru")
+    if not soru then return nil end
+
+    return soru
+end
+
+-- กดปุ่ม Soru ของเกม
+local function pressGameSoru()
+    local soru = getGameSoruButton()
+
+    if not soru then
+        return false
+    end
+
+    -- GuiButton:Activate() จะทำงานเหมือนการกดปุ่มจาก UI
+    if soru:IsA("GuiButton") then
+        pcall(function()
+            soru:Activate()
+        end)
+
+        return true
+    end
+
+    return false
 end
 
 local function SoruAction()
     if cooldown or waitingForClick then return end
 
-    local char = L.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    local soru = getGameSoruButton()
+    if not soru then
+        T.Text = "NO SORU"
+        T.TextSize = 13
+
+        task.delay(1, function()
+            if not cooldown and not waitingForClick and T.Parent then
+                normal()
+            end
+        end)
+
+        return
+    end
 
     waitingForClick = true
+
     T.Text = "AIM"
     T.TextSize = 14
-    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(35, 27, 10)})
-    tw(S, .2, {Color = Color3.fromRGB(255, 190, 45), Thickness = 3})
 
-    currentConnection = UIS.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            
-            local mousePos = input.Position
-            local ray = Cam:ViewportPointToRay(mousePos.X, mousePos.Y)
-            local raycastParams = RaycastParams.new()
-            raycastParams.FilterDescendantsInstances = {char, Workspace:FindFirstChild("SoruFX")}
-            raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-            
-            local raycastResult = Workspace:Raycast(ray.Origin, ray.Direction * 1000, raycastParams)
-            
-            if raycastResult then
-                local startCFrame = root.CFrame
-                local targetPos = raycastResult.Position + Vector3.new(0, 3, 0)
-                local targetCFrame = CFrame.new(targetPos) * (root.CFrame - root.CFrame.Position)
-                
-                -- [!] THE MAGIC: Using the game's actual Remote Logic
-                local randomID = math.random(1, 999999999)
-                local serverTime = workspace:GetServerTimeNow()
-                
-                -- Fire the game's internal Soru event
-                CommE:FireServer("Soru", startCFrame, targetCFrame, serverTime, randomID)
-                
-                -- Visuals
-                WarpFX(root.Position)
-                task.wait(0.05) -- Small delay to match server sync
-                WarpFX(targetPos)
-            end
-            
-            if currentConnection then
-                currentConnection:Disconnect()
-                currentConnection = nil
-            end
-            
-            waitingForClick = false
-            cooldown = true
-            
-            task.spawn(function()
-                for n = 20, 1, -1 do
-                    if not B.Parent then return end
-                    T.Text = string.format("%.1f", n / 10)
-                    T.TextSize = 21
-                    task.wait(.1)
-                end
-                cooldown = false
-                normal()
-            end)
+    tw(B, .2, {
+        BackgroundColor3 = Color3.fromRGB(35, 27, 10)
+    })
+
+    tw(S, .2, {
+        Color = Color3.fromRGB(255, 190, 45),
+        Thickness = 3
+    })
+
+    -- กด Soru ของเกม
+    local success = pressGameSoru()
+
+    if not success then
+        waitingForClick = false
+        normal()
+        return
+    end
+
+    -- หลังจากกดแล้ว ปล่อยให้เกมรับนิ้ว/เมาส์เอง
+    -- ไม่มี Raycast และไม่มีการ CFrame วาร์ปจากสคริปต์นี้
+    waitingForClick = false
+    cooldown = true
+
+    task.spawn(function()
+        for n = 20, 1, -1 do
+            if not B.Parent then return end
+
+            T.Text = string.format("%.1f", n / 10)
+            T.TextSize = 21
+
+            task.wait(.1)
         end
+
+        cooldown = false
+        normal()
     end)
 end
 
@@ -4396,60 +4404,149 @@ B.Activated:Connect(function()
     SoruAction()
 end)
 
--- // DRAG & HOVER (Your existing code)
-local dragging, moved = false, false
-local dragStart, startPos, dragInput
+-- =========================
+-- DRAG BUTTON
+-- =========================
+
+local dragging = false
+local moved = false
+local dragStart
+local startPos
+local dragInput
+
 B.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-        dragging = true; moved = false; dragStart = i.Position; startPos = B.Position
+    if i.UserInputType == Enum.UserInputType.MouseButton1
+    or i.UserInputType == Enum.UserInputType.Touch then
+
+        dragging = true
+        moved = false
+        dragStart = i.Position
+        startPos = B.Position
     end
 end)
+
 B.InputChanged:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then
+    if i.UserInputType == Enum.UserInputType.MouseMovement
+    or i.UserInputType == Enum.UserInputType.Touch then
+
         dragInput = i
     end
 end)
+
 UIS.InputChanged:Connect(function(i)
     if not dragging or i ~= dragInput then return end
+
     local d = i.Position - dragStart
-    if d.Magnitude > 8 then moved = true end
-    B.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+
+    if d.Magnitude > 8 then
+        moved = true
+    end
+
+    B.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + d.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + d.Y
+    )
 end)
+
 B.InputEnded:Connect(function(i)
-    if i.UserInputType ~= Enum.UserInputType.MouseButton1 and i.UserInputType ~= Enum.UserInputType.Touch then return end
-    dragging = false; dragInput = nil
+    if i.UserInputType ~= Enum.UserInputType.MouseButton1
+    and i.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    dragging = false
+    dragInput = nil
 end)
+
+-- =========================
+-- HOVER
+-- =========================
 
 B.MouseEnter:Connect(function()
     if cooldown or waitingForClick then return end
-    tw(B, .15, {Size = UDim2.fromOffset(89, 89)})
-    tw(S, .15, {Thickness = 3, Transparency = 0})
+
+    tw(B, .15, {
+        Size = UDim2.fromOffset(89, 89)
+    })
+
+    tw(S, .15, {
+        Thickness = 3,
+        Transparency = 0
+    })
 end)
+
 B.MouseLeave:Connect(function()
     if cooldown or waitingForClick then return end
-    tw(B, .15, {Size = UDim2.fromOffset(84, 84)})
-    tw(S, .15, {Thickness = 2})
+
+    tw(B, .15, {
+        Size = UDim2.fromOffset(84, 84)
+    })
+
+    tw(S, .15, {
+        Thickness = 2
+    })
 end)
+
+-- =========================
+-- PULSE
+-- =========================
 
 task.spawn(function()
     while G.Parent do
         if not cooldown and not waitingForClick then
-            tw(S, .8, {Transparency = .5})
+
+            tw(S, .8, {
+                Transparency = .5
+            })
+
             task.wait(.8)
-            if not cooldown and not waitingForClick then tw(S, .8, {Transparency = .05}) end
+
+            if not cooldown and not waitingForClick then
+                tw(S, .8, {
+                    Transparency = .05
+                })
+            end
         end
+
         task.wait(.8)
     end
 end)
 
+-- =========================
+-- TOGGLE UI
+-- =========================
+
 getgenv().ToggleSoruUI = function(state)
-    if G and G.Parent then
-        G.Enabled = state
-        if not state then
-            if currentConnection then currentConnection:Disconnect(); currentConnection = nil end
-            waitingForClick = false; cooldown = false; normal()
-        end
+    if not G or not G.Parent then return end
+
+    G.Enabled = state
+
+    if not state then
+        waitingForClick = false
+        cooldown = false
+        normal()
     end
 end
 
 getgenv().ToggleSoruUI(true)
+
+-- =========================
+-- WINDUI
+-- =========================
+
+local SettingsGroup3 = Config:Group({})
+
+SettingsGroup3:Toggle({
+    Title = "Soru Button",
+    Type = "Checkbox",
+    Flag = "ToggleTeleportUI",
+    Value = true,
+
+    Callback = function(Value)
+        if getgenv().ToggleSoruUI then
+            getgenv().ToggleSoruUI(Value)
+        end
+    end
+})
