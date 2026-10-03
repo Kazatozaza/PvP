@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v4.0] ",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -567,39 +567,26 @@ local function GetTargetInFOV(refPos)
 end
 
 
+getgenv().SkillRedirectEnabled = getgenv().SkillRedirectEnabled or true
+getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
-
-
-
-
-
-
-
-
+local type = type
+local typeof = typeof
+local unpack = unpack
+local pairs = pairs
 
 local cachedPart = nil
 local lastTarget = nil
-local cachedScreenPoint = nil
-local lastPredPos = nil
-local lastCachedFrame = 0
-
-local function clearCache()
-    cachedPart = nil
-    lastTarget = nil
-    cachedScreenPoint = nil
-    lastPredPos = nil
-    lastCachedFrame = 0
-end
 
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
     if not target or not target.Parent then 
-        clearCache()
+        cachedPart = nil
+        lastTarget = nil
         return nil 
     end
-
+    
     if target ~= lastTarget then
-        clearCache()
         lastTarget = target
         cachedPart = target.Parent:FindFirstChild("HumanoidRootPart")
     end
@@ -607,103 +594,75 @@ local function getTargetCFrame()
     return cachedPart
 end
 
-local function getPredictedPosition(rootPart)
-    if not rootPart then return nil, nil end
-    
-    local pos = rootPart.Position
-    if not getgenv().PredictionEnabled then return pos, rootPart.CFrame end
-    
-    local velocity = rootPart.AssemblyLinearVelocity
-    local predictedPos = pos + (Vector3.new(velocity.X, 0, velocity.Z) * (getgenv().PredictionFactor or 0.135))
-    return predictedPos, rootPart.CFrame
-end
-
 task.spawn(function()
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-
-    repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
-    local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
+    local success, Mouse = pcall(function()
+        return LocalPlayer:GetMouse()
+    end)
     if not success or not Mouse then return end
+
 
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        if self ~= Mouse or not getgenv().SilentAimEnabled then 
-            return oldIndex(self, idx) 
-        end
-        
-        if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
-            return oldIndex(self, idx)
-        end
-        
-        local rootPart = getTargetCFrame()
-        if not rootPart then 
-            clearCache()
-            return oldIndex(self, idx) 
-        end
-        
-        local predPos, rootCFrame = getPredictedPosition(rootPart)
-        if not predPos then 
-            clearCache()
-            return oldIndex(self, idx) 
-        end
-        
-        if idx == "Hit" then 
-            return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        elseif idx == "Target" then 
-            return rootPart
-        elseif idx == "X" or idx == "Y" then 
-            local currentFrame = tick()
-            if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
-                lastCachedFrame = currentFrame
-                lastPredPos = predPos
-                cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+        if getgenv().SkillRedirectEnabled and self == Mouse then
+            local rootPart = getTargetCFrame()
+            if rootPart then
+                if idx == "Hit" then 
+                    -- ส่งค่า CFrame ของเป้าหมายไปแบบตรงๆ
+                    return rootPart.CFrame
+                elseif idx == "Target" then 
+                    -- ส่งค่า Part ของเป้าหมายตรงๆ
+                    return rootPart
+                elseif idx == "X" or idx == "Y" then 
+                    -- แปลงตำแหน่งเป็นพิกัดหน้าจอเพื่อไม่ให้เกมเอออร์
+                    local screenPoint = Camera:WorldToScreenPoint(rootPart.Position)
+                    return screenPoint[idx]
+                end
             end
-            return cachedScreenPoint[idx]
         end
-        
         return oldIndex(self, idx)
     end))
 
+    -- Hook __namecall เพื่อเปลี่ยนพิกัด CFrame หรือ Vector3 ในรีโมทให้ใช้ CFrame ของเป้าหมาย
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        if not getgenv().SilentAimEnabled then
-            clearCache()
-            return oldNamecall(self, ...)
-        end
-        
         local method = getnamecallmethod()
-        if method ~= "FireServer" and method ~= "InvokeServer" then
-            return oldNamecall(self, ...)
-        end
-        
+        local enabled = getgenv().SkillRedirectEnabled
         local rootPart = getTargetCFrame()
-        if not rootPart then
-            clearCache()
-            return oldNamecall(self, ...)
-        end
-        
-        local predPos, rootCFrame = getPredictedPosition(rootPart)
-        if not predPos then 
-            clearCache()
-            return oldNamecall(self, ...) 
-        end
-        
-        local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        
-        local args = {...}
-        for i = 1, #args do
-            local argType = typeof(args[i])
-            if argType == "CFrame" then 
-                args[i] = targetCFrame
-            elseif argType == "Vector3" then 
-                args[i] = predPos 
+
+        if enabled and rootPart and (method == "FireServer" or method == "InvokeServer") then
+            if isSkillRemote(self) then
+                local targetCFrame = rootPart.CFrame
+                local targetPos = targetCFrame.Position
+                local args = { ... }
+                
+                -- วนลูปเปลี่ยนค่าพิกัดให้เป็น CFrame / Vector3 ของเป้าหมาย
+                for i = 1, #args do
+                    local arg = args[i]
+                    local argType = typeof(arg)
+                    if argType == "CFrame" then
+                        args[i] = targetCFrame
+                    elseif argType == "Vector3" then
+                        args[i] = targetPos
+                    elseif argType == "table" then
+                        for k, v in pairs(arg) do
+                            local vType = typeof(v)
+                            if vType == "CFrame" then
+                                arg[k] = targetCFrame
+                            elseif vType == "Vector3" then
+                                arg[k] = targetPos
+                            end
+                        end
+                    end
+                end
+                
+                return oldNamecall(self, unpack(args))
             end
         end
-        
-        return oldNamecall(self, unpack(args))
+
+        return oldNamecall(self, ...)
     end))
 end)
+
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
