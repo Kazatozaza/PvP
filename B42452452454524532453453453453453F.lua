@@ -2738,7 +2738,6 @@ local function SetFastAttack(state)
     end
 
     if not state then return end
-
     connection = RunService.Heartbeat:Connect(function()
         if not fastAttackRunning then return end
 
@@ -4219,13 +4218,10 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-
-
 local P = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local CG = game:GetService("CoreGui")
 local TS = game:GetService("TweenService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local L = P.LocalPlayer
 
@@ -4279,7 +4275,7 @@ local function tw(o, t, p)
 end
 
 local function SoruAction()
-    -- ค้นหาปุ่ม Soru ของเกมต้นฉบับ แล้วดึงพิกัดจริงมาจิ้ม
+    -- บังคับเรียกใช้งานปุ่ม Soru ของเกมผ่านการยิง Connection ตรงๆ ข้ามการบล็อกทัช
     local playerGui = L:FindFirstChild("PlayerGui")
     if playerGui then
         local mobileContext = playerGui:FindFirstChild("MobileContextButtons")
@@ -4287,19 +4283,17 @@ local function SoruAction()
             local contextFrame = mobileContext:FindFirstChild("ContextButtonFrame")
             if contextFrame then
                 local soruBtn = contextFrame:FindFirstChild("BoundActionSoru")
-                if soruBtn and soruBtn:IsA("GuiObject") then
-                    -- ดึงพิกัดและขนาดจริงบนหน้าจอของผู้เล่น
-                    local absPos = soruBtn.AbsolutePosition
-                    local absSize = soruBtn.AbsoluteSize
-                    
-                    -- คำนวณหากึ่งกลางของปุ่ม
-                    local clickX = absPos.X + (absSize.X / 2)
-                    local clickY = absPos.Y + (absSize.Y / 2)
-
-                    -- จำลองการสัมผัส (Touch) ไปที่ตำแหน่งปุ่มของเกมโดยตรง (รองรับระบบมือถือและ Emulator)
-                    VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.Begin, clickX, clickY, soruBtn)
-                    task.wait(0.05)
-                    VirtualInputManager:SendTouchEvent(0, Enum.UserInputState.End, clickX, clickY, soruBtn)
+                if soruBtn then
+                    for _, conn in pairs(getconnections(soruBtn.MouseButton1Click)) do
+                        conn:Fire()
+                    end
+                    for _, conn in pairs(getconnections(soruBtn.Activated)) do
+                        conn:Fire()
+                    end
+                    -- สั่งกดผ่าน TouchTap ทะลุระบบป้องกัน
+                    for _, conn in pairs(getconnections(soruBtn.TouchTap)) do
+                        conn:Fire(Vector2.new(0,0), 1)
+                    end
                 end
             end
         end
