@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.0] ",
+        Title = "Project Destiny [v4.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -304,17 +304,20 @@ Snapline.To = Vector2.new(0, 0)
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
--- ===== OPTIMIZATION: อัปเดตตำแหน่ง FOV ทันทีที่เม้าส์ขยับ ลดอาการหน่วง =====
+-- ===== FIX: Fixed FOV position update logic =====
 local function UpdateFOVPosition(pos)
     if not FOVUI or not FOVUI.Visible then return end
     local cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
     local viewportSize = Camera.ViewportSize
     
-        if cachedFOVMode:find("mouse") or cachedFOVMode:find("touch") then
-        return LastMousePosition
+    local targetPos
+    if cachedFOVMode:find("mouse") or cachedFOVMode:find("touch") then
+        targetPos = pos or LastMousePosition
     else
-        return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+        targetPos = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     end
+    
+    FOVUI.Position = UDim2.new(0, targetPos.X, 0, targetPos.Y)
 end
 
 UserInputService.InputChanged:Connect(function(input)
@@ -331,7 +334,6 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
--- ===== OPTIMIZATION: Pre-cache เพื่อลดเวลาค้นหา =====
 local safeZonesFolder = Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("SafeZones")
 local combatCache = {}
 local safeZoneCache = {}
@@ -544,39 +546,8 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-local cachedPart = nil
-local lastTarget = nil
-local cachedScreenPoint = nil
-local lastPredPos = nil
-local lastCachedFrame = 0
-
-local function clearCache()
-    cachedPart = nil
-    lastTarget = nil
-    cachedScreenPoint = nil
-    lastPredPos = nil
-    lastCachedFrame = 0
-    table.clear(combatCache)
-    table.clear(safeZoneCache)
-end
-
-local function getTargetCFrame()
-    local target = getgenv().CurrentTarget
-    if not target or not target.Parent then 
-        clearCache()
-        return nil 
-    end
-
-    if target ~= lastTarget then
-        clearCache()
-        lastTarget = target
-        cachedPart = target.Parent:FindFirstChild("HumanoidRootPart")
-    end
-    
-    return cachedPart
-end
-
-local function getPredictedPosition(rootPart)
+-- ===== FIX: Standardized case for global prediction function =====
+local function GetPredictedPosition(rootPart)
     if not rootPart then return nil, nil end
     
     local pos = rootPart.Position
@@ -587,90 +558,118 @@ local function getPredictedPosition(rootPart)
     return predictedPos, rootPart.CFrame
 end
 
-task.spawn(function()
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
+getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
+getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
-    repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
-    local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
+local allowedRemotes = {
+    shoot = true, fire = true, attack = true, 
+    combat = true, ability = true, skill = true, gun = true
+}
+
+local blockedRemotes = {
+    equip = true, tool = true, inventory = true, 
+    backpack = true, loadout = true, anim = true, sound = true
+}
+
+local remoteCache = {}
+
+local function isAllowedRemote(self)
+    local name = self.Name
+    local cached = remoteCache[name]
+    if cached ~= nil then
+        return cached
+    end
+
+    local lowerName = name:lower()
+    for blockWord in pairs(blockedRemotes) do
+        if lowerName:find(blockWord, 1, true) then
+            remoteCache[name] = false
+            return false
+        end
+    end
+
+    for keyword in pairs(allowedRemotes) do
+        if lowerName:find(keyword, 1, true) then
+            remoteCache[name] = true
+            return true
+        end
+    end
+
+    remoteCache[name] = false
+    return false
+end
+
+task.spawn(function()
+    local success, Mouse = pcall(function()
+        return LocalPlayer:GetMouse()
+    end)
     if not success or not Mouse then return end
+
+    local function getRoot()
+        local target = getgenv().CurrentTarget
+        if target and target.Parent then
+            local character = target.Parent
+            return character:FindFirstChild("HumanoidRootPart") 
+                or character:FindFirstChild("UpperTorso") 
+                or character:FindFirstChild("Torso")
+        end
+        return nil
+    end
 
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        if self ~= Mouse or not getgenv().SilentAimEnabled then 
-            return oldIndex(self, idx) 
-        end
-        
-        if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
-            return oldIndex(self, idx)
-        end
-        
-        local rootPart = getTargetCFrame()
-        if not rootPart then 
-            clearCache()
-            return oldIndex(self, idx) 
-        end
-        
-        local predPos, rootCFrame = getPredictedPosition(rootPart)
-        if not predPos then 
-            clearCache()
-            return oldIndex(self, idx) 
-        end
-        
-        if idx == "Hit" then 
-            return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        elseif idx == "Target" then 
-            return rootPart
-        elseif idx == "X" or idx == "Y" then 
-            local currentFrame = tick()
-            if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
-                lastCachedFrame = currentFrame
-                lastPredPos = predPos
-                cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+        if getgenv().SilentAimEnabled and self == Mouse then
+            local r = getRoot()
+            if r then
+                if idx == "Hit" then 
+                    return r.CFrame
+                elseif idx == "Target" then 
+                    return r
+                elseif idx == "X" or idx == "Y" then 
+                    return Camera:WorldToScreenPoint(r.Position)[idx]
+                end
             end
-            return cachedScreenPoint[idx]
         end
-        
         return oldIndex(self, idx)
     end))
 
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        if not getgenv().SilentAimEnabled then
-            clearCache()
-            return oldNamecall(self, ...)
-        end
-        
         local method = getnamecallmethod()
-        if method ~= "FireServer" and method ~= "InvokeServer" then
-            return oldNamecall(self, ...)
-        end
-        
-        local rootPart = getTargetCFrame()
-        if not rootPart then
-            clearCache()
-            return oldNamecall(self, ...)
-        end
-        
-        local predPos, rootCFrame = getPredictedPosition(rootPart)
-        if not predPos then 
-            clearCache()
-            return oldNamecall(self, ...) 
-        end
-        
-        local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        
-        local args = {...}
-        for i = 1, #args do
-            local argType = typeof(args[i])
-            if argType == "CFrame" then 
-                args[i] = targetCFrame
-            elseif argType == "Vector3" then 
-                args[i] = predPos 
+        local target = getgenv().CurrentTarget
+        local enabled = getgenv().SilentAimEnabled
+
+        if target then
+            if enabled or UserInputService.TouchEnabled then
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                    local r = getRoot()
+                    if r then 
+                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
+                    end
+                end
+            end
+
+            if enabled and (method == "FireServer" or method == "InvokeServer") then
+                if isAllowedRemote(self) then
+                    local targetPos = GetPredictedPosition(target)
+                    if targetPos then
+                        local args = { ... }
+                        for i = 1, #args do
+                            local arg = args[i]
+                            local argType = typeof(arg)
+                            if argType == "Vector3" then
+                                args[i] = targetPos
+                            elseif argType == "CFrame" then
+                                args[i] = arg - arg.Position + targetPos
+                            end
+                        end
+                        return oldNamecall(self, unpack(args))
+                    end
+                end
             end
         end
-        
-        return oldNamecall(self, unpack(args))
+
+        return oldNamecall(self, ...)
     end))
 end)
 
@@ -710,7 +709,6 @@ RunService.RenderStepped:Connect(function(dt)
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
 
-    -- ===== FOV UI: ลดภาระการรันซ้ำซ้อนใน RenderStepped =====
     local now = tick()
     if now - lastFOVUpdate > 0.05 then
         lastFOVUpdate = now
@@ -736,7 +734,6 @@ RunService.RenderStepped:Connect(function(dt)
         return
     end
 
-    -- ===== TARGET FINDING =====
     local bestTarget = nil
     local shortestDistance = math.huge
     local maxDistance = getgenv().MaxDistance or 1000
@@ -777,15 +774,13 @@ RunService.RenderStepped:Connect(function(dt)
     
     getgenv().CurrentTarget = bestTarget
 
-    -- ===== CAMLOCK =====
     if getgenv().CamlockEnabled and bestTarget then
-        local targetPos, _ = getPredictedPosition(bestTarget)
+        local targetPos, _ = GetPredictedPosition(bestTarget)
         if targetPos then
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
         end
     end
 
-    -- ===== SNAPLINE =====
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
         
