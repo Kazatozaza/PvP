@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.1] ",
+        Title = "Project Destiny [v3.0] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -530,30 +530,31 @@ end
 
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
-    -- ป้องกันค่า getgenv().FOVRadius เป็น nil
     local fovRadius = getgenv().FOVRadius or 100
     local ShortestDistance = (fovRadius >= 99999) and 99999 or fovRadius
-
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-
-    for _, char in ipairs(GetAllValidTargets()) do
+    
+    if not myHRP then return nil end
+    
+    local maxDistance = getgenv().MaxDistance or 500
+    local validTargets = GetAllValidTargets()
+    
+    for i = 1, #validTargets do
+        local char = validTargets[i]
         local targetPart = char:FindFirstChild(getgenv().LockedPartName) or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
         local humanoid = char:FindFirstChildOfClass("Humanoid")
 
         if targetPart and humanoid and humanoid.Health > 0 then
-            if not ShouldIgnoreTarget(char) then
-                local maxDistance = getgenv().MaxDistance or 500
-                local worldDistance = myHRP and (targetPart.Position - myHRP.Position).Magnitude or 0
+            local targetPlayer = Players:GetPlayerFromCharacter(char)
+            if not ShouldIgnoreTarget(char, targetPlayer) then
+                local worldDistance = (targetPart.Position - myHRP.Position).Magnitude
                 
                 if worldDistance <= maxDistance then
                     local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-
                     if onScreen then
-                        local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                        local distance = (targetPos2D - refPos).Magnitude
-
-                        if distance <= ShortestDistance then
+                        local distance = (Vector2.new(screenPos.X, screenPos.Y) - refPos).Magnitude
+                        if distance < ShortestDistance then
                             ShortestDistance = distance
                             ClosestTarget = targetPart
                         end
@@ -565,7 +566,6 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-
 getgenv().SkillRedirectEnabled = getgenv().SkillRedirectEnabled or true
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
@@ -573,6 +573,43 @@ local type = type
 local typeof = typeof
 local unpack = unpack
 local pairs = pairs
+
+local allowedSkillRemotes = {
+    toMouse = true, castskill = true, useability = true, 
+    attack = true, combat = true, skill = true, shoot = true,
+    miniclick = true, mouseclick = true, remote = true
+}
+
+local blockedRemotes = {
+    equip = true, unequip = true, store = true, reset = true,
+    chat = true, data = true, load = true, save = true
+}
+
+local remoteCache = {}
+
+local function isSkillRemote(self)
+    local name = self.Name
+    local cached = remoteCache[name]
+    if cached ~= nil then return cached end
+
+    local lowerName = name:lower()
+    for blockWord in pairs(blockedRemotes) do
+        if lowerName:find(blockWord, 1, true) then
+            remoteCache[name] = false
+            return false
+        end
+    end
+
+    for keyword in pairs(allowedSkillRemotes) do
+        if lowerName:find(keyword, 1, true) then
+            remoteCache[name] = true
+            return true
+        end
+    end
+
+    remoteCache[name] = true 
+    return true
+end
 
 local cachedPart = nil
 local lastTarget = nil
