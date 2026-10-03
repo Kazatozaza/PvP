@@ -232,7 +232,6 @@ Home:Paragraph({
     },
 })
 
-
 getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
 getgenv().SilentAimMode = getgenv().SilentAimMode or "FOV"
 getgenv().FOVRadius = getgenv().FOVRadius or 100
@@ -302,7 +301,8 @@ Snapline.Transparency = 1
 Snapline.From = Vector2.new(0, 0)        
 Snapline.To = Vector2.new(0, 0)
 
-local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+-- [ส่วนเพิ่มใหม่] ตัวแปรจำลองเมาส์รองรับการสัมผัสมือถือ
+local VirtualMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 local function UpdateFOVPosition(pos)
     if not FOVUI or not FOVUI.Visible then return end
@@ -316,17 +316,18 @@ local function UpdateFOVPosition(pos)
     end
 end
 
+-- ดักจับการใช้นิ้วทัชหน้าจอเพื่ออัปเดตตำแหน่งเสมือนเมาส์
 UserInputService.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
-        UpdateFOVPosition(LastMousePosition)
+        VirtualMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+        UpdateFOVPosition(VirtualMousePosition)
     end
 end)
 
 UserInputService.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
-        LastMousePosition = Vector2.new(input.Position.X, input.Position.Y)
-        UpdateFOVPosition(LastMousePosition)
+        VirtualMousePosition = Vector2.new(input.Position.X, input.Position.Y)
+        UpdateFOVPosition(VirtualMousePosition)
     end
 end)
 
@@ -505,7 +506,7 @@ local function GetReferencePosition()
     
     local viewportSize = Camera.ViewportSize
     if cachedFOVMode:find("mouse") then
-        return LastMousePosition
+        return VirtualMousePosition
     else
         return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     end
@@ -551,19 +552,6 @@ end
 
 local cachedPart = nil
 local lastTarget = nil
-local cachedScreenPoint = nil
-local lastPredPos = nil
-local lastCachedFrame = 0
-
-local function clearCache()
-    cachedPart = nil
-    lastTarget = nil
-    cachedScreenPoint = nil
-    lastPredPos = nil
-    lastCachedFrame = 0
-    table.clear(combatCache)
-    table.clear(safeZoneCache)
-end
 
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
@@ -581,7 +569,6 @@ end
 
 local function getPredictedPosition(rootPart)
     if not rootPart then return nil, nil end
-    
     local pos = rootPart.Position
     if not getgenv().PredictionEnabled then return pos, rootPart.CFrame end
     
@@ -590,12 +577,8 @@ local function getPredictedPosition(rootPart)
     return predictedPos, rootPart.CFrame
 end
 
+-- [ส่วนเพิ่มใหม่] ระบบจำลองเมธอดเมาส์และรีโมท สำหรับอุปกรณ์มือถือโดยเฉพาะ
 task.spawn(function()
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local Humanoid = Character:WaitForChild("Humanoid")
-
-    repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
-    
     local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
     if success and Mouse then
         local oldIndex
@@ -623,13 +606,8 @@ task.spawn(function()
             elseif idx == "Target" then 
                 return rootPart
             elseif idx == "X" or idx == "Y" then 
-                local currentFrame = tick()
-                if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
-                    lastCachedFrame = currentFrame
-                    lastPredPos = predPos
-                    cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
-                end
-                return cachedScreenPoint[idx]
+                local screenPoint = Camera:WorldToScreenPoint(predPos)
+                return screenPoint[idx]
             end
             
             return oldIndex(self, idx)
@@ -643,7 +621,7 @@ task.spawn(function()
         end
         
         local method = getnamecallmethod()
-        if method ~= "FireServer" and method ~= "InvokeServer" then
+        if method ~= "FireServer" and method ~= "InvokeServer" and method ~= "fire" and method ~= "invoke" then
             return oldNamecall(self, ...)
         end
         
@@ -666,6 +644,14 @@ task.spawn(function()
                 args[i] = targetCFrame
             elseif argType == "Vector3" then 
                 args[i] = predPos 
+            elseif argType == "table" then
+                for k, v in pairs(args[i]) do
+                    if typeof(v) == "Vector3" then
+                        args[i][k] = predPos
+                    elseif typeof(v) == "CFrame" then
+                        args[i][k] = targetCFrame
+                    end
+                end
             end
         end
         
@@ -739,7 +725,7 @@ RunService.RenderStepped:Connect(function(dt)
 
                 if rootPart and humanoid and humanoid.Health > 0 then
                     local targetPlayer = Players:GetPlayerFromCharacter(char)
-                    if not ShouldIgnoreTarget(char, targetPlayer) then
+                    if not ShouldIgnoreTypeTarget(char, targetPlayer) and not ShouldIgnoreTarget(char, targetPlayer) then
                         local valid = true
                         if mode == "180°" then
                             valid = lookVector:Dot((rootPart.Position - cameraPos).Unit) > 0
