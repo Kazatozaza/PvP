@@ -310,10 +310,10 @@ local function UpdateFOVPosition(pos)
     local cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
     local viewportSize = Camera.ViewportSize
     
-    if cachedFOVMode:find("mouse") then
-        FOVUI.Position = UDim2.new(0, pos.X, 0, pos.Y)
+        if cachedFOVMode:find("mouse") or cachedFOVMode:find("touch") then
+        return LastMousePosition
     else
-        FOVUI.Position = UDim2.new(0, viewportSize.X / 2, 0, viewportSize.Y / 2)
+        return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
     end
 end
 
@@ -495,51 +495,44 @@ local function GetAllValidTargets()
     return cachedValidTargets
 end
 
-local cachedFOVMode = "Middle"
-local lastModeCheck = 0
-
 local function GetReferencePosition()
-    local now = tick()
-    if now - lastModeCheck > 0.5 then
-        cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
-        lastModeCheck = now
-    end
-    
     local viewportSize = Camera.ViewportSize
-    if cachedFOVMode:find("mouse") then
-        return LastMousePosition
-    else
-        return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-    end
-end
+    local mode = tostring(getgenv().FOVPositionMode):lower()
 
+    if mode == "mouse/touch" or mode == "mousetouch" or mode == "mouse" or mode == "touch" then
+        return LastMousePosition
+    end
+
+    return Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+end
 
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
-    
     local fovRadius = getgenv().FOVRadius or 100
     local ShortestDistance = (fovRadius >= 99999) and 99999 or fovRadius
-
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-
-    for _, char in ipairs(GetAllValidTargets()) do
+    
+    if not myHRP then return nil end
+    
+    local maxDistance = getgenv().MaxDistance or 500
+    local validTargets = GetAllValidTargets()
+    
+    for i = 1, #validTargets do
+        local char = validTargets[i]
         local targetPart = char:FindFirstChild(getgenv().LockedPartName) or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
         local humanoid = char:FindFirstChildOfClass("Humanoid")
 
         if targetPart and humanoid and humanoid.Health > 0 then
-            if not ShouldIgnoreTarget(char) then
-                local maxDistance = getgenv().MaxDistance or 500
-                local worldDistance = myHRP and (targetPart.Position - myHRP.Position).Magnitude or 0
+            local targetPlayer = Players:GetPlayerFromCharacter(char)
+            if not ShouldIgnoreTarget(char, targetPlayer) then
+                local worldDistance = (targetPart.Position - myHRP.Position).Magnitude
                 
                 if worldDistance <= maxDistance then
                     local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-
                     if onScreen then
-                        local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                        local distance = (targetPos2D - refPos).Magnitude
-
-                        if distance <= ShortestDistance then
+                        local distance = (Vector2.new(screenPos.X, screenPos.Y) - refPos).Magnitude
+                        if distance < ShortestDistance then
                             ShortestDistance = distance
                             ClosestTarget = targetPart
                         end
