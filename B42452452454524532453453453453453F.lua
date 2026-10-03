@@ -148,7 +148,7 @@ end)
 
 local windowSuccess, Window = pcall(function()
     return WindUI:CreateWindow({
-    Title = "Project Destiny [v3.0]",
+    Title = "Project Destiny [v3.011111]",
     Icon =  "rbxassetid://97596339693490",
     Author = "System Online • Access Granted",
     Folder = "Destiny Hub",
