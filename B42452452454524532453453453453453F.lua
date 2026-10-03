@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.0] ",
+        Title = "Project Destiny [v3.1] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -530,31 +530,30 @@ end
 
 local function GetTargetInFOV(refPos)
     local ClosestTarget = nil
+    -- ป้องกันค่า getgenv().FOVRadius เป็น nil
     local fovRadius = getgenv().FOVRadius or 100
     local ShortestDistance = (fovRadius >= 99999) and 99999 or fovRadius
+
     local myChar = LocalPlayer.Character
     local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    
-    if not myHRP then return nil end
-    
-    local maxDistance = getgenv().MaxDistance or 500
-    local validTargets = GetAllValidTargets()
-    
-    for i = 1, #validTargets do
-        local char = validTargets[i]
+
+    for _, char in ipairs(GetAllValidTargets()) do
         local targetPart = char:FindFirstChild(getgenv().LockedPartName) or char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
         local humanoid = char:FindFirstChildOfClass("Humanoid")
 
         if targetPart and humanoid and humanoid.Health > 0 then
-            local targetPlayer = Players:GetPlayerFromCharacter(char)
-            if not ShouldIgnoreTarget(char, targetPlayer) then
-                local worldDistance = (targetPart.Position - myHRP.Position).Magnitude
+            if not ShouldIgnoreTarget(char) then
+                local maxDistance = getgenv().MaxDistance or 500
+                local worldDistance = myHRP and (targetPart.Position - myHRP.Position).Magnitude or 0
                 
                 if worldDistance <= maxDistance then
                     local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+
                     if onScreen then
-                        local distance = (Vector2.new(screenPos.X, screenPos.Y) - refPos).Magnitude
-                        if distance < ShortestDistance then
+                        local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
+                        local distance = (targetPos2D - refPos).Magnitude
+
+                        if distance <= ShortestDistance then
                             ShortestDistance = distance
                             ClosestTarget = targetPart
                         end
