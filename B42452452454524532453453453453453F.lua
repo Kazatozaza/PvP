@@ -5,7 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
-        Title = "Project Destiny [v3.111111] ",
+        Title = "Project Destiny [v3.1] ",
         Icon = "rbxassetid://95386367904989",
         Author = "System Online • Access Granted",
         Folder = "Destiny Hub",
@@ -615,48 +615,50 @@ task.spawn(function()
     end
 
     local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        if not getgenv().SilentAimEnabled then
-            return oldNamecall(self, ...)
-        end
-        
-        local method = getnamecallmethod()
-        if method ~= "FireServer" and method ~= "InvokeServer" and method ~= "fire" and method ~= "invoke" then
-            return oldNamecall(self, ...)
-        end
-        
-        local rootPart = getTargetCFrame()
-        if not rootPart then
-            return oldNamecall(self, ...)
-        end
-        
-        local predPos, rootCFrame = getPredictedPosition(rootPart)
-        if not predPos then 
-            return oldNamecall(self, ...) 
-        end
-        
-        local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-        
-        local args = {...}
-        for i = 1, #args do
-            local argType = typeof(args[i])
-            if argType == "CFrame" then 
-                args[i] = targetCFrame
-            elseif argType == "Vector3" then 
-                args[i] = predPos 
-            elseif argType == "table" then
-                for k, v in pairs(args[i]) do
-                    if typeof(v) == "Vector3" then
-                        args[i][k] = predPos
-                    elseif typeof(v) == "CFrame" then
-                        args[i][k] = targetCFrame
-                    end
+oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+    if not getgenv().SilentAimEnabled then
+        return oldNamecall(self, ...)
+    end
+    
+    local method = getnamecallmethod()
+    if method ~= "FireServer" and method ~= "InvokeServer" and method ~= "fire" and method ~= "invoke" then
+        return oldNamecall(self, ...)
+    end
+    
+    local rootPart = getTargetCFrame()
+    if not rootPart then
+        return oldNamecall(self, ...)
+    end
+    
+    local predPos, rootCFrame = getPredictedPosition(rootPart)
+    if not predPos then 
+        return oldNamecall(self, ...) 
+    end
+    
+    local targetCFrame = CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
+    
+    local args = {...}
+    for i = 1, #args do
+        local argType = typeof(args[i])
+        -- ดักจับกรณีที่ส่งค่าตำแหน่งเป็น Vector3, CFrame หรือทิศทางพุ่งกระสุน
+        if argType == "CFrame" then 
+            args[i] = targetCFrame
+        elseif argType == "Vector3" then 
+            -- ถ้าเป็น Vector3 ให้เช็คว่าเป็นตำแหน่งเป้าหมายการยิงหรือไม่ (พุ่งไปที่ตัวเป้าหมายโดยตรง)
+            args[i] = predPos 
+        elseif argType == "table" then
+            for k, v in pairs(args[i]) do
+                if typeof(v) == "Vector3" then
+                    args[i][k] = predPos
+                elseif typeof(v) == "CFrame" then
+                    args[i][k] = targetCFrame
                 end
             end
         end
-        
-        return oldNamecall(self, unpack(args))
-    end))
+    end
+    
+    return oldNamecall(self, unpack(args))
+end))
 end)
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
