@@ -2797,8 +2797,8 @@ end
 
 if GeneralTab then
     GeneralTab:Toggle({
-        Title = "Attack Aura (Mobile Fix)",
-        Desc = "(All Fruits, Melee, Swords)",
+        Title = "Attack Aura",
+        Desc = "Fruits, Melee, Swords",
         Type =  "Checkbox",
         Flag = "FastAttack",
         Value = false,
