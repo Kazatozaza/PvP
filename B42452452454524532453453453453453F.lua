@@ -570,13 +570,6 @@ local function clearCache()
     table.clear(safeZoneCache)
 end
 
-local VirtualUser = {}
-function VirtualUser:GetMouseLocation()
-    -- รองรับทั้งตำแหน่งนิ้วสัมผัสล่าสุดหรือตำแหน่งกึ่งกลางจอ/เมาส์
-    local mouseLoc = UserInputService:GetMouseLocation()
-    return mouseLoc
-end
-
 local function getTargetCFrame()
     local target = getgenv().CurrentTarget
     if not target or not target.Parent then 
@@ -609,44 +602,72 @@ task.spawn(function()
     local Humanoid = Character:WaitForChild("Humanoid")
 
     repeat task.wait() until Character:IsDescendantOf(workspace) and Humanoid.Health > 0
+    local success, Mouse = pcall(function() return LocalPlayer:GetMouse() end)
 
-   local oldIndex
+    local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+
+local oldIndex
 oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-    -- ตรวจสอบว่าเปิด SilentAim หรือไม่
+    -- ถ้าปิด Silent Aim ให้ทำงานตามปกติ
     if not getgenv().SilentAimEnabled then 
         return oldIndex(self, idx) 
     end
     
-    -- รองรับทั้ง PlayerMouse หรือการเรียกใช้งานผ่าน UserInputService / Camera
-    -- บนมือถือมักไม่มี object Mouse ตรงๆ เราจึงให้มันดักจับผ่านเงื่อนไข index ทั่วไปแทน
-    if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
-        return oldIndex(self, idx)
-    end
-    
-    local rootPart = getTargetCFrame()
-    if not rootPart then 
-        clearCache()
-        return oldIndex(self, idx) 
-    end
-    
-    local predPos, rootCFrame = getPredictedPosition(rootPart)
-    if not predPos then 
-        clearCache()
-        return oldIndex(self, idx) 
-    end
-    
-    if idx == "Hit" then 
-        return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
-    elseif idx == "Target" then 
-        return rootPart
-    elseif idx == "X" or idx == "Y" then 
-        local currentFrame = tick()
-        if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
-            lastCachedFrame = currentFrame
-            lastPredPos = predPos
-            cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+    -- จัดการกรณีอยู่บนมือถือ (ใช้กล้อง/มุมมองตรงกลางแทน Mouse)
+    if isMobile then
+        -- ดักจับการเรียกตำแหน่งเป้าหมายกลางจอหรือทิศทางกล้องบนมือถือ
+        if idx == "Hit" then
+            local rootPart = getTargetCFrame()
+            if not rootPart then 
+                clearCache()
+                return oldIndex(self, idx) 
+            end
+            
+            local predPos, rootCFrame = getPredictedPosition(rootPart)
+            if not predPos then 
+                clearCache()
+                return oldIndex(self, idx) 
+            end
+            
+            -- คืนค่า CFrame ไปที่เป้าหมายที่คำนวณไว้
+            return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
+        elseif idx == "Target" then
+            local rootPart = getTargetCFrame()
+            return rootPart or oldIndex(self, idx)
         end
-        return cachedScreenPoint[idx]
+    else
+        -- โค้ดเดิมสำหรับคอมพิวเตอร์ (Mouse)
+        if self == Mouse then
+            if idx ~= "Hit" and idx ~= "Target" and idx ~= "X" and idx ~= "Y" then
+                return oldIndex(self, idx)
+            end
+            
+            local rootPart = getTargetCFrame()
+            if not rootPart then 
+                clearCache()
+                return oldIndex(self, idx) 
+            end
+            
+            local predPos, rootCFrame = getPredictedPosition(rootPart)
+            if not predPos then 
+                clearCache()
+                return oldIndex(self, idx) 
+            end
+            
+            if idx == "Hit" then 
+                return CFrame.new(predPos) * (rootCFrame - rootCFrame.Position)
+            elseif idx == "Target" then 
+                return rootPart
+            elseif idx == "X" or idx == "Y" then 
+                local currentFrame = tick()
+                if currentFrame ~= lastCachedFrame or lastPredPos ~= predPos then
+                    lastCachedFrame = currentFrame
+                    lastPredPos = predPos
+                    cachedScreenPoint = Camera:WorldToScreenPoint(predPos)
+                end
+                return cachedScreenPoint[idx]
+            end
+        end
     end
     
     return oldIndex(self, idx)
