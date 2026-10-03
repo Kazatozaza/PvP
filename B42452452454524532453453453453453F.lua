@@ -562,9 +562,8 @@ getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 local remoteCache = {}
 local lastTarget = nil
 
--- ฟังก์ชันสำหรับล้างข้อมูลเก่าทั้งหมด (Cache และสถานะเป้าหมายเก่า)
 local function ClearOldData()
-    table.clear(remoteCache) -- ล้างแคชรีโมทเก่าทั้งหมด
+    table.clear(remoteCache) 
     lastTarget = nil
 end
 
@@ -577,7 +576,6 @@ task.spawn(function()
     local function getRoot()
         local target = getgenv().CurrentTarget
         
-        -- ถ้าเป้าหมายเปลี่ยนไปจากเดิม หรือเป้าหมายตาย/หายไป ให้ทำการล้างข้อมูลเก่าทันที
         if target ~= lastTarget then
             ClearOldData()
             lastTarget = target
@@ -587,7 +585,6 @@ task.spawn(function()
             local character = target.Parent
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             
-            -- ถ้าเป้าหมายตาย (Health <= 0) ให้ล้างเป้าหมายและข้อมูลเก่าทันที
             if humanoid and humanoid.Health <= 0 then
                 getgenv().CurrentTarget = nil
                 ClearOldData()
@@ -674,9 +671,10 @@ local function clearOldData()
 end
 
 RunService.RenderStepped:Connect(function(dt)
-    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled and not getgenv().ShowFOV then
-        clearOldData()
-        return
+    if (not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled) or not getgenv().ShowTracer then
+        if Snapline then
+            Snapline.Visible = false
+        end
     end
 
     if typeof(clearCacheIfNeeded) == "function" then
@@ -775,7 +773,8 @@ RunService.RenderStepped:Connect(function(dt)
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
         
-        if bestTarget and getgenv().ShowTracer and Snapline then
+        -- เช็คเงื่อนไขว่าต้องแสดงเส้น Tracer หรือไม่
+        if bestTarget and getgenv().ShowTracer and (getgenv().SilentAimEnabled or getgenv().CamlockEnabled) and Snapline then
             local targetPart = bestTarget
             if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
                 targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
@@ -809,7 +808,9 @@ RunService.RenderStepped:Connect(function(dt)
                 Snapline.Visible = false
             end
         else
-            Snapline.Visible = false
+            if Snapline then
+                Snapline.Visible = false
+            end
         end
     end
 end)
@@ -4217,360 +4218,367 @@ RunService.RenderStepped:Connect(function()
 end)
 
 
-local P=game:GetService("Players")
-local UIS=game:GetService("UserInputService")
-local CG=game:GetService("CoreGui")
-local TS=game:GetService("TweenService")
-local Debris=game:GetService("Debris")
+local P = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local CG = game:GetService("CoreGui")
+local TS = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local Workspace = game:GetService("Workspace")
 
-local L=P.LocalPlayer
-local Cam=workspace.CurrentCamera
+local L = P.LocalPlayer
+local Cam = Workspace.CurrentCamera
 
-local old=CG:FindFirstChild("SoruUltimateUI")
+local old = CG:FindFirstChild("SoruUltimateUI")
 if old then old:Destroy() end
 
-local G=Instance.new("ScreenGui",CG)
-G.Name="SoruUltimateUI"
-G.IgnoreGuiInset=true
-G.ResetOnSpawn=false
-G.ZIndexBehavior=Enum.ZIndexBehavior.Global
+local G = Instance.new("ScreenGui", CG)
+G.Name = "SoruUltimateUI"
+G.IgnoreGuiInset = true
+G.ResetOnSpawn = false
+G.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
-local B=Instance.new("TextButton",G)
-B.Size=UDim2.fromOffset(84,84)
-B.Position=UDim2.new(1,-60,.5,0)
-B.AnchorPoint=Vector2.new(.5,.5)
-B.BackgroundColor3=Color3.fromRGB(8,12,18)
-B.BackgroundTransparency=.02
-B.Text=""
-B.AutoButtonColor=false
-B.ZIndex=10
+local B = Instance.new("TextButton", G)
+B.Size = UDim2.fromOffset(84, 84)
+B.Position = UDim2.new(1, -60, .5, 0)
+B.AnchorPoint = Vector2.new(.5, .5)
+B.BackgroundColor3 = Color3.fromRGB(8, 12, 18)
+B.BackgroundTransparency = .02
+B.Text = ""
+B.AutoButtonColor = false
+B.ZIndex = 10
 
-Instance.new("UICorner",B).CornerRadius=UDim.new(1,0)
+Instance.new("UICorner", B).CornerRadius = UDim.new(1, 0)
 
-local S=Instance.new("UIStroke",B)
-S.Color=Color3.fromRGB(0,220,255)
-S.Thickness=2
-S.Transparency=.05
+local S = Instance.new("UIStroke", B)
+S.Color = Color3.fromRGB(0, 220, 255)
+S.Thickness = 2
+S.Transparency = .05
 
-local Gd=Instance.new("UIGradient",B)
-Gd.Rotation=45
-Gd.Color=ColorSequence.new{
-    ColorSequenceKeypoint.new(0,Color3.fromRGB(35,45,55)),
-    ColorSequenceKeypoint.new(.5,Color3.fromRGB(8,12,18)),
-    ColorSequenceKeypoint.new(1,Color3.fromRGB(0,90,130))
+local Gd = Instance.new("UIGradient", B)
+Gd.Rotation = 45
+Gd.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 45, 55)),
+    ColorSequenceKeypoint.new(.5, Color3.fromRGB(8, 12, 18)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 90, 130))
 }
 
-local T=Instance.new("TextLabel",B)
-T.Size=UDim2.fromScale(1,1)
-T.BackgroundTransparency=1
-T.Text="SORU"
-T.TextColor3=Color3.new(1,1,1)
-T.TextSize=17
-T.Font=Enum.Font.GothamBold
-T.TextStrokeColor3=Color3.new(0,0,0)
-T.TextStrokeTransparency=0
-T.ZIndex=20
+local T = Instance.new("TextLabel", B)
+T.Size = UDim2.fromScale(1, 1)
+T.BackgroundTransparency = 1
+T.Text = "SORU"
+T.TextColor3 = Color3.new(1, 1, 1)
+T.TextSize = 17
+T.Font = Enum.Font.GothamBold
+T.TextStrokeColor3 = Color3.new(0, 0, 0)
+T.TextStrokeTransparency = 0
+T.ZIndex = 20
 
-local function tw(o,t,p)
-    TS:Create(o,TweenInfo.new(t,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),p):Play()
+local function tw(o, t, p)
+    TS:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), p):Play()
 end
 
-local function part(f,pos,size,c,tr)
-    local p=Instance.new("Part",f)
-    p.Anchored=true
-    p.CanCollide=false
-    p.CanTouch=false
-    p.CanQuery=false
-    p.Material=Enum.Material.Neon
-    p.Color=c
-    p.Transparency=tr or 0
-    p.Size=size
-    p.Position=pos
+local function part(f, pos, size, c, tr)
+    local p = Instance.new("Part", f)
+    p.Anchored = true
+    p.CanCollide = false
+    p.CanTouch = false
+    p.CanQuery = false
+    p.Material = Enum.Material.Neon
+    p.Color = c
+    p.Transparency = tr or 0
+    p.Size = size
+    p.Position = pos
     return p
 end
 
 local function WarpFX(pos)
-    local F=Instance.new("Folder",workspace)
-    F.Name="SoruFX"
+    local F = Instance.new("Folder", Workspace)
+    F.Name = "SoruFX"
 
-    local C=Color3.fromRGB(0,220,255)
-    local BC=Color3.fromRGB(0,100,255)
-    local W=Color3.fromRGB(220,250,255)
+    local C = Color3.fromRGB(0, 220, 255)
+    local BC = Color3.fromRGB(0, 100, 255)
+    local W = Color3.fromRGB(220, 250, 255)
 
-    for i=1,5 do
-        task.delay(i*.035,function()
-            local r=part(F,pos+Vector3.new(0,.1,0),Vector3.new(.15,.08,.15),i%2==0 and BC or C,.1)
-            local m=Instance.new("SpecialMesh",r)
-            m.MeshType=Enum.MeshType.Cylinder
-            local z=7+i*3
-            tw(r,.45,{Size=Vector3.new(z,.1,z),Transparency=1})
+    for i = 1, 5 do
+        task.delay(i * .035, function()
+            local r = part(F, pos + Vector3.new(0, .1, 0), Vector3.new(.15, .08, .15), i % 2 == 0 and BC or C, .1)
+            local m = Instance.new("SpecialMesh", r)
+            m.MeshType = Enum.MeshType.Cylinder
+            local z = 7 + i * 3
+            tw(r, .45, {Size = Vector3.new(z, .1, z), Transparency = 1})
         end)
     end
 
-    for i=1,8 do
-        local a=i/8*math.pi*2
-        local r=3+math.random()*2
-        local p=part(
+    for i = 1, 8 do
+        local a = i / 8 * math.pi * 2
+        local r = 3 + math.random() * 2
+        local p = part(
             F,
-            pos+Vector3.new(math.cos(a)*r,3,math.sin(a)*r),
-            Vector3.new(.12,6,.12),
-            i%2==0 and C or BC,.2
+            pos + Vector3.new(math.cos(a) * r, 3, math.sin(a) * r),
+            Vector3.new(.12, 6, .12),
+            i % 2 == 0 and C or BC, .2
         )
-        tw(p,.35,{Size=Vector3.new(.02,.2,.02),Transparency=1})
+        tw(p, .35, {Size = Vector3.new(.02, .2, .02), Transparency = 1})
     end
 
-    for i=1,3 do
-        local r=part(F,pos+Vector3.new(0,i*.45,0),Vector3.new(5+i*2,.08,5+i*2),i==2 and W or C,.15)
-        local m=Instance.new("SpecialMesh",r)
-        m.MeshType=Enum.MeshType.Cylinder
+    for i = 1, 3 do
+        local r = part(F, pos + Vector3.new(0, i * .45, 0), Vector3.new(5 + i * 2, .08, 5 + i * 2), i == 2 and W or C, .15)
+        local m = Instance.new("SpecialMesh", r)
+        m.MeshType = Enum.MeshType.Cylinder
 
         task.spawn(function()
-            for _=1,20 do
+            for _ = 1, 20 do
                 if not r.Parent then return end
-                r.CFrame=r.CFrame*CFrame.Angles(0,math.rad(18),math.rad(12))
+                r.CFrame = r.CFrame * CFrame.Angles(0, math.rad(18), math.rad(12))
                 task.wait(.02)
             end
         end)
 
-        tw(r,.65,{Transparency=1})
+        tw(r, .65, {Transparency = 1})
     end
 
-    local h=Instance.new("Part",F)
-    h.Anchored=true
-    h.CanCollide=false
-    h.CanTouch=false
-    h.CanQuery=false
-    h.Transparency=1
-    h.Position=pos
+    local h = Instance.new("Part", F)
+    h.Anchored = true
+    h.CanCollide = false
+    h.CanTouch = false
+    h.CanQuery = false
+    h.Transparency = 1
+    h.Position = pos
 
-    local A=Instance.new("Attachment",h)
+    local A = Instance.new("Attachment", h)
 
-    local p=Instance.new("ParticleEmitter",A)
-    p.Texture="rbxasset://textures/particles/sparkles_main.dds"
-    p.Rate=0
-    p.Lifetime=NumberRange.new(.25,.7)
-    p.Speed=NumberRange.new(15,35)
-    p.SpreadAngle=Vector2.new(360,360)
-    p.Drag=4
-    p.LightEmission=1
-    p.LightInfluence=0
-    p.Color=ColorSequence.new{
-        ColorSequenceKeypoint.new(0,W),
-        ColorSequenceKeypoint.new(.4,C),
-        ColorSequenceKeypoint.new(1,BC)
+    local p = Instance.new("ParticleEmitter", A)
+    p.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    p.Rate = 0
+    p.Lifetime = NumberRange.new(.25, .7)
+    p.Speed = NumberRange.new(15, 35)
+    p.SpreadAngle = Vector2.new(360, 360)
+    p.Drag = 4
+    p.LightEmission = 1
+    p.LightInfluence = 0
+    p.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, W),
+        ColorSequenceKeypoint.new(.4, C),
+        ColorSequenceKeypoint.new(1, BC)
     }
-    p.Size=NumberSequence.new{
-        NumberSequenceKeypoint.new(0,.8),
-        NumberSequenceKeypoint.new(.5,.3),
-        NumberSequenceKeypoint.new(1,0)
+    p.Size = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, .8),
+        NumberSequenceKeypoint.new(.5, .3),
+        NumberSequenceKeypoint.new(1, 0)
     }
-    p.Transparency=NumberSequence.new{
-        NumberSequenceKeypoint.new(0,0),
-        NumberSequenceKeypoint.new(.7,.3),
-        NumberSequenceKeypoint.new(1,1)
+    p.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(.7, .3),
+        NumberSequenceKeypoint.new(1, 1)
     }
     p:Emit(100)
 
-    local sp=Instance.new("ParticleEmitter",A)
-    sp.Texture="rbxasset://textures/particles/sparkles_main.ddds"
-    sp.Rate=0
-    sp.Lifetime=NumberRange.new(.15,.35)
-    sp.Speed=NumberRange.new(30,55)
-    sp.SpreadAngle=Vector2.new(360,360)
-    sp.Drag=8
-    sp.LightEmission=1
-    sp.LightInfluence=0
-    sp.Color=ColorSequence.new(W)
-    sp.Size=NumberSequence.new{
-        NumberSequenceKeypoint.new(0,.3),
-        NumberSequenceKeypoint.new(1,0)
+    local sp = Instance.new("ParticleEmitter", A)
+    sp.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    sp.Rate = 0
+    sp.Lifetime = NumberRange.new(.15, .35)
+    sp.Speed = NumberRange.new(30, 55)
+    sp.SpreadAngle = Vector2.new(360, 360)
+    sp.Drag = 8
+    sp.LightEmission = 1
+    sp.LightInfluence = 0
+    sp.Color = ColorSequence.new(W)
+    sp.Size = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, .3),
+        NumberSequenceKeypoint.new(1, 0)
     }
     sp:Emit(60)
 
-    Debris:AddItem(F,1)
+    Debris:AddItem(F, 1)
 end
 
-local cooldown=false
-local selecting=false
-local targetConnection
+local cooldown = false
+local waitingForClick = false
+local currentConnection = nil
 
 local function normal()
-    selecting=false
-    T.Text="SORU"
-    T.TextSize=17
-    T.TextColor3=Color3.new(1,1,1)
-    T.TextStrokeTransparency=0
+    T.Text = "SORU"
+    T.TextSize = 17
+    T.TextColor3 = Color3.new(1, 1, 1)
+    T.TextStrokeTransparency = 0
 
-    tw(B,.2,{BackgroundColor3=Color3.fromRGB(8,12,18)})
-    tw(S,.2,{Color=Color3.fromRGB(0,220,255),Thickness=2})
+    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(8, 12, 18)})
+    tw(S, .2, {Color = Color3.fromRGB(0, 220, 255), Thickness = 2})
 end
 
-local function selectTarget()
-    if cooldown or selecting then return end
+local function SoruAction()
+    if cooldown or waitingForClick then return end
 
-    selecting=true
-    T.Text="TARGET"
-    T.TextSize=14
+    local char = L.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
 
-    tw(B,.2,{BackgroundColor3=Color3.fromRGB(35,27,10)})
-    tw(S,.2,{Color=Color3.fromRGB(255,190,45),Thickness=3})
+    -- ตัวแปรตรวจสอบระบบเล็ง (Aimbot) เผื่อใช้เรียกเช็คเงื่อนไขรอบตัว
+    local bestTargetPart = nil
+    local shortestDistance = 200
+    for _, player in ipairs(P:GetPlayers()) do
+        if player ~= L and player.Character then
+            local targetChar = player.Character
+            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+            local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
 
-    targetConnection=UIS.InputBegan:Connect(function(i,gp)
-        if gp then return end
-        if i.UserInputType~=Enum.UserInputType.MouseButton1
-        and i.UserInputType~=Enum.UserInputType.Touch then return end
-
-        local char=L.Character
-        local root=char and char:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-
-        local ray=Cam:ScreenPointToRay(i.Position.X,i.Position.Y)
-        local rp=RaycastParams.new()
-        rp.FilterType=Enum.RaycastFilterType.Exclude
-        rp.FilterDescendantsInstances={char}
-
-        local hit=workspace:Raycast(ray.Origin,ray.Direction*1500,rp)
-        if not hit then return end
-
-        local target=hit.Position
-        local d=target-root.Position
-        local dist=d.Magnitude
-
-        if dist>200 then
-            target=root.Position+d.Unit*200
-        end
-
-        WarpFX(root.Position)
-        root.CFrame=CFrame.new(target+Vector3.new(0,3,0))
-
-        task.delay(.02,function()
-            if root.Parent then WarpFX(root.Position) end
-        end)
-
-        if targetConnection then
-            targetConnection:Disconnect()
-            targetConnection=nil
-        end
-
-        selecting=false
-        cooldown=true
-
-        task.spawn(function()
-            for n=20,1,-1 do
-                if not B.Parent then return end
-                T.Text=string.format("%.1f",n/10)
-                T.TextSize=21
-                task.wait(.1)
+            if targetRoot and humanoid and humanoid.Health > 0 then
+                local ignore = false
+                if type(ShouldIgnoreTarget) == "function" then
+                    ignore = ShouldIgnoreTarget(targetChar, player)
+                end
+                if not ignore then
+                    local dist = (targetRoot.Position - root.Position).Magnitude
+                    if dist <= shortestDistance then
+                        shortestDistance = dist
+                        bestTargetPart = targetRoot
+                    end
+                end
             end
+        end
+    end
 
-            cooldown=false
-            normal()
-        end)
+    waitingForClick = true
+    T.Text = "AIM"
+    T.TextSize = 14
+
+    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(35, 27, 10)})
+    tw(S, .2, {Color = Color3.fromRGB(255, 190, 45), Thickness = 3})
+
+    -- รอจนกว่าผู้เล่นจะคลิกเลือกตำแหน่งจริง ๆ โดยไม่เปลี่ยนโหมดกลางคัน
+    currentConnection = UIS.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 
+        or input.UserInputType == Enum.UserInputType.Touch then
+            
+            local mousePos = input.Position
+            local ray = Cam:ViewportPointToRay(mousePos.X, mousePos.Y)
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterDescendantsInstances = {char, Workspace:FindFirstChild("SoruFX")}
+            raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+            
+            local raycastResult = Workspace:Raycast(ray.Origin, ray.Direction * 1000, raycastParams)
+            
+            if raycastResult then
+                WarpFX(root.Position)
+                root.CFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 3, 0))
+                WarpFX(root.Position)
+            end
+            
+            if currentConnection then
+                currentConnection:Disconnect()
+                currentConnection = nil
+            end
+            
+            waitingForClick = false
+            cooldown = true
+            
+            -- เริ่มคูลดาวน์หลังกดใช้งานเสร็จ
+            task.spawn(function()
+                for n = 20, 1, -1 do
+                    if not B.Parent then return end
+                    T.Text = string.format("%.1f", n / 10)
+                    T.TextSize = 21
+                    task.wait(.1)
+                end
+
+                cooldown = false
+                normal()
+            end)
+        end
     end)
 end
 
 B.Activated:Connect(function()
-    if cooldown then return end
-
-    if selecting then
-        if targetConnection then
-            targetConnection:Disconnect()
-            targetConnection=nil
-        end
-        normal()
-    else
-        selectTarget()
-    end
+    if cooldown or waitingForClick then return end
+    SoruAction()
 end)
 
--- Drag
-local dragging,moved=false,false
-local dragStart,startPos,dragInput
+-- Drag (ระบบลากปุ่ม)
+local dragging, moved = false, false
+local dragStart, startPos, dragInput
 
 B.InputBegan:Connect(function(i)
-    if i.UserInputType==Enum.UserInputType.MouseButton1
-    or i.UserInputType==Enum.UserInputType.Touch then
-        dragging=true
-        moved=false
-        dragStart=i.Position
-        startPos=B.Position
+    if i.UserInputType == Enum.UserInputType.MouseButton1
+    or i.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        moved = false
+        dragStart = i.Position
+        startPos = B.Position
     end
 end)
 
 B.InputChanged:Connect(function(i)
-    if i.UserInputType==Enum.UserInputType.MouseMovement
-    or i.UserInputType==Enum.UserInputType.Touch then
-        dragInput=i
+    if i.UserInputType == Enum.UserInputType.MouseMovement
+    or i.UserInputType == Enum.UserInputType.Touch then
+        dragInput = i
     end
 end)
 
 UIS.InputChanged:Connect(function(i)
-    if not dragging or i~=dragInput then return end
+    if not dragging or i ~= dragInput then return end
 
-    local d=i.Position-dragStart
-    if d.Magnitude>8 then moved=true end
+    local d = i.Position - dragStart
+    if d.Magnitude > 8 then moved = true end
 
-    B.Position=UDim2.new(
+    B.Position = UDim2.new(
         startPos.X.Scale,
-        startPos.X.Offset+d.X,
+        startPos.X.Offset + d.X,
         startPos.Y.Scale,
-        startPos.Y.Offset+d.Y
+        startPos.Y.Offset + d.Y
     )
 end)
 
 B.InputEnded:Connect(function(i)
-    if i.UserInputType~=Enum.UserInputType.MouseButton1
-    and i.UserInputType~=Enum.UserInputType.Touch then return end
+    if i.UserInputType ~= Enum.UserInputType.MouseButton1
+    and i.UserInputType ~= Enum.UserInputType.Touch then return end
 
-    dragging=false
-    dragInput=nil
+    dragging = false
+    dragInput = nil
 end)
 
 -- Hover
 B.MouseEnter:Connect(function()
-    if cooldown then return end
-    tw(B,.15,{Size=UDim2.fromOffset(89,89)})
-    tw(S,.15,{Thickness=3,Transparency=0})
+    if cooldown or waitingForClick then return end
+    tw(B, .15, {Size = UDim2.fromOffset(89, 89)})
+    tw(S, .15, {Thickness = 3, Transparency = 0})
 end)
 
 B.MouseLeave:Connect(function()
-    if cooldown then return end
-    tw(B,.15,{Size=UDim2.fromOffset(84,84)})
-    tw(S,.15,{Thickness=2})
+    if cooldown or waitingForClick then return end
+    tw(B, .15, {Size = UDim2.fromOffset(84, 84)})
+    tw(S, .15, {Thickness = 2})
 end)
 
 -- Pulse
 task.spawn(function()
     while G.Parent do
-        if not selecting and not cooldown then
-            tw(S,.8,{Transparency=.5})
+        if not cooldown and not waitingForClick then
+            tw(S, .8, {Transparency = .5})
             task.wait(.8)
 
-            if not selecting and not cooldown then
-                tw(S,.8,{Transparency=.05})
+            if not cooldown and not waitingForClick then
+                tw(S, .8, {Transparency = .05})
             end
         end
         task.wait(.8)
     end
 end)
 
--- เปิด/ปิดจากภายนอก
-getgenv().ToggleSoruUI=function(state)
+getgenv().ToggleSoruUI = function(state)
     if G and G.Parent then
-        G.Enabled=state
-
+        G.Enabled = state
         if not state then
-            if targetConnection then
-                targetConnection:Disconnect()
-                targetConnection=nil
+            if currentConnection then
+                currentConnection:Disconnect()
+                currentConnection = nil
             end
-            selecting=false
+            waitingForClick = false
+            cooldown = false
             normal()
         end
     end
 end
 
--- ค่าเริ่มต้น
 getgenv().ToggleSoruUI(true)
 
 local SettingsGroup3 = Config:Group({})
