@@ -201,7 +201,7 @@ Home:Paragraph({
     Desc = dashboardText,
 
     ImageSize = 50,
-    Thumbnail = "rbxassetid://71825656372618",
+    Thumbnail = "rbxassetid://101880822615713",
     ThumbnailSize = 70,
 
     Buttons = {
@@ -2169,14 +2169,18 @@ local function StopFollow()
     smoothVelocity = Vector3.new(0, 0, 0)
 end
 
-local function FollowTarget(player)
-    if not player or not player.Parent then 
+local function FollowTarget(targetObject)
+    local targetChar = targetObject
+    if targetObject:IsA("Player") then
+        targetChar = targetObject.Character
+    end
+
+    if not targetChar or not targetChar.Parent then 
         StopFollow()
         return false
     end
 
     local char = LocalPlayer.Character
-    local targetChar = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
@@ -2216,34 +2220,58 @@ local function FollowTarget(player)
     return true
 end
 
-local function GetClosestPlayerTarget()
+local function GetClosestTarget()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
 
     local closest
     local shortest = FollowDistance
+    local mode = getgenv().TargetMode or "Players Only"
     
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and not ShouldIgnoreTarget(player.Character, player) then
-            local tRoot = player.Character:FindFirstChild("HumanoidRootPart")
-            local hum = player.Character:FindFirstChildOfClass("Humanoid")
-            
-            if tRoot and hum and hum.Health > 0 then
-                local dist = (root.Position - tRoot.Position).Magnitude
-                if dist < shortest then
-                    shortest = dist
-                    closest = player
+    if mode == "Both" or mode == "Players Only" then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and not ShouldIgnoreTarget(player.Character, player) then
+                local tRoot = player.Character:FindFirstChild("HumanoidRootPart")
+                local hum = player.Character:FindFirstChildOfClass("Humanoid")
+                
+                if tRoot and hum and hum.Health > 0 then
+                    local dist = (root.Position - tRoot.Position).Magnitude
+                    if dist < shortest then
+                        shortest = dist
+                        closest = player
+                    end
                 end
             end
         end
     end
+
+    if mode == "Both" or mode == "Enemies Only" then
+        local enemiesFolder = getCachedEnemiesFolder and getCachedEnemiesFolder() or nil
+        if enemiesFolder then
+            for _, enemyModel in ipairs(enemiesFolder:GetChildren()) do
+                if enemyModel:IsA("Model") and not ShouldIgnoreTarget(enemyModel, nil) then
+                    local tRoot = enemyModel:FindFirstChild("HumanoidRootPart")
+                    local hum = enemyModel:FindFirstChildOfClass("Humanoid")
+                    
+                    if tRoot and hum and hum.Health > 0 then
+                        local dist = (root.Position - tRoot.Position).Magnitude
+                        if dist < shortest then
+                            shortest = dist
+                            closest = enemyModel
+                        end
+                    end
+                end
+            end
+        end
+    end
+
     return closest
 end
 
 local function SetFollowState(state, message)
     FollowEnabled = state
-    currentTarget = state and GetClosestPlayerTarget() or nil
+    currentTarget = state and GetClosestTarget() or nil
     
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -2300,27 +2328,37 @@ RunService.RenderStepped:Connect(function()
     end
 
     if currentTarget then
-        local targetChar = currentTarget.Character
+        local targetChar = currentTarget:IsA("Player") and currentTarget.Character or currentTarget
         local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
 
         if not targetChar or not targetHum or targetHum.Health <= 0 then
-            SetFollowState(false, "Target died! System off.")
+            local action = getgenv().OnTargetDeath or "Stop"
+            if action == "Switch to Next" then
+                currentTarget = GetClosestTarget() -- ค้นหาตัวถัดไปต่อทันที โดยไม่สั่งปิดระบบ
+            else
+                SetFollowState(false, "Target died! System off.")
+            end
             return
         end
 
-        if ShouldIgnoreTarget(targetChar, currentTarget) then
-            currentTarget = GetClosestPlayerTarget()
+        if ShouldIgnoreTarget(targetChar, currentTarget:IsA("Player") and currentTarget or nil) then
+            currentTarget = GetClosestTarget()
             return
         end
 
         local status = FollowTarget(currentTarget)
         if status == "DEAD" then
-            SetFollowState(false, "Target died! System off.")
+            local action = getgenv().OnTargetDeath or "Stop"
+            if action == "Switch to Next" then
+                currentTarget = GetClosestTarget() -- ค้นหาตัวถัดไปต่อทันที โดยไม่สั่งปิดระบบ
+            else
+                SetFollowState(false, "Target died! System off.")
+            end
         elseif not status then
-            currentTarget = GetClosestPlayerTarget()
+            currentTarget = GetClosestTarget()
         end
     else
-        currentTarget = GetClosestPlayerTarget()
+        currentTarget = GetClosestTarget()
     end
 end)
 
@@ -2329,6 +2367,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
         SetFollowState(not FollowEnabled)
     end
 end)
+
 
 RunService.RenderStepped:Connect(function()
     local isSilentAimOn = getgenv().SilentAimEnabled == true
@@ -2729,7 +2768,7 @@ CombatTab:Dropdown({
     Title = "Enemy Type",
     Desc  = "Choose Players or NPCs.",
     Flag  = "target_type_dropdown",
-    Values = { "Players Only", "Enemies Only" },
+    Values = { "Players Only", "Enemies Only", "Both" },
     Value  = "Players Only",
     Callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
@@ -3121,8 +3160,21 @@ GeneralTab:Slider({
     end,
 })
 GeneralTab:Divider() 
+
+getgenv().OnTargetDeath = "Stop"
+GeneralTab:Dropdown({
+    Title = "Select operation",
+    Desc  = "Stop system or switch to next target when current dies.",
+    Flag  = "target_death_dropdown",
+    Values = { "Stop", "Switch to Next" },
+    Value  = "Stop",
+    Callback = function(selected)
+        local action = type(selected) == "table" and selected[1] or selected
+        getgenv().OnTargetDeath = action
+    end,
+})
 local FollowToggle = GeneralTab:Toggle({
-    Title = "Teleport Player",
+    Title = "Teleport",
     Desc = "Warps instantly when within range.",
     Type = "Checkbox",
     Flag = "FollowToggle",
@@ -3153,8 +3205,8 @@ local Slider = GeneralTab:Slider({
     Increment = 1,
     Value = {
         Min = 0,
-        Max = 250,
-        Default = 200
+        Max = 300,
+        Default = 0
     },
     Callback = function(value)
         FollowDistance = value
