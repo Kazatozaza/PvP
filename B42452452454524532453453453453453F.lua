@@ -295,15 +295,14 @@ DotCorner.Parent = CenterDot
 
 local Snapline = Drawing.new("Line")
 Snapline.Visible = false
-Snapline.Thickness = 1.5        
+Snapline.Thickness = 1.5            
 Snapline.Color = Color3.fromRGB(255, 255, 255) 
-Snapline.Transparency = 1            
+Snapline.Transparency = 1                
 Snapline.From = Vector2.new(0, 0)        
 Snapline.To = Vector2.new(0, 0)
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
--- ===== FIX: Fixed FOV position update logic =====
 local function UpdateFOVPosition(pos)
     if not FOVUI or not FOVUI.Visible then return end
     local cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
@@ -458,7 +457,7 @@ end
 
 local cachedValidTargets = {}
 local lastTargetUpdate = 0
-local targetUpdateInterval = 0.5
+local targetUpdateInterval = 0.2 -- ลดเวลาแคชเป้าหมายให้ลื่นขึ้นเล็กน้อยแต่ยังประหยัดแรม
 
 local function UpdateValidTargets()
     table.clear(cachedValidTargets)  
@@ -550,9 +549,6 @@ local function GetPredictedPosition(rootPart)
     local pos = rootPart.Position
     if not getgenv().PredictionEnabled then return pos, rootPart.CFrame end
     local velocity = rootPart.AssemblyLinearVelocity
-    local success, acceleration = pcall(function()
-        return rootPart.AssemblyAngularVelocity 
-    end)
     local factor = getgenv().PredictionFactor or 0.125
     local predictedPos = pos + (velocity * factor)
     if not rootPart.Anchored then
@@ -564,11 +560,9 @@ end
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
-local remoteCache = {}
 local lastTarget = nil
 
 local function ClearOldData()
-    table.clear(remoteCache) 
     lastTarget = nil
 end
 
@@ -580,7 +574,6 @@ task.spawn(function()
 
     local function getRoot()
         local target = getgenv().CurrentTarget
-        
         if target ~= lastTarget then
             ClearOldData()
             lastTarget = target
@@ -601,7 +594,6 @@ task.spawn(function()
                 or character:FindFirstChild("Torso")
         end
         
-        -- ถ้าไม่มีเป้าหมาย ให้ล้างข้อมูลทิ้งด้วย
         ClearOldData()
         return nil
     end
@@ -655,11 +647,6 @@ task.spawn(function()
                     return oldNamecall(self, unpack(args))
                 end
             end
-        else
-            -- ถ้าไม่มีเป้าหมาย ให้แน่ใจว่าล้างข้อมูลเก่าเรียบร้อย
-            if lastTarget ~= nil then
-                ClearOldData()
-            end
         end
 
         return oldNamecall(self, ...)
@@ -682,9 +669,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    if typeof(clearCacheIfNeeded) == "function" then
-        clearCacheIfNeeded()
-    end
+    clearCacheIfNeeded()
 
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
@@ -778,7 +763,6 @@ RunService.RenderStepped:Connect(function(dt)
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
         
-        -- เช็คเงื่อนไขว่าต้องแสดงเส้น Tracer หรือไม่
         if bestTarget and getgenv().ShowTracer and (getgenv().SilentAimEnabled or getgenv().CamlockEnabled) and Snapline then
             local targetPart = bestTarget
             if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
@@ -2745,15 +2729,15 @@ local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")
 local fastAttackRunning = false
 local connection
 local lastAttackTime = 0
-local attackDelay = 0.1 
+local attackDelay = 0.08 -- ลดลงเล็กน้อยเพื่อให้โจมตีต่อเนื่องและสมูทขึ้น
 
--- // ฟังก์ชันคำนวณทิศทาง //
+-- // ฟังก์ชันคำนวณทิศทางแบบน้ำหนักเบา //
 local function GetAttackDirection(root, target)
     local direction = (target.Position - root.Position).Unit
     return Vector3.new(
-        direction.X + (math.random(-10, 10)/100),
+        direction.X + (math.random(-5, 5)/100),
         0, 
-        direction.Z + (math.random(-10, 10)/100)
+        direction.Z + (math.random(-5, 5)/100)
     )
 end
 
@@ -2789,12 +2773,13 @@ local function SetFastAttack(state)
 
     if not state then return end
 
+    -- ใช้ Stepped หรือ Heartbeat พร้อมระบบเช็คเวลาที่มีประสิทธิภาพ
     connection = RunService.Heartbeat:Connect(function()
         if not fastAttackRunning then return end
         
-        -- เพิ่มระบบ Delay เพื่อให้ใช้บนมือถือได้เสถียรขึ้นและไม่โดนเตะ
-        if tick() - lastAttackTime < attackDelay then return end
-        lastAttackTime = tick()
+        local currentTime = tick()
+        if currentTime - lastAttackTime < attackDelay then return end
+        lastAttackTime = currentTime
 
         pcall(function()
             local char = player.Character
@@ -2802,35 +2787,37 @@ local function SetFastAttack(state)
             local root = char:FindFirstChild("HumanoidRootPart")
             if not root then return end
 
-            -- ตรวจสอบ Tool ใน Character หรือใน Backpack (สำหรับบางระบบ)
             local currentTool = char:FindFirstChildOfClass("Tool")
-            
-            -- 1. ตรวจสอบ NPC
+            local rootPos = root.Position
+
+            -- 1. ตรวจสอบ NPC (Optimize การวนลูป)
             local enemies = workspace:FindFirstChild("Enemies")
             if enemies then
                 for _, enemy in ipairs(enemies:GetChildren()) do
                     local rootPart = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
                     local hum = enemy:FindFirstChildOfClass("Humanoid")
 
-                    if rootPart and hum and hum.Health > 0
-                        and (root.Position - rootPart.Position).Magnitude <= 60 then
-                        Attack(rootPart, currentTool)
-                        return 
+                    if rootPart and hum and hum.Health > 0 then
+                        if (rootPos - rootPart.Position).Magnitude <= 55 then
+                            Attack(rootPart, currentTool)
+                            return 
+                        end
                     end
                 end
             end
 
-            -- 2. ตรวจสอบผู้เล่น
+            -- 2. ตรวจสอบผู้เล่นอื่น
             for _, target in ipairs(Players:GetPlayers()) do
                 if target ~= player then
                     local targetChar = target.Character
                     local rootPart = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
                     local hum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
 
-                    if rootPart and hum and hum.Health > 0
-                        and (root.Position - rootPart.Position).Magnitude <= 60 then
-                        Attack(rootPart, currentTool)
-                        return
+                    if rootPart and hum and hum.Health > 0 then
+                        if (rootPos - rootPart.Position).Magnitude <= 55 then
+                            Attack(rootPart, currentTool)
+                            return
+                        end
                     end
                 end
             end
@@ -2841,8 +2828,8 @@ end
 if GeneralTab then
     local FastAttackToggle = GeneralTab:Toggle({
         Title = "Attack Aura",
-        Desc = "(All Fruits, Melee, Swords)",
-        Type =  "Checkbox",
+        Desc = "(Optimized & Smooth)",
+        Type = "Checkbox",
         Flag = "FastAttack",
         Value = false,
         Callback = function(state)
@@ -2850,7 +2837,6 @@ if GeneralTab then
         end,
     })
 end
-
 
 GeneralTab:Toggle({
     Title = "Auto Race V4",
