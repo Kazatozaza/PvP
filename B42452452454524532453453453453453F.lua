@@ -772,7 +772,6 @@ RunService.RenderStepped:Connect(function(dt)
    if getgenv().CamlockEnabled and bestTarget then
 		local targetPos, _ = GetPredictedPosition(bestTarget)
 		if targetPos then
-			-- ล็อกมุมกล้องมองไปที่เป้าหมายทันทีโดยไม่มีอาการหน่วงหรือหลุดเฟรม
 			Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
 		end
 	end
@@ -2400,7 +2399,6 @@ local toggleState = false
 local soruCooldown = 0.05
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 local function setSoru(soruScript, on)
@@ -2418,12 +2416,16 @@ local function findSoru()
     return charFolder and charFolder:FindFirstChild("Soru")
 end
 
+-- เพิ่มตัวแปรสำหรับป้องกันการสร้าง Thread ซ้อนกันเกินความจำเป็น (Debounce / Guard)
+local isProcessing = false
+
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
 
-    if toggleState and method == "FireServer" and self.Name == "CommE" and args[1] == "Soru" then
+    if toggleState and not isProcessing and method == "FireServer" and self.Name == "CommE" and args[1] == "Soru" then
+        isProcessing = true
         task.spawn(function()
             local soruScript = findSoru()
             if soruScript then
@@ -2433,6 +2435,7 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
                 task.wait(soruCooldown)
                 setSoru(soruScript, true)
             end
+            isProcessing = false
         end)
     end
 
@@ -2449,6 +2452,7 @@ local Toggle = System:Toggle({
     Callback = function(state)
         toggleState = state
         if not state then
+            isProcessing = false
             local soruScript = findSoru()
             if soruScript then
                 setSoru(soruScript, true)
