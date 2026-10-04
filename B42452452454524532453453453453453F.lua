@@ -616,41 +616,57 @@ task.spawn(function()
     end))
 
     local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local target = getgenv().CurrentTarget
-        local enabled = getgenv().SilentAimEnabled
+oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local target = getgenv().CurrentTarget
+    local enabled = getgenv().SilentAimEnabled
 
-        if target then
-            if enabled or UserInputService.TouchEnabled then
-                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                    local r = getRoot()
-                    if r then 
-                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
-                    end
-                end
+    -- กรองรีโมทที่ไม่ต้องการให้ Silent Aim ไปยุ่ง
+    if method == "FireServer" or method == "InvokeServer" then
+        if self then
+            -- รวมรายชื่อรีโมททั้งหมดที่ไม่ต้องการให้สคริปต์ไปแก้ไข
+            local ignoredRemotes = {
+                "CommE",             -- จากภาพที่ 1[cite: 1]
+                "RE/RegisterHit",    -- จากภาพที่ 2[cite: 2]
+                "RE/RegisterAttack", -- จากภาพที่ 2[cite: 2]
+                "LeftClickRemote"    -- จากภาพล่าสุด[cite: 3]
+            }
+            if table.find(ignoredRemotes, self.Name) then
+                return oldNamecall(self, ...)
             end
+        end
+    end
 
-            if enabled and (method == "FireServer" or method == "InvokeServer") then
-                local targetPos = GetPredictedPosition(target)
-                if targetPos then
-                    local args = { ... }
-                    for i = 1, #args do
-                        local arg = args[i]
-                        local argType = typeof(arg)
-                        if argType == "Vector3" then
-                            args[i] = targetPos
-                        elseif argType == "CFrame" then
-                            args[i] = arg - arg.Position + targetPos
-                        end
-                    end
-                    return oldNamecall(self, unpack(args))
+    if target then
+        if enabled or UserInputService.TouchEnabled then
+            if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                local r = getRoot()
+                if r then 
+                    return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
                 end
             end
         end
 
-        return oldNamecall(self, ...)
-    end))
+        if enabled and (method == "FireServer" or method == "InvokeServer") then
+            local targetPos = GetPredictedPosition(target)
+            if targetPos then
+                local args = { ... }
+                for i = 1, #args do
+                    local arg = args[i]
+                    local argType = typeof(arg)
+                    if argType == "Vector3" then
+                        args[i] = targetPos
+                    elseif argType == "CFrame" then
+                        args[i] = arg - arg.Position + targetPos
+                    end
+                end
+                return oldNamecall(self, unpack(args))
+            end
+        end
+    end
+
+    return oldNamecall(self, ...)
+end))
 end)
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
@@ -753,12 +769,13 @@ RunService.RenderStepped:Connect(function(dt)
     
     getgenv().CurrentTarget = bestTarget
 
-    if getgenv().CamlockEnabled and bestTarget then
-        local targetPos, _ = GetPredictedPosition(bestTarget)
-        if targetPos then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-        end
-    end
+   if getgenv().CamlockEnabled and bestTarget then
+		local targetPos, _ = GetPredictedPosition(bestTarget)
+		if targetPos then
+			-- ล็อกมุมกล้องมองไปที่เป้าหมายทันทีโดยไม่มีอาการหน่วงหรือหลุดเฟรม
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+		end
+	end
 
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
