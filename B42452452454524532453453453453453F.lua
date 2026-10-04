@@ -2880,7 +2880,7 @@ end
 if GeneralTab then
     local FastAttackToggle = GeneralTab:Toggle({
         Title = "Attack Aura",
-        Desc = "(Optimized & Smooth)",
+        Desc = "Sword,Fruit,Combat",
         Type = "Checkbox",
         Flag = "FastAttack",
         Value = false,
