@@ -1,7 +1,37 @@
+-- ตรวจสอบว่าเคยรันไปแล้วหรือยัง
+if _G.WindUI_AlreadyLoaded then
+    warn("❌ สคริปต์นี้ถูกรันไปแล้ว และอนุญาตให้รันได้แค่ 1 รอบเท่านั้น!")
+    warn("💡 หากต้องการรันใหม่อีกครั้ง กรุณารีเกม (Rejoin) หรือรีเซ็ตสคริปต์ใหม่")
+    return
+end
+_G.WindUI_AlreadyLoaded = true
+
+local startTime = tick()
+
 local _version = "1.6.66"
-if not game:IsLoaded() then game.Loaded:Wait() end
+if not game:IsLoaded() then 
+    game.Loaded:Wait() 
+end
 
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
+
+WindUI:Notify({
+    Title = "WindUI Status",
+    Content = "⏳ กำลังรันสคริปต์...",
+    Duration = 3
+})
+
+task.wait(0.5)
+
+local endTime = tick()
+local duration = string.format("%.2f", endTime - startTime)
+
+WindUI:Notify({
+    Title = "WindUI Status",
+    Content = "✅ รันเสร็จแล้ว! ใช้เวลาไป " .. duration .. " วินาที",
+    Duration = 5
+})
+
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
