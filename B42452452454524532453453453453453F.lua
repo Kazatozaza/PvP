@@ -18,10 +18,9 @@ local success, Window = pcall(function()
         ScrollBarEnabled = true,
     })
 end)
-
-Window:DisableTopbarButtons({ "Close", "Minimize" })
 Window:SetIconSize(25) 
-Window:Section({ Title = "Control Panel" })
+Window:DisableTopbarButtons({ "Close", "Minimize" })
+Window:Section({ Title = "Cnotrol Panel" })
 local Home = Window:Tab({ Title = "Changelog !!", Icon = "clipboard-list" })
 local GeneralTab = Window:Tab({ Title = "General Main", Icon = "gauge" })
 Window:Divider() 
@@ -3362,7 +3361,7 @@ local HideShowUI = SettingsGroup3:Section({
 SettingsGroup3:Toggle({
     Title = "",
     Type =  "Checkbox",
-    Flag = "ToggleTeleportUI",
+    Flag = "SilentAimButtonSilentAimButton",
     Value = true,
 
     Callback = function(Value)
@@ -3371,7 +3370,6 @@ SettingsGroup3:Toggle({
         end
     end,
 })
-
 
 local P=game:GetService("Players")
 local UIS=game:GetService("UserInputService")
@@ -3456,7 +3454,7 @@ local selectedMeleeSkills = {"None"}
 local selectedSwordSkills = {"None"}
 local selectedFruitSkills = {"None"}
 local selectedGunSkills = {"None"}
-local flySpeed = 210 
+
 local healthTriggerThreshold = 30 
 local healthRecoveryThreshold = 85 
 local defenseProtocolEnabled = true 
@@ -3670,6 +3668,7 @@ local function executeSkills(skillTable, toolType)
     end
 end
 
+local flySpeed = 210 
 local lastComboTime = 0
 local comboCooldown = 1
 
@@ -3682,33 +3681,37 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     if not myRoot then return end
 
     local humanoid = myChar:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid.Health > 0 then
-        humanoid.PlatformStand = true 
-    else
-        return
-    end
+    if not humanoid or humanoid.Health <= 0 then return end
 
-    local targetPos = targetCFrame.Position
+    humanoid.PlatformStand = true
+
+    local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return end
+
+    -- ระยะห่างด้านหลังเป้าหมาย
+    local behindOffset = 3
+
+    -- จุดด้านหลังเป้าหมาย
+    local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, behindOffset)
+    local targetPos = behindCFrame.Position
+
     local currentPos = myRoot.Position
     local distance = (targetPos - currentPos).Magnitude
 
     local sliderDist = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 150
-    local maxDistance = math.max(sliderDist, 250) 
-    local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
+    local maxDistance = math.max(sliderDist, 250)
 
+    -- ถึงตำแหน่งด้านหลังแล้ว
     if distance <= maxDistance then
-        local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+        myRoot.CFrame = CFrame.lookAt(
+            targetPos,
+            targetRoot.Position
+        )
 
-        if targetRoot then
-            local offsetPos = targetRoot.CFrame * Vector3.new(0, 15, enemyDistanceOffset)
-            myRoot.CFrame = CFrame.new(offsetPos, targetRoot.Position)
-        else
-            myRoot.CFrame = CFrame.new(myRoot.Position, targetPos) * CFrame.new(0, 15, enemyDistanceOffset)
-        end
+        myRoot.AssemblyLinearVelocity = Vector3.zero
+        myRoot.AssemblyAngularVelocity = Vector3.zero
 
-        myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-
+        -- ระบบคอมโบ
         if tick() - lastComboTime >= comboCooldown then
             lastComboTime = tick()
 
@@ -3733,23 +3736,31 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
                 end
             end)
         end
+
         return
     end
 
+    -- บินเข้าหาตำแหน่งด้านหลัง
     if distance > 0 then
-        local elevatedTargetPos = targetPos + Vector3.new(0, 120, 0)
+        local elevatedTargetPos = targetPos + Vector3.new(0, 60, 0)
         local direction = (elevatedTargetPos - currentPos).Unit
-        local currentSpeed = speed or (Bounty and Bounty.Flags and Bounty.Flags.FlySpeed) or 210
+
+        local currentSpeed = speed
+            or (Bounty and Bounty.Flags and Bounty.Flags.FlySpeed)
+            or flySpeed
+
         local clampedSpeed = math.min(currentSpeed, 210)
 
-        local targetVelocity = direction * clampedSpeed
-        myRoot.AssemblyLinearVelocity = targetVelocity
-        myRoot.AssemblyAngularVelocity = Vector3.zero
+        myRoot.AssemblyLinearVelocity = direction * clampedSpeed
 
-        local lookAtCFrame = CFrame.lookAt(currentPos, elevatedTargetPos)
-        myRoot.CFrame = myRoot.CFrame:Lerp(lookAtCFrame, 0.2)
+        -- หันหน้าไปทางจุดด้านหลัง
+        myRoot.CFrame = CFrame.lookAt(
+            currentPos,
+            elevatedTargetPos
+        )
     end
 end
+
 
 local hopServersEnabled = false
 
@@ -3831,8 +3842,9 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
 
     lastTargetSearchTime = now
 
-    if not myRoot then
+    if not myRoot or not myRoot.Parent then
         cachedNearestTarget = nil
+        currentTargetPlayer = nil
         return nil
     end
 
@@ -3844,14 +3856,19 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
     local playerList = updatePlayerCache()
 
     for _, targetPlayer in ipairs(playerList) do
-        if not shouldSkipTarget(targetPlayer, LocalPlayer) and not isTargetBlocked(targetPlayer) then
+        if targetPlayer ~= LocalPlayer
+            and not shouldSkipTarget(targetPlayer, LocalPlayer)
+            and not isTargetBlocked(targetPlayer) then
+
             local char = targetPlayer.Character
 
-            if char then
+            if char and not ShouldIgnoreTarget(char, targetPlayer) then
                 local targetRoot = char:FindFirstChild("HumanoidRootPart")
                 local targetHum = char:FindFirstChildOfClass("Humanoid")
 
-                if targetHum and targetHum.Health > 0 and targetRoot then
+                if targetRoot and targetHum and targetHum.Health > 0 then
+
+                    -- SafeZone check
                     local inSafeZone = false
 
                     pcall(function()
@@ -3861,22 +3878,28 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
                     end)
 
                     if not inSafeZone then
-                        local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled") or char:GetAttribute("PvpDisabled")
+                        local pvpDisabled =
+                            targetPlayer:GetAttribute("PvpDisabled") == true
+                            or char:GetAttribute("PvpDisabled") == true
 
-                        if pvpDisabled ~= true then
+                        if not pvpDisabled then
                             local targetLevel = getPlayerLevel(targetPlayer)
                             local isLevelValid = true
 
-                            if type(myLevel) == "number" and type(targetLevel) == "number" then
-                                if math.abs(myLevel - targetLevel) > 800 then
-                                    isLevelValid = false
-                                end
+                            if type(myLevel) == "number"
+                                and type(targetLevel) == "number" then
+
+                                isLevelValid =
+                                    math.abs(myLevel - targetLevel) <= 700
                             end
 
                             if isLevelValid then
-                                local distance = (targetRoot.Position - myRoot.Position).Magnitude
+                                local distance =
+                                    (targetRoot.Position - myRoot.Position).Magnitude
 
-                                if distance <= 15000 and distance < shortestDistance then
+                                if distance <= 15000
+                                    and distance < shortestDistance then
+
                                     shortestDistance = distance
                                     nearestTargetRoot = targetRoot
                                     nearestTargetChar = char
@@ -3892,12 +3915,16 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
 
     currentTargetPlayer = nearestTargetPlayer
 
-    cachedNearestTarget = {
-        root = nearestTargetRoot,
-        char = nearestTargetChar,
-        distance = shortestDistance,
-        player = nearestTargetPlayer
-    }
+    if nearestTargetPlayer then
+        cachedNearestTarget = {
+            root = nearestTargetRoot,
+            char = nearestTargetChar,
+            distance = shortestDistance,
+            player = nearestTargetPlayer
+        }
+    else
+        cachedNearestTarget = nil
+    end
 
     return cachedNearestTarget
 end
