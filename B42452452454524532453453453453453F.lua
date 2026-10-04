@@ -3538,6 +3538,8 @@ SettingsGroup3:Toggle({
 })
 end
 initializeSkillSettings()
+
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -3564,6 +3566,9 @@ local ascentVelocity = 300
 local playerCache = {}
 local lastPlayerCacheTime = 0
 local playerCacheInterval = 0.5
+
+-- ตัวแปรสำหรับความเร็วในการบิน
+local flySpeed = 210 
 
 local function updatePlayerCache()
     local now = tick()
@@ -3625,6 +3630,7 @@ local function checkAndSwitchTeam()
     teamCheckInProgress = false
 end
 
+-- ฟังก์ชันกดปุ่มปกติแบบกดแล้วปล่อยทันที
 local function pressKey(keyName)
     pcall(function()
         if type(keyName) == "table" then
@@ -3762,7 +3768,6 @@ local function executeSkills(skillTable, toolType)
     end
 end
 
-local flySpeed = 210 
 local lastComboTime = 0
 local comboCooldown = 1
 
@@ -3782,10 +3787,7 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
     if not targetRoot then return end
 
-    -- ระยะห่างด้านหลังเป้าหมาย
     local behindOffset = 3
-
-    -- จุดด้านหลังเป้าหมาย
     local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, behindOffset)
     local targetPos = behindCFrame.Position
 
@@ -3795,7 +3797,6 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     local sliderDist = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 150
     local maxDistance = math.max(sliderDist, 250)
 
-    -- ถึงตำแหน่งด้านหลังแล้ว
     if distance <= maxDistance then
         myRoot.CFrame = CFrame.lookAt(
             targetPos,
@@ -3805,7 +3806,6 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         myRoot.AssemblyLinearVelocity = Vector3.zero
         myRoot.AssemblyAngularVelocity = Vector3.zero
 
-        -- ระบบคอมโบ
         if tick() - lastComboTime >= comboCooldown then
             lastComboTime = tick()
 
@@ -3834,27 +3834,21 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
         return
     end
 
-    -- บินเข้าหาตำแหน่งด้านหลัง
     if distance > 0 then
         local elevatedTargetPos = targetPos + Vector3.new(0, 60, 0)
         local direction = (elevatedTargetPos - currentPos).Unit
 
-        local currentSpeed = speed
-            or (Bounty and Bounty.Flags and Bounty.Flags.FlySpeed)
-            or flySpeed
-
-        local clampedSpeed = math.min(currentSpeed, 210)
+        local currentSpeed = speed or flySpeed
+        local clampedSpeed = math.min(currentSpeed, 500)
 
         myRoot.AssemblyLinearVelocity = direction * clampedSpeed
 
-        -- หันหน้าไปทางจุดด้านหลัง
         myRoot.CFrame = CFrame.lookAt(
             currentPos,
             elevatedTargetPos
         )
     end
 end
-
 
 local hopServersEnabled = false
 
@@ -3962,9 +3956,7 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
 
                 if targetRoot and targetHum and targetHum.Health > 0 then
 
-                    -- SafeZone check
                     local inSafeZone = false
-
                     pcall(function()
                         if isPlayerInSafeZone then
                             inSafeZone = isPlayerInSafeZone(targetPlayer, char)
@@ -4284,6 +4276,21 @@ local UtilitySection = Bounty:Section({
 })
 Bounty:Divider() 
 
+local SliderFlySpeed = Bounty:Slider({
+    Title = "Fly Speed",
+    Desc = "Adjust movement speed while flying to targets",
+    Value = {
+        Min = 50,
+        Max = 350,
+        Default = 210
+    },
+    Step = 5,
+    Flag = "FlySpeed_Slider",
+    Callback = function(value)
+        flySpeed = value
+    end
+})
+
 local DropdownMelee = Bounty:Dropdown({
     Title = "Melee",
     Desc = "Select Melee skills ",
@@ -4355,380 +4362,3 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
-local P = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local CG = game:GetService("CoreGui")
-local TS = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
-local Workspace = game:GetService("Workspace")
-
-local L = P.LocalPlayer
-local Cam = Workspace.CurrentCamera
-
-local old = CG:FindFirstChild("SoruUltimateUI")
-if old then old:Destroy() end
-
-local G = Instance.new("ScreenGui", CG)
-G.Name = "SoruUltimateUI"
-G.IgnoreGuiInset = true
-G.ResetOnSpawn = false
-G.ZIndexBehavior = Enum.ZIndexBehavior.Global
-
-local B = Instance.new("TextButton", G)
-B.Size = UDim2.fromOffset(84, 84)
-B.Position = UDim2.new(1, -60, .5, 0)
-B.AnchorPoint = Vector2.new(.5, .5)
-B.BackgroundColor3 = Color3.fromRGB(8, 12, 18)
-B.BackgroundTransparency = .02
-B.Text = ""
-B.AutoButtonColor = false
-B.ZIndex = 10
-
-Instance.new("UICorner", B).CornerRadius = UDim.new(1, 0)
-
-local S = Instance.new("UIStroke", B)
-S.Color = Color3.fromRGB(0, 220, 255)
-S.Thickness = 2
-S.Transparency = .05
-
-local Gd = Instance.new("UIGradient", B)
-Gd.Rotation = 45
-Gd.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 45, 55)),
-    ColorSequenceKeypoint.new(.5, Color3.fromRGB(8, 12, 18)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 90, 130))
-}
-
-local T = Instance.new("TextLabel", B)
-T.Size = UDim2.fromScale(1, 1)
-T.BackgroundTransparency = 1
-T.Text = "SORU"
-T.TextColor3 = Color3.new(1, 1, 1)
-T.TextSize = 17
-T.Font = Enum.Font.GothamBold
-T.TextStrokeColor3 = Color3.new(0, 0, 0)
-T.TextStrokeTransparency = 0
-T.ZIndex = 20
-
-local function tw(o, t, p)
-    TS:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), p):Play()
-end
-
-local function part(f, pos, size, c, tr)
-    local p = Instance.new("Part", f)
-    p.Anchored = true
-    p.CanCollide = false
-    p.CanTouch = false
-    p.CanQuery = false
-    p.Material = Enum.Material.Neon
-    p.Color = c
-    p.Transparency = tr or 0
-    p.Size = size
-    p.Position = pos
-    return p
-end
-
-local function WarpFX(pos)
-    local F = Instance.new("Folder", Workspace)
-    F.Name = "SoruFX"
-
-    local C = Color3.fromRGB(0, 220, 255)
-    local BC = Color3.fromRGB(0, 100, 255)
-    local W = Color3.fromRGB(220, 250, 255)
-
-    for i = 1, 5 do
-        task.delay(i * .035, function()
-            local r = part(F, pos + Vector3.new(0, .1, 0), Vector3.new(.15, .08, .15), i % 2 == 0 and BC or C, .1)
-            local m = Instance.new("SpecialMesh", r)
-            m.MeshType = Enum.MeshType.Cylinder
-            local z = 7 + i * 3
-            tw(r, .45, {Size = Vector3.new(z, .1, z), Transparency = 1})
-        end)
-    end
-
-    for i = 1, 8 do
-        local a = i / 8 * math.pi * 2
-        local r = 3 + math.random() * 2
-        local p = part(
-            F,
-            pos + Vector3.new(math.cos(a) * r, 3, math.sin(a) * r),
-            Vector3.new(.12, 6, .12),
-            i % 2 == 0 and C or BC, .2
-        )
-        tw(p, .35, {Size = Vector3.new(.02, .2, .02), Transparency = 1})
-    end
-
-    for i = 1, 3 do
-        local r = part(F, pos + Vector3.new(0, i * .45, 0), Vector3.new(5 + i * 2, .08, 5 + i * 2), i == 2 and W or C, .15)
-        local m = Instance.new("SpecialMesh", r)
-        m.MeshType = Enum.MeshType.Cylinder
-
-        task.spawn(function()
-            for _ = 1, 20 do
-                if not r.Parent then return end
-                r.CFrame = r.CFrame * CFrame.Angles(0, math.rad(18), math.rad(12))
-                task.wait(.02)
-            end
-        end)
-
-        tw(r, .65, {Transparency = 1})
-    end
-
-    local h = Instance.new("Part", F)
-    h.Anchored = true
-    h.CanCollide = false
-    h.CanTouch = false
-    h.CanQuery = false
-    h.Transparency = 1
-    h.Position = pos
-
-    local A = Instance.new("Attachment", h)
-
-    local p = Instance.new("ParticleEmitter", A)
-    p.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-    p.Rate = 0
-    p.Lifetime = NumberRange.new(.25, .7)
-    p.Speed = NumberRange.new(15, 35)
-    p.SpreadAngle = Vector2.new(360, 360)
-    p.Drag = 4
-    p.LightEmission = 1
-    p.LightInfluence = 0
-    p.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, W),
-        ColorSequenceKeypoint.new(.4, C),
-        ColorSequenceKeypoint.new(1, BC)
-    }
-    p.Size = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, .8),
-        NumberSequenceKeypoint.new(.5, .3),
-        NumberSequenceKeypoint.new(1, 0)
-    }
-    p.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(.7, .3),
-        NumberSequenceKeypoint.new(1, 1)
-    }
-    p:Emit(100)
-
-    local sp = Instance.new("ParticleEmitter", A)
-    sp.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-    sp.Rate = 0
-    sp.Lifetime = NumberRange.new(.15, .35)
-    sp.Speed = NumberRange.new(30, 55)
-    sp.SpreadAngle = Vector2.new(360, 360)
-    sp.Drag = 8
-    sp.LightEmission = 1
-    sp.LightInfluence = 0
-    sp.Color = ColorSequence.new(W)
-    sp.Size = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, .3),
-        NumberSequenceKeypoint.new(1, 0)
-    }
-    sp:Emit(60)
-
-    Debris:AddItem(F, 1)
-end
-
-local cooldown = false
-local waitingForClick = false
-local currentConnection = nil
-
-local function normal()
-    T.Text = "SORU"
-    T.TextSize = 17
-    T.TextColor3 = Color3.new(1, 1, 1)
-    T.TextStrokeTransparency = 0
-
-    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(8, 12, 18)})
-    tw(S, .2, {Color = Color3.fromRGB(0, 220, 255), Thickness = 2})
-end
-
-local function SoruAction()
-    if cooldown or waitingForClick then return end
-
-    local char = L.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-
-    local bestTargetPart = nil
-    local shortestDistance = 200
-    for _, player in ipairs(P:GetPlayers()) do
-        if player ~= L and player.Character then
-            local targetChar = player.Character
-            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-            local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
-
-            if targetRoot and humanoid and humanoid.Health > 0 then
-                local ignore = false
-                if type(ShouldIgnoreTarget) == "function" then
-                    ignore = ShouldIgnoreTarget(targetChar, player)
-                end
-                if not ignore then
-                    local dist = (targetRoot.Position - root.Position).Magnitude
-                    if dist <= shortestDistance then
-                        shortestDistance = dist
-                        bestTargetPart = targetRoot
-                    end
-                end
-            end
-        end
-    end
-
-    waitingForClick = true
-    T.Text = "AIM"
-    T.TextSize = 14
-
-    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(35, 27, 10)})
-    tw(S, .2, {Color = Color3.fromRGB(255, 190, 45), Thickness = 3})
-
-    -- รอจนกว่าผู้เล่นจะคลิกเลือกตำแหน่งจริง ๆ โดยไม่เปลี่ยนโหมดกลางคัน
-    currentConnection = UIS.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 
-        or input.UserInputType == Enum.UserInputType.Touch then
-            
-            local mousePos = input.Position
-            local ray = Cam:ViewportPointToRay(mousePos.X, mousePos.Y)
-            local raycastParams = RaycastParams.new()
-            raycastParams.FilterDescendantsInstances = {char, Workspace:FindFirstChild("SoruFX")}
-            raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-            
-            local raycastResult = Workspace:Raycast(ray.Origin, ray.Direction * 1000, raycastParams)
-            
-            if raycastResult then
-                WarpFX(root.Position)
-                root.CFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 3, 0))
-                WarpFX(root.Position)
-            end
-            
-            if currentConnection then
-                currentConnection:Disconnect()
-                currentConnection = nil
-            end
-            
-            waitingForClick = false
-            cooldown = true
-            
-            -- เริ่มคูลดาวน์หลังกดใช้งานเสร็จ
-            task.spawn(function()
-                for n = 20, 1, -1 do
-                    if not B.Parent then return end
-                    T.Text = string.format("%.1f", n / 10)
-                    T.TextSize = 21
-                    task.wait(.1)
-                end
-
-                cooldown = false
-                normal()
-            end)
-        end
-    end)
-end
-
-B.Activated:Connect(function()
-    if cooldown or waitingForClick then return end
-    SoruAction()
-end)
-
--- Drag (ระบบลากปุ่ม)
-local dragging, moved = false, false
-local dragStart, startPos, dragInput
-
-B.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1
-    or i.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        moved = false
-        dragStart = i.Position
-        startPos = B.Position
-    end
-end)
-
-B.InputChanged:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseMovement
-    or i.UserInputType == Enum.UserInputType.Touch then
-        dragInput = i
-    end
-end)
-
-UIS.InputChanged:Connect(function(i)
-    if not dragging or i ~= dragInput then return end
-
-    local d = i.Position - dragStart
-    if d.Magnitude > 8 then moved = true end
-
-    B.Position = UDim2.new(
-        startPos.X.Scale,
-        startPos.X.Offset + d.X,
-        startPos.Y.Scale,
-        startPos.Y.Offset + d.Y
-    )
-end)
-
-B.InputEnded:Connect(function(i)
-    if i.UserInputType ~= Enum.UserInputType.MouseButton1
-    and i.UserInputType ~= Enum.UserInputType.Touch then return end
-
-    dragging = false
-    dragInput = nil
-end)
-
--- Hover
-B.MouseEnter:Connect(function()
-    if cooldown or waitingForClick then return end
-    tw(B, .15, {Size = UDim2.fromOffset(89, 89)})
-    tw(S, .15, {Thickness = 3, Transparency = 0})
-end)
-
-B.MouseLeave:Connect(function()
-    if cooldown or waitingForClick then return end
-    tw(B, .15, {Size = UDim2.fromOffset(84, 84)})
-    tw(S, .15, {Thickness = 2})
-end)
-
--- Pulse
-task.spawn(function()
-    while G.Parent do
-        if not cooldown and not waitingForClick then
-            tw(S, .8, {Transparency = .5})
-            task.wait(.8)
-
-            if not cooldown and not waitingForClick then
-                tw(S, .8, {Transparency = .05})
-            end
-        end
-        task.wait(.8)
-    end
-end)
-
-getgenv().ToggleSoruUI = function(state)
-    if G and G.Parent then
-        G.Enabled = state
-        if not state then
-            if currentConnection then
-                currentConnection:Disconnect()
-                currentConnection = nil
-            end
-            waitingForClick = false
-            cooldown = false
-            normal()
-        end
-    end
-end
-
-getgenv().ToggleSoruUI(true)
-
-local SettingsGroup3 = Config:Group({})
-SettingsGroup3:Toggle({
-    Title = "Soru Button",
-    Type = "Checkbox",
-    Flag = "ToggleTeleportUI",
-    Value = true,
-
-    Callback = function(Value)
-        if getgenv().ToggleSoruUI then
-            getgenv().ToggleSoruUI(Value)
-        end
-    end
-})
