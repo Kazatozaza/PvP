@@ -544,19 +544,6 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-local function GetPredictedPosition(rootPart)
-    if not rootPart then return nil, nil end
-    local pos = rootPart.Position
-    if not getgenv().PredictionEnabled then return pos, rootPart.CFrame end
-    local velocity = rootPart.AssemblyLinearVelocity
-    local factor = getgenv().PredictionFactor or 0.125
-    local predictedPos = pos + (velocity * factor)
-    if not rootPart.Anchored then
-        predictedPos = predictedPos + (Vector3.new(0, -workspace.Gravity * 0.5, 0) * (factor * factor))
-    end
-    return predictedPos, rootPart.CFrame
-end
-
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
@@ -616,58 +603,59 @@ task.spawn(function()
     end))
 
     local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local target = getgenv().CurrentTarget
-    local enabled = getgenv().SilentAimEnabled
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local target = getgenv().CurrentTarget
+        local enabled = getgenv().SilentAimEnabled
 
-    -- กรองรีโมทที่ไม่ต้องการให้ Silent Aim ไปยุ่ง
-    if method == "FireServer" or method == "InvokeServer" then
-        if self then
-            -- รวมรายชื่อรีโมททั้งหมดที่ไม่ต้องการให้สคริปต์ไปแก้ไข
-            local ignoredRemotes = {
-                "CommE",             -- จากภาพที่ 1[cite: 1]
-                "RE/RegisterHit",    -- จากภาพที่ 2[cite: 2]
-                "RE/RegisterAttack", -- จากภาพที่ 2[cite: 2]
-                "LeftClickRemote"    -- จากภาพล่าสุด[cite: 3]
-            }
-            if table.find(ignoredRemotes, self.Name) then
-                return oldNamecall(self, ...)
-            end
-        end
-    end
-
-    if target then
-        if enabled or UserInputService.TouchEnabled then
-            if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                local r = getRoot()
-                if r then 
-                    return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
+        -- กรองรีโมทที่ไม่ต้องการให้ Silent Aim ไปยุ่ง
+        if method == "FireServer" or method == "InvokeServer" then
+            if self then
+                local ignoredRemotes = {
+                    "CommE",
+                    "RE/RegisterHit",
+                    "RE/RegisterAttack",
+                    "LeftClickRemote"
+                }
+                if table.find(ignoredRemotes, self.Name) then
+                    return oldNamecall(self, ...)
                 end
             end
         end
 
-        if enabled and (method == "FireServer" or method == "InvokeServer") then
-            local targetPos = GetPredictedPosition(target)
-            if targetPos then
-                local args = { ... }
-                for i = 1, #args do
-                    local arg = args[i]
-                    local argType = typeof(arg)
-                    if argType == "Vector3" then
-                        args[i] = targetPos
-                    elseif argType == "CFrame" then
-                        args[i] = arg - arg.Position + targetPos
+        if target then
+            if enabled or UserInputService.TouchEnabled then
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                    local r = getRoot()
+                    if r then 
+                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
                     end
                 end
-                return oldNamecall(self, unpack(args))
+            end
+
+            if enabled and (method == "FireServer" or method == "InvokeServer") then
+                local r = getRoot()
+                if r then
+                    local targetPos = r.Position -- ใช้ตำแหน่งปัจจุบันตรงๆ แทนการดักทาง
+                    local args = { ... }
+                    for i = 1, #args do
+                        local arg = args[i]
+                        local argType = typeof(arg)
+                        if argType == "Vector3" then
+                            args[i] = targetPos
+                        elseif argType == "CFrame" then
+                            args[i] = arg - arg.Position + targetPos
+                        end
+                    end
+                    return oldNamecall(self, unpack(args))
+                end
             end
         end
-    end
 
-    return oldNamecall(self, ...)
-end))
+        return oldNamecall(self, ...)
+    end))
 end)
+
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
