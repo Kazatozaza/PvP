@@ -1754,8 +1754,8 @@ local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+
 local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
@@ -1864,8 +1864,11 @@ local function createDraggableButton(text,accentColor,x,y,callback)
     knob.BorderSizePixel = 0
     Instance.new("UICorner",knob).CornerRadius = UDim.new(1,0)
 
-    local dragging,dragInput,isDragging = false,nil,false
-    local dragStart,startCenter
+    local dragging = false
+    local dragInput = nil
+    local isDragging = false
+    local dragStart
+    local startCenter
     local activeState = false
 
     local function updateVisual(state,fire)
@@ -1883,34 +1886,67 @@ local function createDraggableButton(text,accentColor,x,y,callback)
                 Color3.fromRGB(16,16,22)
             )
 
-            tween(stroke,.2,{Color=accentColor,Thickness=2})
+            tween(stroke,.2,{
+                Color = accentColor,
+                Thickness = 2
+            })
+
             tween(bar,.2,{
-                BackgroundColor3=accentColor,
-                Size=UDim2.fromOffset(3,26)
+                BackgroundColor3 = accentColor,
+                Size = UDim2.fromOffset(3,26)
             })
-            tween(label,.2,{TextColor3=Color3.new(1,1,1)})
-            tween(track,.2,{BackgroundColor3=accentColor})
+
+            tween(label,.2,{
+                TextColor3 = Color3.new(1,1,1)
+            })
+
+            tween(track,.2,{
+                BackgroundColor3 = accentColor
+            })
+
             tween(knob,.2,{
-                Position=KNOB_ON,
-                BackgroundColor3=Color3.new(1,1,1)
+                Position = KNOB_ON,
+                BackgroundColor3 = Color3.new(1,1,1)
             })
-            tween(status,.2,{TextColor3=accentColor})
+
+            tween(status,.2,{
+                TextColor3 = accentColor
+            })
+
             status.Text = "ON"
         else
-            gradient.Color = ColorSequence.new(OFF_BG2,OFF_BG)
+            gradient.Color = ColorSequence.new(
+                OFF_BG2,
+                OFF_BG
+            )
 
-            tween(stroke,.2,{Color=OFF_STROKE,Thickness=1.5})
+            tween(stroke,.2,{
+                Color = OFF_STROKE,
+                Thickness = 1.5
+            })
+
             tween(bar,.2,{
-                BackgroundColor3=OFF_STROKE,
-                Size=UDim2.fromOffset(3,18)
+                BackgroundColor3 = OFF_STROKE,
+                Size = UDim2.fromOffset(3,18)
             })
-            tween(label,.2,{TextColor3=OFF_TEXT})
-            tween(track,.2,{BackgroundColor3=OFF_TRACK})
+
+            tween(label,.2,{
+                TextColor3 = OFF_TEXT
+            })
+
+            tween(track,.2,{
+                BackgroundColor3 = OFF_TRACK
+            })
+
             tween(knob,.2,{
-                Position=KNOB_OFF,
-                BackgroundColor3=OFF_KNOB
+                Position = KNOB_OFF,
+                BackgroundColor3 = OFF_KNOB
             })
-            tween(status,.2,{TextColor3=OFF_STATUS})
+
+            tween(status,.2,{
+                TextColor3 = OFF_STATUS
+            })
+
             status.Text = "OFF"
         end
 
@@ -1930,19 +1966,25 @@ local function createDraggableButton(text,accentColor,x,y,callback)
         dragStart = input.Position
         startCenter = center
 
-        tween(scale,.1,{Scale=.95})
+        tween(scale,.1,{
+            Scale = .95
+        })
 
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
-                tween(scale,.12,{Scale=1})
+
+                tween(scale,.12,{
+                    Scale = 1
+                })
             end
         end)
     end)
 
     button.InputChanged:Connect(function(input)
+        -- แก้จาก AND เป็น OR
         if input.UserInputType == Enum.UserInputType.MouseMovement
-            and input.UserInputType == Enum.UserInputType.Touch then
+            or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
@@ -1959,6 +2001,7 @@ local function createDraggableButton(text,accentColor,x,y,callback)
                 and math.abs(delta.Y) < DRAG_THRESHOLD then
                 return
             end
+
             isDragging = true
         end
 
@@ -1990,12 +2033,12 @@ local function createDraggableButton(text,accentColor,x,y,callback)
 
     return {
         Instance = button,
+
         Set = function(state)
             updateVisual(state,false)
         end
     }
 end
-
 local SilentAimSyncing = false
 local SilentAimNotifyCooldown = false
 
