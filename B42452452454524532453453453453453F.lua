@@ -574,12 +574,6 @@ local function GetTargetInFOV(refPos)
     return ClosestTarget
 end
 
-local function GetPredictedPosition(rootPart)
-    if not rootPart then return nil end
-    
-    return rootPart.Position
-end
-
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
@@ -637,7 +631,7 @@ task.spawn(function()
 
         if target then
             if enabled and method == "Raycast" and self == workspace then
-                local targetPos = GetPredictedPosition(target)
+                local targetPos = target.Position
                 if targetPos and args[1] then
                     local origin = args[1]  
                     local currentDir = args[2]  
@@ -658,7 +652,7 @@ task.spawn(function()
             end
 
             if enabled and (method == "FireServer" or method == "InvokeServer") then
-                local targetPos = GetPredictedPosition(target)
+                local targetPos = target.Position
                 if targetPos then
                     for i = 1, #args do
                         local arg = args[i]
