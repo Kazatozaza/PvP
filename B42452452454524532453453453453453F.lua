@@ -1,37 +1,7 @@
--- ตรวจสอบว่าเคยรันไปแล้วหรือยัง
-if _G.WindUI_AlreadyLoaded then
-    warn("❌ สคริปต์นี้ถูกรันไปแล้ว และอนุญาตให้รันได้แค่ 1 รอบเท่านั้น!")
-    warn("💡 หากต้องการรันใหม่อีกครั้ง กรุณารีเกม (Rejoin) หรือรีเซ็ตสคริปต์ใหม่")
-    return
-end
-_G.WindUI_AlreadyLoaded = true
-
-local startTime = tick()
-
 local _version = "1.6.66"
-if not game:IsLoaded() then 
-    game.Loaded:Wait() 
-end
+if not game:IsLoaded() then game.Loaded:Wait() end
 
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
-
-WindUI:Notify({
-    Title = "WindUI Status",
-    Content = "⏳ กำลังรันสคริปต์...",
-    Duration = 3
-})
-
-task.wait(0.5)
-
-local endTime = tick()
-local duration = string.format("%.2f", endTime - startTime)
-
-WindUI:Notify({
-    Title = "WindUI Status",
-    Content = "✅ รันเสร็จแล้ว! ใช้เวลาไป " .. duration .. " วินาที",
-    Duration = 5
-})
-
 
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
@@ -48,9 +18,10 @@ local success, Window = pcall(function()
         ScrollBarEnabled = true,
     })
 end)
-Window:SetIconSize(25) 
+
 Window:DisableTopbarButtons({ "Close", "Minimize" })
-Window:Section({ Title = "Cnotrol Panel" })
+Window:SetIconSize(25) 
+Window:Section({ Title = "Control Panel" })
 local Home = Window:Tab({ Title = "Changelog !!", Icon = "clipboard-list" })
 local GeneralTab = Window:Tab({ Title = "General Main", Icon = "gauge" })
 Window:Divider() 
@@ -231,7 +202,7 @@ Home:Paragraph({
     Desc = dashboardText,
 
     ImageSize = 50,
-    Thumbnail = "rbxassetid://101880822615713",
+    Thumbnail = "rbxassetid://71825656372618",
     ThumbnailSize = 70,
 
     Buttons = {
@@ -325,14 +296,15 @@ DotCorner.Parent = CenterDot
 
 local Snapline = Drawing.new("Line")
 Snapline.Visible = false
-Snapline.Thickness = 1.5            
+Snapline.Thickness = 1.5        
 Snapline.Color = Color3.fromRGB(255, 255, 255) 
-Snapline.Transparency = 1                
+Snapline.Transparency = 1            
 Snapline.From = Vector2.new(0, 0)        
 Snapline.To = Vector2.new(0, 0)
 
 local LastMousePosition = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
+-- ===== FIX: Fixed FOV position update logic =====
 local function UpdateFOVPosition(pos)
     if not FOVUI or not FOVUI.Visible then return end
     local cachedFOVMode = tostring(getgenv().FOVPositionMode):lower()
@@ -487,7 +459,7 @@ end
 
 local cachedValidTargets = {}
 local lastTargetUpdate = 0
-local targetUpdateInterval = 0.2 -- ลดเวลาแคชเป้าหมายให้ลื่นขึ้นเล็กน้อยแต่ยังประหยัดแรม
+local targetUpdateInterval = 0.5
 
 local function UpdateValidTargets()
     table.clear(cachedValidTargets)  
@@ -575,17 +547,29 @@ local function GetTargetInFOV(refPos)
 end
 
 local function GetPredictedPosition(rootPart)
-    if not rootPart then return nil end
-    
-    return rootPart.Position
+    if not rootPart then return nil, nil end
+    local pos = rootPart.Position
+    if not getgenv().PredictionEnabled then return pos, rootPart.CFrame end
+    local velocity = rootPart.AssemblyLinearVelocity
+    local success, acceleration = pcall(function()
+        return rootPart.AssemblyAngularVelocity 
+    end)
+    local factor = getgenv().PredictionFactor or 0.125
+    local predictedPos = pos + (velocity * factor)
+    if not rootPart.Anchored then
+        predictedPos = predictedPos + (Vector3.new(0, -workspace.Gravity * 0.5, 0) * (factor * factor))
+    end
+    return predictedPos, rootPart.CFrame
 end
 
 getgenv().SilentAimEnabled = getgenv().SilentAimEnabled or false
 getgenv().CurrentTarget = getgenv().CurrentTarget or nil
 
+local remoteCache = {}
 local lastTarget = nil
 
 local function ClearOldData()
+    table.clear(remoteCache) 
     lastTarget = nil
 end
 
@@ -597,6 +581,7 @@ task.spawn(function()
 
     local function getRoot()
         local target = getgenv().CurrentTarget
+        
         if target ~= lastTarget then
             ClearOldData()
             lastTarget = target
@@ -612,10 +597,12 @@ task.spawn(function()
                 return nil
             end
 
-            -- บังคับคืนค่าเฉพาะ Head (หัว) อย่างเดียวเท่านั้น
-            return character:FindFirstChild("Head")
+            return character:FindFirstChild("HumanoidRootPart") 
+                or character:FindFirstChild("UpperTorso") 
+                or character:FindFirstChild("Torso")
         end
         
+        -- ถ้าไม่มีเป้าหมาย ให้ล้างข้อมูลทิ้งด้วย
         ClearOldData()
         return nil
     end
@@ -638,57 +625,46 @@ task.spawn(function()
     end))
 
     local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local target = getgenv().CurrentTarget
-    local enabled = getgenv().SilentAimEnabled
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local target = getgenv().CurrentTarget
+        local enabled = getgenv().SilentAimEnabled
 
-    -- กรองรีโมทที่ไม่ต้องการให้ Silent Aim ไปยุ่ง
-    if method == "FireServer" or method == "InvokeServer" then
-        if self then
-            -- รวมรายชื่อรีโมททั้งหมดที่ไม่ต้องการให้สคริปต์ไปแก้ไข
-            local ignoredRemotes = {
-                "CommE",             -- จากภาพที่ 1[cite: 1]
-                "RE/RegisterHit",    -- จากภาพที่ 2[cite: 2]
-                "RE/RegisterAttack", -- จากภาพที่ 2[cite: 2]
-                "LeftClickRemote"    -- จากภาพล่าสุด[cite: 3]
-            }
-            if table.find(ignoredRemotes, self.Name) then
-                return oldNamecall(self, ...)
-            end
-        end
-    end
-
-    if target then
-        if enabled or UserInputService.TouchEnabled then
-            if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
-                local r = getRoot()
-                if r then 
-                    return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
-                end
-            end
-        end
-
-        if enabled and (method == "FireServer" or method == "InvokeServer") then
-            local targetPos = GetPredictedPosition(target)
-            if targetPos then
-                local args = { ... }
-                for i = 1, #args do
-                    local arg = args[i]
-                    local argType = typeof(arg)
-                    if argType == "Vector3" then
-                        args[i] = targetPos
-                    elseif argType == "CFrame" then
-                        args[i] = arg - arg.Position + targetPos
+        if target then
+            if enabled or UserInputService.TouchEnabled then
+                if method == "ScreenPointToRay" or method == "ViewportPointToRay" then
+                    local r = getRoot()
+                    if r then 
+                        return Ray.new(Camera.CFrame.Position, (r.Position - Camera.CFrame.Position).Unit * 1000) 
                     end
                 end
-                return oldNamecall(self, unpack(args))
+            end
+
+            if enabled and (method == "FireServer" or method == "InvokeServer") then
+                local targetPos = GetPredictedPosition(target)
+                if targetPos then
+                    local args = { ... }
+                    for i = 1, #args do
+                        local arg = args[i]
+                        local argType = typeof(arg)
+                        if argType == "Vector3" then
+                            args[i] = targetPos
+                        elseif argType == "CFrame" then
+                            args[i] = arg - arg.Position + targetPos
+                        end
+                    end
+                    return oldNamecall(self, unpack(args))
+                end
+            end
+        else
+            -- ถ้าไม่มีเป้าหมาย ให้แน่ใจว่าล้างข้อมูลเก่าเรียบร้อย
+            if lastTarget ~= nil then
+                ClearOldData()
             end
         end
-    end
 
-    return oldNamecall(self, ...)
-end))
+        return oldNamecall(self, ...)
+    end))
 end)
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
@@ -707,7 +683,9 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    clearCacheIfNeeded()
+    if typeof(clearCacheIfNeeded) == "function" then
+        clearCacheIfNeeded()
+    end
 
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
 
@@ -791,16 +769,17 @@ RunService.RenderStepped:Connect(function(dt)
     
     getgenv().CurrentTarget = bestTarget
 
-   if getgenv().CamlockEnabled and bestTarget then
-		local targetPos, _ = GetPredictedPosition(bestTarget)
-		if targetPos then
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-		end
-	end
+    if getgenv().CamlockEnabled and bestTarget then
+        local targetPos, _ = GetPredictedPosition(bestTarget)
+        if targetPos then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+        end
+    end
 
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
         
+        -- เช็คเงื่อนไขว่าต้องแสดงเส้น Tracer หรือไม่
         if bestTarget and getgenv().ShowTracer and (getgenv().SilentAimEnabled or getgenv().CamlockEnabled) and Snapline then
             local targetPart = bestTarget
             if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
@@ -1776,8 +1755,8 @@ local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-
 local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
@@ -1886,11 +1865,8 @@ local function createDraggableButton(text,accentColor,x,y,callback)
     knob.BorderSizePixel = 0
     Instance.new("UICorner",knob).CornerRadius = UDim.new(1,0)
 
-    local dragging = false
-    local dragInput = nil
-    local isDragging = false
-    local dragStart
-    local startCenter
+    local dragging,dragInput,isDragging = false,nil,false
+    local dragStart,startCenter
     local activeState = false
 
     local function updateVisual(state,fire)
@@ -1908,67 +1884,34 @@ local function createDraggableButton(text,accentColor,x,y,callback)
                 Color3.fromRGB(16,16,22)
             )
 
-            tween(stroke,.2,{
-                Color = accentColor,
-                Thickness = 2
-            })
-
+            tween(stroke,.2,{Color=accentColor,Thickness=2})
             tween(bar,.2,{
-                BackgroundColor3 = accentColor,
-                Size = UDim2.fromOffset(3,26)
+                BackgroundColor3=accentColor,
+                Size=UDim2.fromOffset(3,26)
             })
-
-            tween(label,.2,{
-                TextColor3 = Color3.new(1,1,1)
-            })
-
-            tween(track,.2,{
-                BackgroundColor3 = accentColor
-            })
-
+            tween(label,.2,{TextColor3=Color3.new(1,1,1)})
+            tween(track,.2,{BackgroundColor3=accentColor})
             tween(knob,.2,{
-                Position = KNOB_ON,
-                BackgroundColor3 = Color3.new(1,1,1)
+                Position=KNOB_ON,
+                BackgroundColor3=Color3.new(1,1,1)
             })
-
-            tween(status,.2,{
-                TextColor3 = accentColor
-            })
-
+            tween(status,.2,{TextColor3=accentColor})
             status.Text = "ON"
         else
-            gradient.Color = ColorSequence.new(
-                OFF_BG2,
-                OFF_BG
-            )
+            gradient.Color = ColorSequence.new(OFF_BG2,OFF_BG)
 
-            tween(stroke,.2,{
-                Color = OFF_STROKE,
-                Thickness = 1.5
-            })
-
+            tween(stroke,.2,{Color=OFF_STROKE,Thickness=1.5})
             tween(bar,.2,{
-                BackgroundColor3 = OFF_STROKE,
-                Size = UDim2.fromOffset(3,18)
+                BackgroundColor3=OFF_STROKE,
+                Size=UDim2.fromOffset(3,18)
             })
-
-            tween(label,.2,{
-                TextColor3 = OFF_TEXT
-            })
-
-            tween(track,.2,{
-                BackgroundColor3 = OFF_TRACK
-            })
-
+            tween(label,.2,{TextColor3=OFF_TEXT})
+            tween(track,.2,{BackgroundColor3=OFF_TRACK})
             tween(knob,.2,{
-                Position = KNOB_OFF,
-                BackgroundColor3 = OFF_KNOB
+                Position=KNOB_OFF,
+                BackgroundColor3=OFF_KNOB
             })
-
-            tween(status,.2,{
-                TextColor3 = OFF_STATUS
-            })
-
+            tween(status,.2,{TextColor3=OFF_STATUS})
             status.Text = "OFF"
         end
 
@@ -1988,25 +1931,19 @@ local function createDraggableButton(text,accentColor,x,y,callback)
         dragStart = input.Position
         startCenter = center
 
-        tween(scale,.1,{
-            Scale = .95
-        })
+        tween(scale,.1,{Scale=.95})
 
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
-
-                tween(scale,.12,{
-                    Scale = 1
-                })
+                tween(scale,.12,{Scale=1})
             end
         end)
     end)
 
     button.InputChanged:Connect(function(input)
-        -- แก้จาก AND เป็น OR
         if input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch then
+            and input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
@@ -2023,7 +1960,6 @@ local function createDraggableButton(text,accentColor,x,y,callback)
                 and math.abs(delta.Y) < DRAG_THRESHOLD then
                 return
             end
-
             isDragging = true
         end
 
@@ -2055,12 +1991,12 @@ local function createDraggableButton(text,accentColor,x,y,callback)
 
     return {
         Instance = button,
-
         Set = function(state)
             updateVisual(state,false)
         end
     }
 end
+
 local SilentAimSyncing = false
 local SilentAimNotifyCooldown = false
 
@@ -2191,18 +2127,14 @@ local function StopFollow()
     smoothVelocity = Vector3.new(0, 0, 0)
 end
 
-local function FollowTarget(targetObject)
-    local targetChar = targetObject
-    if targetObject:IsA("Player") then
-        targetChar = targetObject.Character
-    end
-
-    if not targetChar or not targetChar.Parent then 
+local function FollowTarget(player)
+    if not player or not player.Parent then 
         StopFollow()
         return false
     end
 
     local char = LocalPlayer.Character
+    local targetChar = player.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
@@ -2242,58 +2174,34 @@ local function FollowTarget(targetObject)
     return true
 end
 
-local function GetClosestTarget()
+local function GetClosestPlayerTarget()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
 
     local closest
     local shortest = FollowDistance
-    local mode = getgenv().TargetMode or "Players Only"
     
-    if mode == "Both" or mode == "Players Only" then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and not ShouldIgnoreTarget(player.Character, player) then
-                local tRoot = player.Character:FindFirstChild("HumanoidRootPart")
-                local hum = player.Character:FindFirstChildOfClass("Humanoid")
-                
-                if tRoot and hum and hum.Health > 0 then
-                    local dist = (root.Position - tRoot.Position).Magnitude
-                    if dist < shortest then
-                        shortest = dist
-                        closest = player
-                    end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and not ShouldIgnoreTarget(player.Character, player) then
+            local tRoot = player.Character:FindFirstChild("HumanoidRootPart")
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            
+            if tRoot and hum and hum.Health > 0 then
+                local dist = (root.Position - tRoot.Position).Magnitude
+                if dist < shortest then
+                    shortest = dist
+                    closest = player
                 end
             end
         end
     end
-
-    if mode == "Both" or mode == "Enemies Only" then
-        local enemiesFolder = getCachedEnemiesFolder and getCachedEnemiesFolder() or nil
-        if enemiesFolder then
-            for _, enemyModel in ipairs(enemiesFolder:GetChildren()) do
-                if enemyModel:IsA("Model") and not ShouldIgnoreTarget(enemyModel, nil) then
-                    local tRoot = enemyModel:FindFirstChild("HumanoidRootPart")
-                    local hum = enemyModel:FindFirstChildOfClass("Humanoid")
-                    
-                    if tRoot and hum and hum.Health > 0 then
-                        local dist = (root.Position - tRoot.Position).Magnitude
-                        if dist < shortest then
-                            shortest = dist
-                            closest = enemyModel
-                        end
-                    end
-                end
-            end
-        end
-    end
-
     return closest
 end
 
 local function SetFollowState(state, message)
     FollowEnabled = state
-    currentTarget = state and GetClosestTarget() or nil
+    currentTarget = state and GetClosestPlayerTarget() or nil
     
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -2350,37 +2258,27 @@ RunService.RenderStepped:Connect(function()
     end
 
     if currentTarget then
-        local targetChar = currentTarget:IsA("Player") and currentTarget.Character or currentTarget
+        local targetChar = currentTarget.Character
         local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
 
         if not targetChar or not targetHum or targetHum.Health <= 0 then
-            local action = getgenv().OnTargetDeath or "Stop"
-            if action == "Switch to Next" then
-                currentTarget = GetClosestTarget() -- ค้นหาตัวถัดไปต่อทันที โดยไม่สั่งปิดระบบ
-            else
-                SetFollowState(false, "Target died! System off.")
-            end
+            SetFollowState(false, "Target died! System off.")
             return
         end
 
-        if ShouldIgnoreTarget(targetChar, currentTarget:IsA("Player") and currentTarget or nil) then
-            currentTarget = GetClosestTarget()
+        if ShouldIgnoreTarget(targetChar, currentTarget) then
+            currentTarget = GetClosestPlayerTarget()
             return
         end
 
         local status = FollowTarget(currentTarget)
         if status == "DEAD" then
-            local action = getgenv().OnTargetDeath or "Stop"
-            if action == "Switch to Next" then
-                currentTarget = GetClosestTarget() -- ค้นหาตัวถัดไปต่อทันที โดยไม่สั่งปิดระบบ
-            else
-                SetFollowState(false, "Target died! System off.")
-            end
+            SetFollowState(false, "Target died! System off.")
         elseif not status then
-            currentTarget = GetClosestTarget()
+            currentTarget = GetClosestPlayerTarget()
         end
     else
-        currentTarget = GetClosestTarget()
+        currentTarget = GetClosestPlayerTarget()
     end
 end)
 
@@ -2389,7 +2287,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
         SetFollowState(not FollowEnabled)
     end
 end)
-
 
 RunService.RenderStepped:Connect(function()
     local isSilentAimOn = getgenv().SilentAimEnabled == true
@@ -2460,6 +2357,7 @@ local toggleState = false
 local soruCooldown = 0.05
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 local function setSoru(soruScript, on)
@@ -2477,16 +2375,12 @@ local function findSoru()
     return charFolder and charFolder:FindFirstChild("Soru")
 end
 
--- เพิ่มตัวแปรสำหรับป้องกันการสร้าง Thread ซ้อนกันเกินความจำเป็น (Debounce / Guard)
-local isProcessing = false
-
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
 
-    if toggleState and not isProcessing and method == "FireServer" and self.Name == "CommE" and args[1] == "Soru" then
-        isProcessing = true
+    if toggleState and method == "FireServer" and self.Name == "CommE" and args[1] == "Soru" then
         task.spawn(function()
             local soruScript = findSoru()
             if soruScript then
@@ -2496,7 +2390,6 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
                 task.wait(soruCooldown)
                 setSoru(soruScript, true)
             end
-            isProcessing = false
         end)
     end
 
@@ -2513,7 +2406,6 @@ local Toggle = System:Toggle({
     Callback = function(state)
         toggleState = state
         if not state then
-            isProcessing = false
             local soruScript = findSoru()
             if soruScript then
                 setSoru(soruScript, true)
@@ -2790,7 +2682,7 @@ CombatTab:Dropdown({
     Title = "Enemy Type",
     Desc  = "Choose Players or NPCs.",
     Flag  = "target_type_dropdown",
-    Values = { "Players Only", "Enemies Only", "Both" },
+    Values = { "Players Only", "Enemies Only" },
     Value  = "Players Only",
     Callback = function(selected)
         local mode = type(selected) == "table" and selected[1] or selected
@@ -2811,15 +2703,15 @@ local registerAttack = net and net:FindFirstChild("RE/RegisterAttack")
 local fastAttackRunning = false
 local connection
 local lastAttackTime = 0
-local attackDelay = 0.08 -- ลดลงเล็กน้อยเพื่อให้โจมตีต่อเนื่องและสมูทขึ้น
+local attackDelay = 0.1 
 
--- // ฟังก์ชันคำนวณทิศทางแบบน้ำหนักเบา //
+-- // ฟังก์ชันคำนวณทิศทาง //
 local function GetAttackDirection(root, target)
     local direction = (target.Position - root.Position).Unit
     return Vector3.new(
-        direction.X + (math.random(-5, 5)/100),
+        direction.X + (math.random(-10, 10)/100),
         0, 
-        direction.Z + (math.random(-5, 5)/100)
+        direction.Z + (math.random(-10, 10)/100)
     )
 end
 
@@ -2855,13 +2747,12 @@ local function SetFastAttack(state)
 
     if not state then return end
 
-    -- ใช้ Stepped หรือ Heartbeat พร้อมระบบเช็คเวลาที่มีประสิทธิภาพ
     connection = RunService.Heartbeat:Connect(function()
         if not fastAttackRunning then return end
         
-        local currentTime = tick()
-        if currentTime - lastAttackTime < attackDelay then return end
-        lastAttackTime = currentTime
+        -- เพิ่มระบบ Delay เพื่อให้ใช้บนมือถือได้เสถียรขึ้นและไม่โดนเตะ
+        if tick() - lastAttackTime < attackDelay then return end
+        lastAttackTime = tick()
 
         pcall(function()
             local char = player.Character
@@ -2869,37 +2760,35 @@ local function SetFastAttack(state)
             local root = char:FindFirstChild("HumanoidRootPart")
             if not root then return end
 
+            -- ตรวจสอบ Tool ใน Character หรือใน Backpack (สำหรับบางระบบ)
             local currentTool = char:FindFirstChildOfClass("Tool")
-            local rootPos = root.Position
-
-            -- 1. ตรวจสอบ NPC (Optimize การวนลูป)
+            
+            -- 1. ตรวจสอบ NPC
             local enemies = workspace:FindFirstChild("Enemies")
             if enemies then
                 for _, enemy in ipairs(enemies:GetChildren()) do
                     local rootPart = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
                     local hum = enemy:FindFirstChildOfClass("Humanoid")
 
-                    if rootPart and hum and hum.Health > 0 then
-                        if (rootPos - rootPart.Position).Magnitude <= 55 then
-                            Attack(rootPart, currentTool)
-                            return 
-                        end
+                    if rootPart and hum and hum.Health > 0
+                        and (root.Position - rootPart.Position).Magnitude <= 60 then
+                        Attack(rootPart, currentTool)
+                        return 
                     end
                 end
             end
 
-            -- 2. ตรวจสอบผู้เล่นอื่น
+            -- 2. ตรวจสอบผู้เล่น
             for _, target in ipairs(Players:GetPlayers()) do
                 if target ~= player then
                     local targetChar = target.Character
                     local rootPart = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
                     local hum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
 
-                    if rootPart and hum and hum.Health > 0 then
-                        if (rootPos - rootPart.Position).Magnitude <= 55 then
-                            Attack(rootPart, currentTool)
-                            return
-                        end
+                    if rootPart and hum and hum.Health > 0
+                        and (root.Position - rootPart.Position).Magnitude <= 60 then
+                        Attack(rootPart, currentTool)
+                        return
                     end
                 end
             end
@@ -2910,8 +2799,8 @@ end
 if GeneralTab then
     local FastAttackToggle = GeneralTab:Toggle({
         Title = "Attack Aura",
-        Desc = "Sword,Fruit,Combat",
-        Type = "Checkbox",
+        Desc = "(All Fruits, Melee, Swords)",
+        Type =  "Checkbox",
         Flag = "FastAttack",
         Value = false,
         Callback = function(state)
@@ -2919,6 +2808,7 @@ if GeneralTab then
         end,
     })
 end
+
 
 GeneralTab:Toggle({
     Title = "Auto Race V4",
@@ -3182,21 +3072,8 @@ GeneralTab:Slider({
     end,
 })
 GeneralTab:Divider() 
-
-getgenv().OnTargetDeath = "Stop"
-GeneralTab:Dropdown({
-    Title = "Select operation",
-    Desc  = "Stop system or switch to next target when current dies.",
-    Flag  = "target_death_dropdown",
-    Values = { "Stop", "Switch to Next" },
-    Value  = "Stop",
-    Callback = function(selected)
-        local action = type(selected) == "table" and selected[1] or selected
-        getgenv().OnTargetDeath = action
-    end,
-})
 local FollowToggle = GeneralTab:Toggle({
-    Title = "Teleport",
+    Title = "Teleport Player",
     Desc = "Warps instantly when within range.",
     Type = "Checkbox",
     Flag = "FollowToggle",
@@ -3227,8 +3104,8 @@ local Slider = GeneralTab:Slider({
     Increment = 1,
     Value = {
         Min = 0,
-        Max = 300,
-        Default = 0
+        Max = 250,
+        Default = 200
     },
     Callback = function(value)
         FollowDistance = value
@@ -3485,7 +3362,7 @@ local HideShowUI = SettingsGroup3:Section({
 SettingsGroup3:Toggle({
     Title = "",
     Type =  "Checkbox",
-    Flag = "SilentAimButtonSilentAimButton",
+    Flag = "ToggleTeleportUI",
     Value = true,
 
     Callback = function(Value)
@@ -3494,6 +3371,7 @@ SettingsGroup3:Toggle({
         end
     end,
 })
+
 
 local P=game:GetService("Players")
 local UIS=game:GetService("UserInputService")
@@ -3568,8 +3446,6 @@ SettingsGroup3:Toggle({
 })
 end
 initializeSkillSettings()
-
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -3580,7 +3456,7 @@ local selectedMeleeSkills = {"None"}
 local selectedSwordSkills = {"None"}
 local selectedFruitSkills = {"None"}
 local selectedGunSkills = {"None"}
-
+local flySpeed = 210 
 local healthTriggerThreshold = 30 
 local healthRecoveryThreshold = 85 
 local defenseProtocolEnabled = true 
@@ -3596,9 +3472,6 @@ local ascentVelocity = 300
 local playerCache = {}
 local lastPlayerCacheTime = 0
 local playerCacheInterval = 0.5
-
--- ตัวแปรสำหรับความเร็วในการบิน
-local flySpeed = 210 
 
 local function updatePlayerCache()
     local now = tick()
@@ -3660,7 +3533,6 @@ local function checkAndSwitchTeam()
     teamCheckInProgress = false
 end
 
--- ฟังก์ชันกดปุ่มปกติแบบกดแล้วปล่อยทันที
 local function pressKey(keyName)
     pcall(function()
         if type(keyName) == "table" then
@@ -3810,31 +3682,32 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
     if not myRoot then return end
 
     local humanoid = myChar:FindFirstChildOfClass("Humanoid")
-    if not humanoid or humanoid.Health <= 0 then return end
+    if humanoid and humanoid.Health > 0 then
+        humanoid.PlatformStand = true 
+    else
+        return
+    end
 
-    humanoid.PlatformStand = true
-
-    local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-    if not targetRoot then return end
-
-    local behindOffset = 3
-    local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, behindOffset)
-    local targetPos = behindCFrame.Position
-
+    local targetPos = targetCFrame.Position
     local currentPos = myRoot.Position
     local distance = (targetPos - currentPos).Magnitude
 
     local sliderDist = (Bounty and Bounty.Flags and Bounty.Flags.SafeModeDistanceSlider) or 150
-    local maxDistance = math.max(sliderDist, 250)
+    local maxDistance = math.max(sliderDist, 250) 
+    local enemyDistanceOffset = (Bounty and Bounty.Flags and Bounty.Flags.EnemyDistanceSlider) or 0
 
     if distance <= maxDistance then
-        myRoot.CFrame = CFrame.lookAt(
-            targetPos,
-            targetRoot.Position
-        )
+        local targetRoot = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
 
-        myRoot.AssemblyLinearVelocity = Vector3.zero
-        myRoot.AssemblyAngularVelocity = Vector3.zero
+        if targetRoot then
+            local offsetPos = targetRoot.CFrame * Vector3.new(0, 15, enemyDistanceOffset)
+            myRoot.CFrame = CFrame.new(offsetPos, targetRoot.Position)
+        else
+            myRoot.CFrame = CFrame.new(myRoot.Position, targetPos) * CFrame.new(0, 15, enemyDistanceOffset)
+        end
+
+        myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
 
         if tick() - lastComboTime >= comboCooldown then
             lastComboTime = tick()
@@ -3860,23 +3733,21 @@ local function smoothFlyTo(targetCFrame, speed, deltaTime, targetChar, distanceT
                 end
             end)
         end
-
         return
     end
 
     if distance > 0 then
-        local elevatedTargetPos = targetPos + Vector3.new(0, 60, 0)
+        local elevatedTargetPos = targetPos + Vector3.new(0, 120, 0)
         local direction = (elevatedTargetPos - currentPos).Unit
+        local currentSpeed = speed or (Bounty and Bounty.Flags and Bounty.Flags.FlySpeed) or 210
+        local clampedSpeed = math.min(currentSpeed, 210)
 
-        local currentSpeed = speed or flySpeed
-        local clampedSpeed = math.min(currentSpeed, 500)
+        local targetVelocity = direction * clampedSpeed
+        myRoot.AssemblyLinearVelocity = targetVelocity
+        myRoot.AssemblyAngularVelocity = Vector3.zero
 
-        myRoot.AssemblyLinearVelocity = direction * clampedSpeed
-
-        myRoot.CFrame = CFrame.lookAt(
-            currentPos,
-            elevatedTargetPos
-        )
+        local lookAtCFrame = CFrame.lookAt(currentPos, elevatedTargetPos)
+        myRoot.CFrame = myRoot.CFrame:Lerp(lookAtCFrame, 0.2)
     end
 end
 
@@ -3960,9 +3831,8 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
 
     lastTargetSearchTime = now
 
-    if not myRoot or not myRoot.Parent then
+    if not myRoot then
         cachedNearestTarget = nil
-        currentTargetPlayer = nil
         return nil
     end
 
@@ -3974,19 +3844,16 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
     local playerList = updatePlayerCache()
 
     for _, targetPlayer in ipairs(playerList) do
-        if targetPlayer ~= LocalPlayer
-            and not shouldSkipTarget(targetPlayer, LocalPlayer)
-            and not isTargetBlocked(targetPlayer) then
-
+        if not shouldSkipTarget(targetPlayer, LocalPlayer) and not isTargetBlocked(targetPlayer) then
             local char = targetPlayer.Character
 
-            if char and not ShouldIgnoreTarget(char, targetPlayer) then
+            if char then
                 local targetRoot = char:FindFirstChild("HumanoidRootPart")
                 local targetHum = char:FindFirstChildOfClass("Humanoid")
 
-                if targetRoot and targetHum and targetHum.Health > 0 then
-
+                if targetHum and targetHum.Health > 0 and targetRoot then
                     local inSafeZone = false
+
                     pcall(function()
                         if isPlayerInSafeZone then
                             inSafeZone = isPlayerInSafeZone(targetPlayer, char)
@@ -3994,28 +3861,22 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
                     end)
 
                     if not inSafeZone then
-                        local pvpDisabled =
-                            targetPlayer:GetAttribute("PvpDisabled") == true
-                            or char:GetAttribute("PvpDisabled") == true
+                        local pvpDisabled = targetPlayer:GetAttribute("PvpDisabled") or char:GetAttribute("PvpDisabled")
 
-                        if not pvpDisabled then
+                        if pvpDisabled ~= true then
                             local targetLevel = getPlayerLevel(targetPlayer)
                             local isLevelValid = true
 
-                            if type(myLevel) == "number"
-                                and type(targetLevel) == "number" then
-
-                                isLevelValid =
-                                    math.abs(myLevel - targetLevel) <= 700
+                            if type(myLevel) == "number" and type(targetLevel) == "number" then
+                                if math.abs(myLevel - targetLevel) > 800 then
+                                    isLevelValid = false
+                                end
                             end
 
                             if isLevelValid then
-                                local distance =
-                                    (targetRoot.Position - myRoot.Position).Magnitude
+                                local distance = (targetRoot.Position - myRoot.Position).Magnitude
 
-                                if distance <= 15000
-                                    and distance < shortestDistance then
-
+                                if distance <= 15000 and distance < shortestDistance then
                                     shortestDistance = distance
                                     nearestTargetRoot = targetRoot
                                     nearestTargetChar = char
@@ -4031,16 +3892,12 @@ local function findNearestTarget(LocalPlayer, myRoot, myLevel)
 
     currentTargetPlayer = nearestTargetPlayer
 
-    if nearestTargetPlayer then
-        cachedNearestTarget = {
-            root = nearestTargetRoot,
-            char = nearestTargetChar,
-            distance = shortestDistance,
-            player = nearestTargetPlayer
-        }
-    else
-        cachedNearestTarget = nil
-    end
+    cachedNearestTarget = {
+        root = nearestTargetRoot,
+        char = nearestTargetChar,
+        distance = shortestDistance,
+        player = nearestTargetPlayer
+    }
 
     return cachedNearestTarget
 end
@@ -4306,21 +4163,6 @@ local UtilitySection = Bounty:Section({
 })
 Bounty:Divider() 
 
-local SliderFlySpeed = Bounty:Slider({
-    Title = "Fly Speed",
-    Desc = "Adjust movement speed while flying to targets",
-    Value = {
-        Min = 50,
-        Max = 350,
-        Default = 210
-    },
-    Step = 5,
-    Flag = "FlySpeed_Slider",
-    Callback = function(value)
-        flySpeed = value
-    end
-})
-
 local DropdownMelee = Bounty:Dropdown({
     Title = "Melee",
     Desc = "Select Melee skills ",
@@ -4392,3 +4234,380 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
+local P = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local CG = game:GetService("CoreGui")
+local TS = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local Workspace = game:GetService("Workspace")
+
+local L = P.LocalPlayer
+local Cam = Workspace.CurrentCamera
+
+local old = CG:FindFirstChild("SoruUltimateUI")
+if old then old:Destroy() end
+
+local G = Instance.new("ScreenGui", CG)
+G.Name = "SoruUltimateUI"
+G.IgnoreGuiInset = true
+G.ResetOnSpawn = false
+G.ZIndexBehavior = Enum.ZIndexBehavior.Global
+
+local B = Instance.new("TextButton", G)
+B.Size = UDim2.fromOffset(84, 84)
+B.Position = UDim2.new(1, -60, .5, 0)
+B.AnchorPoint = Vector2.new(.5, .5)
+B.BackgroundColor3 = Color3.fromRGB(8, 12, 18)
+B.BackgroundTransparency = .02
+B.Text = ""
+B.AutoButtonColor = false
+B.ZIndex = 10
+
+Instance.new("UICorner", B).CornerRadius = UDim.new(1, 0)
+
+local S = Instance.new("UIStroke", B)
+S.Color = Color3.fromRGB(0, 220, 255)
+S.Thickness = 2
+S.Transparency = .05
+
+local Gd = Instance.new("UIGradient", B)
+Gd.Rotation = 45
+Gd.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 45, 55)),
+    ColorSequenceKeypoint.new(.5, Color3.fromRGB(8, 12, 18)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 90, 130))
+}
+
+local T = Instance.new("TextLabel", B)
+T.Size = UDim2.fromScale(1, 1)
+T.BackgroundTransparency = 1
+T.Text = "SORU"
+T.TextColor3 = Color3.new(1, 1, 1)
+T.TextSize = 17
+T.Font = Enum.Font.GothamBold
+T.TextStrokeColor3 = Color3.new(0, 0, 0)
+T.TextStrokeTransparency = 0
+T.ZIndex = 20
+
+local function tw(o, t, p)
+    TS:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), p):Play()
+end
+
+local function part(f, pos, size, c, tr)
+    local p = Instance.new("Part", f)
+    p.Anchored = true
+    p.CanCollide = false
+    p.CanTouch = false
+    p.CanQuery = false
+    p.Material = Enum.Material.Neon
+    p.Color = c
+    p.Transparency = tr or 0
+    p.Size = size
+    p.Position = pos
+    return p
+end
+
+local function WarpFX(pos)
+    local F = Instance.new("Folder", Workspace)
+    F.Name = "SoruFX"
+
+    local C = Color3.fromRGB(0, 220, 255)
+    local BC = Color3.fromRGB(0, 100, 255)
+    local W = Color3.fromRGB(220, 250, 255)
+
+    for i = 1, 5 do
+        task.delay(i * .035, function()
+            local r = part(F, pos + Vector3.new(0, .1, 0), Vector3.new(.15, .08, .15), i % 2 == 0 and BC or C, .1)
+            local m = Instance.new("SpecialMesh", r)
+            m.MeshType = Enum.MeshType.Cylinder
+            local z = 7 + i * 3
+            tw(r, .45, {Size = Vector3.new(z, .1, z), Transparency = 1})
+        end)
+    end
+
+    for i = 1, 8 do
+        local a = i / 8 * math.pi * 2
+        local r = 3 + math.random() * 2
+        local p = part(
+            F,
+            pos + Vector3.new(math.cos(a) * r, 3, math.sin(a) * r),
+            Vector3.new(.12, 6, .12),
+            i % 2 == 0 and C or BC, .2
+        )
+        tw(p, .35, {Size = Vector3.new(.02, .2, .02), Transparency = 1})
+    end
+
+    for i = 1, 3 do
+        local r = part(F, pos + Vector3.new(0, i * .45, 0), Vector3.new(5 + i * 2, .08, 5 + i * 2), i == 2 and W or C, .15)
+        local m = Instance.new("SpecialMesh", r)
+        m.MeshType = Enum.MeshType.Cylinder
+
+        task.spawn(function()
+            for _ = 1, 20 do
+                if not r.Parent then return end
+                r.CFrame = r.CFrame * CFrame.Angles(0, math.rad(18), math.rad(12))
+                task.wait(.02)
+            end
+        end)
+
+        tw(r, .65, {Transparency = 1})
+    end
+
+    local h = Instance.new("Part", F)
+    h.Anchored = true
+    h.CanCollide = false
+    h.CanTouch = false
+    h.CanQuery = false
+    h.Transparency = 1
+    h.Position = pos
+
+    local A = Instance.new("Attachment", h)
+
+    local p = Instance.new("ParticleEmitter", A)
+    p.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    p.Rate = 0
+    p.Lifetime = NumberRange.new(.25, .7)
+    p.Speed = NumberRange.new(15, 35)
+    p.SpreadAngle = Vector2.new(360, 360)
+    p.Drag = 4
+    p.LightEmission = 1
+    p.LightInfluence = 0
+    p.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, W),
+        ColorSequenceKeypoint.new(.4, C),
+        ColorSequenceKeypoint.new(1, BC)
+    }
+    p.Size = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, .8),
+        NumberSequenceKeypoint.new(.5, .3),
+        NumberSequenceKeypoint.new(1, 0)
+    }
+    p.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(.7, .3),
+        NumberSequenceKeypoint.new(1, 1)
+    }
+    p:Emit(100)
+
+    local sp = Instance.new("ParticleEmitter", A)
+    sp.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    sp.Rate = 0
+    sp.Lifetime = NumberRange.new(.15, .35)
+    sp.Speed = NumberRange.new(30, 55)
+    sp.SpreadAngle = Vector2.new(360, 360)
+    sp.Drag = 8
+    sp.LightEmission = 1
+    sp.LightInfluence = 0
+    sp.Color = ColorSequence.new(W)
+    sp.Size = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, .3),
+        NumberSequenceKeypoint.new(1, 0)
+    }
+    sp:Emit(60)
+
+    Debris:AddItem(F, 1)
+end
+
+local cooldown = false
+local waitingForClick = false
+local currentConnection = nil
+
+local function normal()
+    T.Text = "SORU"
+    T.TextSize = 17
+    T.TextColor3 = Color3.new(1, 1, 1)
+    T.TextStrokeTransparency = 0
+
+    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(8, 12, 18)})
+    tw(S, .2, {Color = Color3.fromRGB(0, 220, 255), Thickness = 2})
+end
+
+local function SoruAction()
+    if cooldown or waitingForClick then return end
+
+    local char = L.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+
+    local bestTargetPart = nil
+    local shortestDistance = 200
+    for _, player in ipairs(P:GetPlayers()) do
+        if player ~= L and player.Character then
+            local targetChar = player.Character
+            local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+            local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
+
+            if targetRoot and humanoid and humanoid.Health > 0 then
+                local ignore = false
+                if type(ShouldIgnoreTarget) == "function" then
+                    ignore = ShouldIgnoreTarget(targetChar, player)
+                end
+                if not ignore then
+                    local dist = (targetRoot.Position - root.Position).Magnitude
+                    if dist <= shortestDistance then
+                        shortestDistance = dist
+                        bestTargetPart = targetRoot
+                    end
+                end
+            end
+        end
+    end
+
+    waitingForClick = true
+    T.Text = "AIM"
+    T.TextSize = 14
+
+    tw(B, .2, {BackgroundColor3 = Color3.fromRGB(35, 27, 10)})
+    tw(S, .2, {Color = Color3.fromRGB(255, 190, 45), Thickness = 3})
+
+    -- รอจนกว่าผู้เล่นจะคลิกเลือกตำแหน่งจริง ๆ โดยไม่เปลี่ยนโหมดกลางคัน
+    currentConnection = UIS.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 
+        or input.UserInputType == Enum.UserInputType.Touch then
+            
+            local mousePos = input.Position
+            local ray = Cam:ViewportPointToRay(mousePos.X, mousePos.Y)
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterDescendantsInstances = {char, Workspace:FindFirstChild("SoruFX")}
+            raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+            
+            local raycastResult = Workspace:Raycast(ray.Origin, ray.Direction * 1000, raycastParams)
+            
+            if raycastResult then
+                WarpFX(root.Position)
+                root.CFrame = CFrame.new(raycastResult.Position + Vector3.new(0, 3, 0))
+                WarpFX(root.Position)
+            end
+            
+            if currentConnection then
+                currentConnection:Disconnect()
+                currentConnection = nil
+            end
+            
+            waitingForClick = false
+            cooldown = true
+            
+            -- เริ่มคูลดาวน์หลังกดใช้งานเสร็จ
+            task.spawn(function()
+                for n = 20, 1, -1 do
+                    if not B.Parent then return end
+                    T.Text = string.format("%.1f", n / 10)
+                    T.TextSize = 21
+                    task.wait(.1)
+                end
+
+                cooldown = false
+                normal()
+            end)
+        end
+    end)
+end
+
+B.Activated:Connect(function()
+    if cooldown or waitingForClick then return end
+    SoruAction()
+end)
+
+-- Drag (ระบบลากปุ่ม)
+local dragging, moved = false, false
+local dragStart, startPos, dragInput
+
+B.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1
+    or i.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        moved = false
+        dragStart = i.Position
+        startPos = B.Position
+    end
+end)
+
+B.InputChanged:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseMovement
+    or i.UserInputType == Enum.UserInputType.Touch then
+        dragInput = i
+    end
+end)
+
+UIS.InputChanged:Connect(function(i)
+    if not dragging or i ~= dragInput then return end
+
+    local d = i.Position - dragStart
+    if d.Magnitude > 8 then moved = true end
+
+    B.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + d.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + d.Y
+    )
+end)
+
+B.InputEnded:Connect(function(i)
+    if i.UserInputType ~= Enum.UserInputType.MouseButton1
+    and i.UserInputType ~= Enum.UserInputType.Touch then return end
+
+    dragging = false
+    dragInput = nil
+end)
+
+-- Hover
+B.MouseEnter:Connect(function()
+    if cooldown or waitingForClick then return end
+    tw(B, .15, {Size = UDim2.fromOffset(89, 89)})
+    tw(S, .15, {Thickness = 3, Transparency = 0})
+end)
+
+B.MouseLeave:Connect(function()
+    if cooldown or waitingForClick then return end
+    tw(B, .15, {Size = UDim2.fromOffset(84, 84)})
+    tw(S, .15, {Thickness = 2})
+end)
+
+-- Pulse
+task.spawn(function()
+    while G.Parent do
+        if not cooldown and not waitingForClick then
+            tw(S, .8, {Transparency = .5})
+            task.wait(.8)
+
+            if not cooldown and not waitingForClick then
+                tw(S, .8, {Transparency = .05})
+            end
+        end
+        task.wait(.8)
+    end
+end)
+
+getgenv().ToggleSoruUI = function(state)
+    if G and G.Parent then
+        G.Enabled = state
+        if not state then
+            if currentConnection then
+                currentConnection:Disconnect()
+                currentConnection = nil
+            end
+            waitingForClick = false
+            cooldown = false
+            normal()
+        end
+    end
+end
+
+getgenv().ToggleSoruUI(true)
+
+local SettingsGroup3 = Config:Group({})
+SettingsGroup3:Toggle({
+    Title = "Soru Button",
+    Type = "Checkbox",
+    Flag = "ToggleTeleportUI",
+    Value = true,
+
+    Callback = function(Value)
+        if getgenv().ToggleSoruUI then
+            getgenv().ToggleSoruUI(Value)
+        end
+    end
+})
