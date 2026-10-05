@@ -32,7 +32,6 @@ WindUI:Notify({
     Duration = 5
 })
 
-
 local success, Window = pcall(function()
     return WindUI:CreateWindow({
         Title = "Project Destiny [v3.0] ",
@@ -774,12 +773,15 @@ RunService.RenderStepped:Connect(function(dt)
     getgenv().CurrentTarget = bestTarget
 
    if getgenv().CamlockEnabled and bestTarget then
-		local targetPos, _ = GetPredictedPosition(bestTarget)
-		if targetPos then
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-		end
-	end
+        local targetPart = bestTarget
+        if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
+            targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
+        end
 
+        if targetPart and targetPart:IsA("BasePart") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+        end
+    end
     if now - lastSnaplineUpdate > 0.033 then
         lastSnaplineUpdate = now
         
@@ -823,6 +825,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 end)
+
 
 local function initializeSkillSettings()
 local Players = game:GetService("Players")
@@ -2862,7 +2865,7 @@ local function SetFastAttack(state)
                     local hum = enemy:FindFirstChildOfClass("Humanoid")
 
                     if rootPart and hum and hum.Health > 0 then
-                        if (rootPos - rootPart.Position).Magnitude <= 55 then
+                        if (rootPos - rootPart.Position).Magnitude <= 60 then
                             Attack(rootPart, currentTool)
                             return 
                         end
