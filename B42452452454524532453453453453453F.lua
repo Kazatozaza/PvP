@@ -370,7 +370,7 @@ local cachedEnemiesFolder = nil
 
 local function getCachedEnemiesFolder()
     local now = tick()
-    if now - lastEnemiesCheck > 1 then
+    if now - lastEnemiesCheck > 0.5 then
         cachedEnemiesFolder = Workspace:FindFirstChild("Enemies")
         lastEnemiesCheck = now
     end
@@ -379,7 +379,7 @@ end
 
 local function clearCacheIfNeeded()
     local now = tick()
-    if now - lastCacheClear >= 1.0 then
+    if now - lastCacheClear >= 0.5 then
         table.clear(combatCache)
         table.clear(safeZoneCache)
         lastCacheClear = now
@@ -486,7 +486,7 @@ end
 
 local cachedValidTargets = {}
 local lastTargetUpdate = 0
-local targetUpdateInterval = 0.2 -- ลดเวลาแคชเป้าหมายให้ลื่นขึ้นเล็กน้อยแต่ยังประหยัดแรม
+local targetUpdateInterval = 0.1 -- เร็วขึ้นจาก 0.2
 
 local function UpdateValidTargets()
     table.clear(cachedValidTargets)  
@@ -708,7 +708,7 @@ RunService.RenderStepped:Connect(function(dt)
     local mode = getgenv().SilentAimMode
 
     local now = tick()
-    if now - lastFOVUpdate > 0.05 then
+    if now - lastFOVUpdate > 0.016 then
         lastFOVUpdate = now
         
         if FOVUI then
@@ -782,7 +782,7 @@ RunService.RenderStepped:Connect(function(dt)
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
         end
     end
-    if now - lastSnaplineUpdate > 0.033 then
+    if now - lastSnaplineUpdate > 0.016 then
         lastSnaplineUpdate = now
         
         if bestTarget and getgenv().ShowTracer and (getgenv().SilentAimEnabled or getgenv().CamlockEnabled) and Snapline then
@@ -1681,29 +1681,42 @@ end
 
 RefreshSafeZones()
 
-local distanceTimer=0
+local distanceTimer = 0
+local DISTANCE_INTERVAL = 0.5
 
-GlobalConns[#GlobalConns+1]=RunService.Heartbeat:Connect(function(dt)
-	distanceTimer=distanceTimer+dt
+GlobalConns[#GlobalConns+1] = RunService.Heartbeat:Connect(function(dt)
+    distanceTimer = distanceTimer + dt
 
-	if distanceTimer<DISTANCE_INTERVAL then
-		return
-	end
+    if distanceTimer < DISTANCE_INTERVAL then
+        return
+    end
 
-	distanceTimer=0
+    distanceTimer = 0
 
-	local character=LocalPlayer.Character
-	MyRoot=character and character:FindFirstChild("HumanoidRootPart")
+    local character = LocalPlayer.Character
+    MyRoot = character and character:FindFirstChild("HumanoidRootPart")
 
-	if not MyRoot then
-		return
-	end
+    if not MyRoot then
+        return
+    end
 
-	for player,entry in pairs(Registry) do
-		if player.Parent then
-			Update(player,entry,true)
-		end
-	end
+    -- build snapshot only once
+    local toUpdate = {}
+    for player, entry in pairs(Registry) do
+        if player and player.Parent then
+            table.insert(toUpdate, { player, entry })
+        end
+    end
+
+    if #toUpdate == 0 then
+        return
+    end
+
+    for i = 1, #toUpdate do
+        local player = toUpdate[i][1]
+        local entry = toUpdate[i][2]
+        Update(player, entry, true)
+    end
 end)
 
 ENV.__ESPCleanup=function()
@@ -2881,7 +2894,7 @@ local function SetFastAttack(state)
                     local hum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
 
                     if rootPart and hum and hum.Health > 0 then
-                        if (rootPos - rootPart.Position).Magnitude <= 55 then
+                        if (rootPos - rootPart.Position).Magnitude <= 60 then
                             Attack(rootPart, currentTool)
                             return
                         end
