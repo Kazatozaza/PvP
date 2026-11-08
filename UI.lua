@@ -3455,10 +3455,10 @@ or 7),bS,bR})bE(bT,bM)function bO(bU)local bV=bL.Value ab.OverrideTag(bT,{Backgr
 and 0 or(bP and 1 or 0.96)local bX=bV and 0 or 1 local bY=bV and 0 or 0.78 if bU then bT.BackgroundTransparency=bW bR.
 ImageTransparency=bX if bS then bS.Transparency=bY end else ab.Tween(bT,0.15,{BackgroundTransparency=bW})ab.Tween(bR,
 0.15,{ImageTransparency=bX})if bS then ab.Tween(bS,0.15,{Transparency=bY})end end end end function bL:OnChanged(bP)bL.
-Changed=bP bP(bL.Value)end function bL:SetValue(bP)bP=not not bP bL.Value=bP bO(false)bI:SafeCallback(bL.Callback,bL.
+Changed=bP bP(bL.Value)end function bL:SetValue(bP)bN=false bP=not not bP bL.Value=bP bO(false)bI:SafeCallback(bL.Callback,bL.
 Value)bI:SafeCallback(bL.Changed,bL.Value)end function bL:Destroy()bM:Destroy()bI.Options[bG]=nil end ab.AddGuarded(bM.
 Body,'MouseButton1Down',function()if not ab.AcceptsInput(bM.Body)then return end bN=true if bK=='Switch'then bO(false)
-end end)local function bP()if bN then bN=false if bK=='Switch'then bO(false)end end end ab.OnHoverLeave(bM.Body,bP)ab.
+end end)local function bP()if bN then bN=false if bK=='Switch'then bO(false)end end end ab.AddSignal(bM.Body.InputEnded,function(bQ)if bQ.UserInputType==Enum.UserInputType.MouseButton1 or bQ.UserInputType==Enum.UserInputType.Touch then bP()end end)ab.OnHoverLeave(bM.Body,bP)ab.
 AddGuarded(bM.Body,'MouseButton1Up',bP)ab.AddGuarded(bM.Body,'MouseButton1Click',function()if not ab.AcceptsInput(bM.
 Body)then return end bL:SetValue(not bL.Value)end)bL.Value=not not bL.Value bO(true)bI.Options[bG]=bL return bL end
 return bF end)()bB.Slider=(function()local bF={}bF.__index=bF bF.__type='Slider'bF.ClassType='Input'function bF:New(bG,
