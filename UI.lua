@@ -2715,8 +2715,8 @@ bE or bE.Kind~='Root'then bE=nil for bF=1,bA.TabCount do local bG=bA.Tabs[bF]if 
 end end end if not bE then return end bD=bE end if bC.Searching then bC.SearchBox.Input.Text=''end local bE=bD local bF
 if bD.Kind=='Header'then bF=bD if#bD.Subs>0 then bE=bD.LastSub or bD.Subs[1]end elseif bD.Kind=='Sub'then bF=bD.Header
 bF.LastSub=bD else bA.LastRoot=bD.Index end local bG=bA.SelectedTab bA.SelectedTab=bE.Index v:ClosePopups()for bH,bI in
-next,bA.Tabs do if bI.Selected and bI~=bE then bI:SetSelected(false)end if bI.Kind=='Header'then local bK=bI==bF if(bI.
-NavSelected and true or false)~=bK then bI:SetNavSelected(bK)end end end bE:SetSelected(true)bC.CurrentContent=bE v.
+next,bA.Tabs do if bI.Selected and bI~=bE then bI:SetSelected(false)end if bI.Kind=='Header'then local bK=bI==bF if not bK then bI.Hovering=false end if(bI.
+NavSelected and true or false)~=bK or not bK then bI:SetNavSelected(bK)end end end bE:SetSelected(true)bC.CurrentContent=bE v.
 Events.TabSelected:Fire(bE,bF)bC:ShowGroup(bF)bC:UpdateSelection(false)if bA.SelectionTimer then task.cancel(bA.
 SelectionTimer)end bA.SelectionTimer=task.delay(0.05,function()bA.SelectionTimer=nil bC:UpdateSelection(true)end)local
 bH=bE.Index if bG==bH and bA.SwitchTween then return end local bI=(bA.SwitchToken or 0)+1 bA.SwitchToken=bI if bA.
