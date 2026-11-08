@@ -514,7 +514,7 @@ FillButton=Color3.fromRGB(176,62,60),FillButtonText=Color3.fromRGB(250,244,242),
 230),ToastText=Color3.fromRGB(41,5,5),Overlay=Color3.fromRGB(0,0,0),OverlayTransparency=0.46,Shadow=Color3.fromRGB(0,0,0
 ),ScrollBar=Color3.fromRGB(232,232,230),ScrollBarTransparency=0.88,PickerDialog=ColorSequence.new(Color3.fromRGB(60,8,7)
 ,Color3.fromRGB(16,2,2)),PickerPanel=ColorSequence.new(Color3.fromRGB(71,46,44),Color3.fromRGB(25,3,3)),PickerBorder=
-Color3.fromRGB(176,62,60)},Aliases={Mint='Uranus'}}t.Mint=t.Uranus local u local v={Version='2.3.0',ThemeMode='Normal',
+Color3.fromRGB(176,62,60)},Aliases={Mint='Uranus'}}t.Mint=t.Uranus local u local v={Version='Blox Fruits',ThemeMode='Normal',
 Config={AnimationSpeed=1,ReducedMotion=false,PageTransition=true,ResizeMode='Outline',CallbackErrors=true,Intro=true,
 IntroTimeout=20,Marquee=true},IntroActive=false,LockInside=false,OpenFrames={},HoveredRows={},Options={},Themes=t.Names,
 Window=nil,WindowFrame=nil,Unloaded=false,Theme='Light',DialogOpen=false,DialogHosts={},UseAcrylic=false,Acrylic=false,
