@@ -4424,7 +4424,7 @@ Values={'Tile','Plain'},Default='Tile',Icon='layers',IconColor=Color3.fromRGB(50
 SetIconStyle(bR)end},{Id='PanelDepth',Title='Panel Depth',Description='Strength of panel shadows and elevation',Type=
 'Slider',Variant='Number',Min=0,Max=2,Rounding=1,Default=1,Icon='layers',IconColor=Color3.fromRGB(255,159,10),Apply=
 function(bR)v:SetPanelDepth(bR)end},{Id='HoverStyle',Title='Hover Style',Description='How rows react to the cursor',Type
-='Dropdown',Values={'Full','Border','Click','Accent'},Default='Full',Icon='mouse-pointer-click',IconColor=Color3.
+='Dropdown',Values={'Full','Border','Click','Accent'},Default='Click',Icon='mouse-pointer-click',IconColor=Color3.
 fromRGB(100,210,255),Apply=function(bR)v:SetHoverStyle(bR)end},{Id='CornerRadius',Title='Window Corner Radius',
 Description='Roundness of the window corners',Type='Slider',Min=0,Max=24,Default=13,Suffix='px',Icon='monitor',IconColor
 =Color3.fromRGB(10,132,255),Apply=function(bR)if bQ()then bQ():SetCornerRadius(bR)end end},{Id='BorderThickness',Title=
