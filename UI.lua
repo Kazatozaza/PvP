@@ -518,7 +518,7 @@ Color3.fromRGB(176,62,60)},Aliases={Mint='Uranus'}}t.Mint=t.Uranus local u local
 Config={AnimationSpeed=1,ReducedMotion=false,PageTransition=true,ResizeMode='Outline',CallbackErrors=true,Intro=true,
 IntroTimeout=20,Marquee=true},IntroActive=false,LockInside=false,OpenFrames={},HoveredRows={},Options={},Themes=t.Names,
 Window=nil,WindowFrame=nil,Unloaded=false,Theme='Light',DialogOpen=false,DialogHosts={},UseAcrylic=false,Acrylic=false,
-Transparency=false,ColorfulIcons=false,IconHue=0,IconStyle='Plain',PanelDepth=1,HoverStyle='Full',Layout='Fluent',
+Transparency=false,ColorfulIcons=false,IconHue=0,IconStyle='Plain',PanelDepth=1,HoverStyle='Click',Layout='Fluent',
 NavPosition='Top',NavLabelMode='Hover',NotificationPosition='Bottom Right',Shadows=setmetatable({},{__mode='k'}),
 PanelAlpha=1,PanelFills=setmetatable({},{__mode='k'}),MinimizeKeybind=nil,MinimizeKey=Enum.KeyCode.LeftControl,
 UnloadCallbacks={},IconDefaults={},IconPalette={Color3.fromRGB(10,132,255),Color3.fromRGB(191,90,242),Color3.fromRGB(255
@@ -4752,7 +4752,7 @@ return true end function v:GetThemeMode()return v.ThemeMode end local b5={}do b5
 Theme='Light',Acrylic=false,Transparency=false,ColorfulIcons=false,IconHue=0,IconStyle='Plain',Layout='Fluent',
 ColorpickerStyle='Chromium',NavPosition='Top',NavLabelMode='Hover',NotificationPosition='Bottom Right',TitleTextVisible=
 true,SubTitleVisible=true,TitleIcon='',CornerRadius=13,BorderThickness=1,BorderColor='',RainbowBorder=false,
-WindowOpacity=100,PanelDepth=1,HoverStyle='Full',MenuKeybind='LeftControl',LockInsideScreen=false,AppFont='Gotham',
+WindowOpacity=100,PanelDepth=1,HoverStyle='Click',MenuKeybind='LeftControl',LockInsideScreen=false,AppFont='Gotham',
 LocalFonts={},Background={}}b5.Defaults={}for b6,b7 in next,b5.Settings do b5.Defaults[b6]=b7 end function b5:SetFolder(
 b6)self.Folder=b6 self:BuildFolderTree()end function b5:ResolveDefaults()if self.DefaultsResolved then return end self.
 DefaultsResolved=true for b6,b7 in next,self.Library.WindowDefaults or{}do self.Defaults[b6]=b7 self.Settings[b6]=b7 end
