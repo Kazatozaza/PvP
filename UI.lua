@@ -519,7 +519,7 @@ Config={AnimationSpeed=1,ReducedMotion=false,PageTransition=true,ResizeMode='Out
 IntroTimeout=20,Marquee=true},IntroActive=false,LockInside=false,OpenFrames={},HoveredRows={},Options={},Themes=t.Names,
 Window=nil,WindowFrame=nil,Unloaded=false,Theme='Light',DialogOpen=false,DialogHosts={},UseAcrylic=false,Acrylic=false,
 Transparency=false,ColorfulIcons=false,IconHue=0,IconStyle='Plain',PanelDepth=1,HoverStyle='Click',Layout='Fluent',
-NavPosition='Top',NavLabelMode='Hover',NotificationPosition='Bottom Right',Shadows=setmetatable({},{__mode='k'}),
+NavPosition='Top',NavLabelMode='Selected',NotificationPosition='Bottom Right',Shadows=setmetatable({},{__mode='k'}),
 PanelAlpha=1,PanelFills=setmetatable({},{__mode='k'}),MinimizeKeybind=nil,MinimizeKey=Enum.KeyCode.LeftControl,
 UnloadCallbacks={},IconDefaults={},IconPalette={Color3.fromRGB(10,132,255),Color3.fromRGB(191,90,242),Color3.fromRGB(255
 ,159,10),Color3.fromRGB(48,209,88),Color3.fromRGB(255,69,58),Color3.fromRGB(100,210,255),Color3.fromRGB(255,55,95),
@@ -4750,7 +4750,7 @@ lower(string.sub(b5,2))]if not b6 then return false end if v.ThemeMode==b6 then 
 Window then return true end if z.ModeBlacklist[v.Theme]then v.ThemeChanged:Fire(v.Theme)else ab.UpdateTheme(bP)end
 return true end function v:GetThemeMode()return v.ThemeMode end local b5={}do b5.Folder='FluentSettings'b5.Settings={
 Theme='Light',Acrylic=false,Transparency=false,ColorfulIcons=false,IconHue=0,IconStyle='Plain',Layout='Fluent',
-ColorpickerStyle='Chromium',NavPosition='Top',NavLabelMode='Hover',NotificationPosition='Bottom Right',TitleTextVisible=
+ColorpickerStyle='Chromium',NavPosition='Top',NavLabelMode='Selected',NotificationPosition='Bottom Right',TitleTextVisible=
 true,SubTitleVisible=true,TitleIcon='',CornerRadius=13,BorderThickness=1,BorderColor='',RainbowBorder=false,
 WindowOpacity=100,PanelDepth=1,HoverStyle='Click',MenuKeybind='LeftControl',LockInsideScreen=false,AppFont='Gotham',
 LocalFonts={},Background={}}b5.Defaults={}for b6,b7 in next,b5.Settings do b5.Defaults[b6]=b7 end function b5:SetFolder(
